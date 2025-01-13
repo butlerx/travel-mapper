@@ -1,5 +1,6 @@
 robyn >=0.65.0
-requests
 orjson >= 3.9,<4
-opentelemetry-api
-opentelemetry-sdk
+opentelemetry-api >= 1.29
+opentelemetry-sdk >= 1.29
+aiohttp >= 3.11.11
+authlib >= 1.4.0
