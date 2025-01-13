@@ -24,7 +24,7 @@ async def get_trips(
         if not tokens:
             raise InvalidOAuthToken()
 
-        response = client.list_trip(tokens[0], tokens[1])
+        response = await client.list_trip(tokens[0], tokens[1])
         return response
 
     except Exception as e:
