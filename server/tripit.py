@@ -4,7 +4,7 @@
 
 import secrets
 import time
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import requests
 from requests_oauthlib import OAuth1
@@ -71,8 +71,8 @@ class TripIt:
         access_secret: str,
         endpoint: str,
         method="GET",
-        params: Dict[str, str] = None,
-        data: Dict[str, Any] = None,
+        params: Optional[Dict[str, str]] = None,
+        data: Optional[Dict[str, Any]] = None,
     ):
         oauth = OAuth1(
             self.consumer_key,
@@ -101,9 +101,9 @@ class TripIt:
         access_token: str,
         access_secret: str,
         id: str,
-        filter: Dict[str, str] = None,
+        filters: Optional[Dict[str, str]] = None,
     ):
-        params = filter or {}
+        params = filters or {}
         params["id"] = id
         return self._do_request(
             access_token, access_secret, f"get/trip/id/{id}", params=params
@@ -136,8 +136,15 @@ class TripIt:
     def get_profile(self, access_token: str, access_secret: str):
         return self._do_request(access_token, access_secret, "get/profile")
 
-    def list_trip(self, access_token: str, access_secret: str, filter: Dict = None):
-        return self._do_request(access_token, access_secret, "list/trip", params=filter)
+    def list_trip(
+        self,
+        access_token: str,
+        access_secret: str,
+        filters: Optional[Dict[str, str]] = None,
+    ):
+        return self._do_request(
+            access_token, access_secret, "list/trip", params=filters
+        )
 
     def create(self, access_token: str, access_secret: str, data: Dict[str, Any]):
         return self._do_request(
@@ -338,16 +345,25 @@ class TripIt:
             data=data,
         )
 
-    def list_object(self, access_token: str, access_secret: str, filter: Dict = None):
+    def list_object(
+        self,
+        access_token: str,
+        access_secret: str,
+        filters: Optional[Dict[str, str]] = None,
+    ):
         return self._do_request(
-            access_token, access_secret, "list/object", params=filter
+            access_token, access_secret, "list/object", params=filters
         )
 
     def list_points_program(self, access_token: str, access_secret: str):
         return self._do_request(access_token, access_secret, "list/points_program")
 
     def crs_load_reservations(
-        self, access_token: str, access_secret: str, data: Dict, company_key: str = None
+        self,
+        access_token: str,
+        access_secret: str,
+        data: Dict[str, Any],
+        company_key: Optional[str] = None,
     ):
         params = {"company_key": company_key} if company_key else None
         return self._do_request(
