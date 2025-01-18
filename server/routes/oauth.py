@@ -19,7 +19,7 @@ class InitiateResponse(JSONResponse):
 async def initiate_oauth(r: Request, global_dependencies) -> InitiateResponse:
     client = global_dependencies["tripit_client"]
     db = global_dependencies["db"]
-    request_token, request_secret = client.get_request_token()
+    request_token, request_secret = await client.get_request_token()
     db.store_oauth_state(request_token, request_secret)
     auth_url = client.get_authorization_url(
         request_token, "http://pints.me/oauth/callback"
@@ -50,17 +50,18 @@ async def oauth_callback(
         raise ExpiredOAuthToken()
 
     try:
-        access_token, access_secret = client.get_access_token(
+        access_token, access_secret = await client.get_access_token(
             state.request_token, state.request_secret
         )
-
-        if db.store_tokens(access_token, access_secret):
-            db.delete_oauth_state(oauth_token)
-            return {"redirect_to": "/oauth/success"}
-
-        logger.error("Failed to store tokens")
-        raise InternalServerError()
-
     except Exception as e:
-        logger.error(str(e))
+        logger.error("Failed to get Access token: %s" % str(e))
+        raise e
         raise InvalidOAuthToken()
+
+    try:
+        db.store_tokens(access_token, access_secret)
+        db.delete_oauth_state(oauth_token)
+        return {"redirect_to": "/oauth/success"}
+    except Exception as e:
+        logger.error("Failed to store tokens: %s" % str(e))
+        raise InternalServerError()

@@ -3,20 +3,18 @@
 import os
 
 import orjson
-from opentelemetry import baggage, propagate, trace
-from opentelemetry.baggage.propagation import W3CBaggagePropagator
+from opentelemetry import propagate, trace
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
 from opentelemetry.trace import set_span_in_context
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
-from requests import status_codes
 from robyn import Request, Response, Robyn
+from robyn.exceptions import HTTPException
 from robyn.logger import Logger
 from robyn.openapi import License, OpenAPI, OpenAPIInfo
-from robyn.robyn import QueryParams
 
 from .db import DatabaseManager
-from .errors import InternalServerError, InvalidOAuthToken, Unauthorized
+from .errors import Unauthorized
 from .routes import setup_routes
 from .tripit import TripIt
 
@@ -80,13 +78,12 @@ def setup_server() -> Robyn:
         return response
 
     @app.exception
-    def handle_exception(error: Exception) -> Response:
-        logger.error(f"Error: %s", error)
+    def handle_exception(error: HTTPException) -> Response:
         details = error.detail if hasattr(error, "detail") else str(error)
         status_code = error.status_code if hasattr(error, "status_code") else 500
         span = trace.get_current_span()
         span.record_exception(error)
-        span.set_status(trace.Status(trace.status.StatusCode.ERROR, details))
+        span.set_status(trace.Status(trace.StatusCode.ERROR, details))
         return Response(
             status_code=status_code,
             description=orjson.dumps({"success": False, "error": details}),

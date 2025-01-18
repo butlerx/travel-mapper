@@ -5,7 +5,7 @@ WORKDIR /workspace
 COPY . .
 
 RUN python pip install --no-cache-dir --upgrade -r requirements.txt
-RUN python -m robyn --compile-rust-path="."
+RUN python -m rustimport build --release server/database
 
 EXPOSE 8080
 

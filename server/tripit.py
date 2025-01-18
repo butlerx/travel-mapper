@@ -4,6 +4,7 @@
 
 import secrets
 import time
+import urllib.parse
 from typing import Any, Dict, Optional, Tuple
 
 import aiohttp
@@ -27,21 +28,19 @@ class TripIt:
         self._api_version = "v1"
 
     async def get_request_token(self) -> Tuple[str, str]:
-        auth = oauthlib.oauth1.Client(
+        oauth = oauthlib.oauth1.Client(
             self.consumer_key,
             client_secret=self.consumer_secret,
             signature_method=TripIt.OAUTH_SIGNATURE_METHOD,
-            timestamp=str(int(time.time())),
-            nonce=secrets.token_hex(40),
         )
         url = f"{self.base_url}/oauth/request_token"
         uri, signed_headers, signed_body = oauth.sign(url, http_method="POST")
 
         async with aiohttp.ClientSession() as session:
             async with session.post(uri, headers=signed_headers) as response:
-                if response.status_code != 200:
-                    raise Exception("Failed to get request token")
-                credentials = dict(x.split("=") for x in response.text.split("&"))
+                response.raise_for_status()
+                text = await response.text()
+                credentials = dict(x.split("=") for x in text.split("&"))
                 return credentials["oauth_token"], credentials["oauth_token_secret"]
 
     def get_authorization_url(self, request_token: str, callback_url: str) -> str:
@@ -50,23 +49,25 @@ class TripIt:
     async def get_access_token(
         self, request_token: str, request_token_secret: str
     ) -> Tuple[str, str]:
-        auth = oauthlib.oauth1.Client(
+        oauth = oauthlib.oauth1.Client(
             self.consumer_key,
             client_secret=self.consumer_secret,
             resource_owner_key=request_token,
             resource_owner_secret=request_token_secret,
             signature_method=TripIt.OAUTH_SIGNATURE_METHOD,
-            timestamp=str(int(time.time())),
-            nonce=secrets.token_hex(40),
+            callback_uri=None,
+            signature_type=oauthlib.oauth1.SIGNATURE_TYPE_AUTH_HEADER,
+            rsa_key=None,
+            verifier=None,
         )
         url = f"{self.base_url}/oauth/access_token"
         uri, signed_headers, signed_body = oauth.sign(url, http_method="POST")
-
+        print(uri, signed_headers, signed_body)
         async with aiohttp.ClientSession() as session:
             async with session.post(uri, headers=signed_headers) as response:
-                if response.status_code != 200:
-                    raise Exception("Failed to get request token")
-                credentials = dict(x.split("=") for x in response.text.split("&"))
+                response.raise_for_status()
+                text = await response.text()
+                credentials = dict(x.split("=") for x in text.split("&"))
                 return credentials["oauth_token"], credentials["oauth_token_secret"]
 
     async def _do_request(
@@ -78,7 +79,7 @@ class TripIt:
         params: Optional[Dict[str, str]] = None,
         data: Optional[Dict[str, Any]] = None,
     ):
-        auth = oauthlib.oauth1.Client(
+        oauth = oauthlib.oauth1.Client(
             client_key=self.consumer_key,
             client_secret=self.consumer_secret,
             resource_owner_key=access_token,
@@ -88,11 +89,11 @@ class TripIt:
         async with aiohttp.ClientSession() as session:
             params = params or {}
             params["format"] = "json"
-            url = f"{self.base_url}/{self._api_version}/{endpoint}"
+            url = f"{self.base_url}/{self._api_version}/{endpoint}?{urllib.parse.urlencode(params)}"
             json = data if data else None
 
             uri, signed_headers, signed_body = oauth.sign(
-                url, http_method=method, body=json, parameters=params
+                url, http_method=method, body=json
             )
 
             async with session.request(
