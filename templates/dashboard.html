@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+    <h2>Welcome, {{ username }}!</h2>
+    <form method="POST" action="/user/logout">
+        <button type="submit">Logout</button>
+    </form>
+{% endblock %}

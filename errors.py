@@ -1,6 +1,13 @@
 from robyn.exceptions import HTTPException
 
 
+class TripItError(HTTPException):
+    """Base class for TripIt errors"""
+
+    def __init__(self, status_code: int, message: str):
+        super().__init__(status_code, message)
+
+
 class InvalidOAuthToken(HTTPException):
     """The OAuth token retrived is invalid"""
 

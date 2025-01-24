@@ -5,17 +5,18 @@ Tool for mapping tripit data
 ## Setup
 
 ```bash
-poetry install
-```
+python -m pip install -r requirements.txt
 
-## Building Rust code
-
-```bash
-python3 -m rustimport build server/db
 ```
 
 ## Start server
 
 ```bash
-python3 -m robyn app.py
+robyn server.py
+```
+
+## Dev Server
+
+```bash
+robyn server.py ---dev --log-level=DEBUG
 ```
