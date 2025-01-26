@@ -9,3 +9,13 @@ services:
       - 8080:8080
     volumes:
       - .:/workspace
+  migration:
+    image: butlerx/travel-mapper
+    build: .
+    command: database
+    stdin_open: true
+    tty: true
+    entrypoint:
+      - python3
+    volumes:
+      - .:/workspace

@@ -5,6 +5,7 @@ from robyn.logger import Logger
 from robyn.robyn import QueryParams
 
 from database import database_manager
+from database.security import create_access_token
 from errors import Unauthorized
 from templates import templates
 
@@ -31,10 +32,15 @@ async def register_user(request: Request):
         with database_manager() as db:
             created_user = db.create_user(user)
 
+        token, max_age = create_access_token(created_user.id, created_user.username)
+
         return Response(
             status_code=302,
             description="Registration successful",
-            headers={"Location": "/user/login?message=Registration successful"},
+            headers={
+                "Location": "/dashboard",
+                "Set-Cookie": auth_cookie(token, max_age),
+            },
         )
     except Exception as e:
         return templates.render_template("register.html", error=str(e))
@@ -73,20 +79,12 @@ async def login_user(request: Request):
 
         token, max_age = token
 
-        cookie_value = (
-            f"auth_token={token}; "
-            "Path=/; "
-            "HttpOnly; "
-            "Secure; "
-            "SameSite=Lax; "
-            f"Max-Age={max_age}"
-        )
         return Response(
             status_code=302,
             description="Redirecting to dashboard",
             headers={
                 "Location": "/dashboard",
-                "Set-Cookie": cookie_value,
+                "Set-Cookie": auth_cookie(token, max_age),
             },
         )
     except Unauthorized:
@@ -106,4 +104,15 @@ async def logout(request: Request):
             "Location": "/user/login?message=Logged out successfully",
             "Set-Cookie": "auth_token=; Max-Age=0",
         },
+    )
+
+
+def auth_cookie(token: str, max_age: str):
+    return (
+        f"auth_token={token}; "
+        "Path=/; "
+        "HttpOnly; "
+        "Secure; "
+        "SameSite=Lax; "
+        f"Max-Age={max_age}"
     )
