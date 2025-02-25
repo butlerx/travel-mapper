@@ -1,15 +1,12 @@
-from .manager import database_manager
-from .security import (
-    create_access_token,
-    decode_access_token,
-    get_password_hash,
-    verify_password,
-)
+from .models import Base, SessionLocal, engine
 
-__all__ = [
-    "verify_password",
-    "get_password_hash",
-    "create_access_token",
-    "decode_access_token",
-    "database_manager",
-]
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+__all__ = ["Base", "SessionLocal", "get_db", "engine", "models"]

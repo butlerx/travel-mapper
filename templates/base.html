@@ -3,33 +3,8 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
     <title>{% block title %}{% endblock %}</title>
-    <style>
-        .container {
-            max-width: 400px;
-            margin: 50px auto;
-            padding: 20px;
-        }
-        .form-group {
-            margin-bottom: 15px;
-        }
-        .form-group input {
-            width: 100%;
-            padding: 8px;
-            margin-top: 5px;
-        }
-        .error {
-            color: red;
-            padding: 10px;
-            margin: 10px 0;
-        }
-        .success {
-            color: green;
-            padding: 10px;
-            margin: 10px 0;
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', path='styles.css') }}">
 </head>
 <body>
     <div class="container">

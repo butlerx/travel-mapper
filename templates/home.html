@@ -3,8 +3,10 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block content %}
-    <h2>Welcome, {{ username }}!</h2>
-    <form method="POST" action="/user/logout">
+<div class="home">
+    <h2>Welcome, {{ user.email }}!</h2>
+    <form method="POST" action="/logout">
         <button type="submit">Logout</button>
     </form>
+</div>
 {% endblock %}

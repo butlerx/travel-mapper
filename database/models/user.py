@@ -1,18 +1,19 @@
+from __future__ import annotations
+
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime, Integer, String
+from sqlalchemy import Boolean, Column, DateTime, Enum, Integer, String, Text
 
 from .base import Base
 
 
 class User(Base):
     __tablename__ = "users"
-
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True)
-    hashed_password = Column(String)
-    access_token = Column(String, nullable=True)
-    access_secret = Column(String, nullable=True)
+    fullname = Column(String(255), nullable=False)
+    email = Column(Text, nullable=False, unique=True)
+    password = Column(String(255), nullable=False)
     created_at = Column(DateTime, default=datetime.now)
 
     def __repr__(self):

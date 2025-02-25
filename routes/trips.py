@@ -1,32 +1,46 @@
-from typing import Any, Dict, Tuple
+import logging
+from typing import Any, Dict, List
 
-from robyn import Request, SubRouter
-from robyn.logger import Logger
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy.orm import Session
 
-from database import database_manager
-from errors import InternalServerError, InvalidOAuthToken, TripItError, Unauthorized
+from ..auth import get_user
+from ..clients import get_tripit_client
+from ..database import get_db, models
 
-logger = Logger()
-trips_router: SubRouter = SubRouter(__name__, prefix="/api/trips")
+logger = logging.getLogger(__name__)
+router = APIRouter(prefix="/api/trips")
 
 
-@trips_router.get("/", auth_required=True)
+@router.get("/")
 async def get_trips(
-    request: Request, global_dependencies
-) -> Dict[str, Any] | Tuple[Dict[str, Any], Dict[str, Any], int]:
-    client = global_dependencies["tripit_client"]
-    access_token = request.identity.claims.get("access_token")
+    db: Session = Depends(get_db),
+    tripit_client=Depends(get_tripit_client),
+    user=Depends(get_user),
+):
+    """Get trips from TripIt API"""
     if not access_token:
-        raise TripItError("Access token not setup please auth with tripit")
-    try:
-        with database_manager() as db:
-            tokens = db.get_tokens(access_token)
-        if not tokens:
-            raise InvalidOAuthToken()
+        raise HTTPException(
+            status_code=400, detail="Access token not setup please auth with tripit"
+        )
 
-        response = await client.list_trip(tokens[0], tokens[1])
+    try:
+        # Query the database for tokens using the access_token
+        user_token = (
+            db.query(models.UserTokens)
+            .filter(models.UserTokens.user_id == user.id)
+            .first()
+        )
+
+        if not user_token:
+            raise HTTPException(status_code=401, detail="Invalid OAuth token")
+
+        response = await tripit_client.list_trip(
+            user_token.access_token, user_token.access_secret
+        )
         return response
 
     except Exception as e:
         logger.error("Failed to get trips: %s", e)
-        raise InternalServerError()
+        raise HTTPException(status_code=500, detail="An internal server error occurred")

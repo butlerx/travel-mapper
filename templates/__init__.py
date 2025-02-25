@@ -1,10 +1,8 @@
-import os
-from os.path import join
-from pathlib import Path
-from urllib.parse import quote_plus, unquote_plus
+from os import path
 
-from robyn.templating import JinjaTemplate
+from fastapi.templating import Jinja2Templates
 
-templates = JinjaTemplate(join(Path(__file__).parent.resolve()))
-templates.env.filters["quote_plus"] = lambda x: quote_plus(str(x)) if x else ""
-templates.env.filters["unquote_plus"] = lambda x: unquote_plus(str(x)) if x else ""
+dir_path = path.dirname(path.realpath(__file__))
+
+
+templates = Jinja2Templates(directory=dir_path)

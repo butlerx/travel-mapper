@@ -1,21 +1,18 @@
 name: travel-mapper
 services:
-  server:
+  web:
     image: butlerx/travel-mapper
     build: .
     env_file: .env
-    restart: always
     ports:
       - 8080:8080
-    volumes:
-      - .:/workspace
-  migration:
-    image: butlerx/travel-mapper
-    build: .
-    command: database
-    stdin_open: true
-    tty: true
-    entrypoint:
-      - python3
-    volumes:
-      - .:/workspace
+    command: fastapi dev --host 0.0.0.0 --port 8080 /app/main.py
+    develop:
+      watch:
+        - action: sync
+          path: .
+          target: /app
+          ignore:
+            - .venv/
+        - action: rebuild
+          path: ./uv.lock

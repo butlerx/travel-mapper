@@ -1,68 +1,70 @@
-from time import time
+from datetime import datetime, timedelta
+from typing import List, Optional
 
-from robyn import Request, SubRouter
-from robyn.logger import Logger
-from robyn.robyn import QueryParams
-from robyn.types import JSONResponse
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi.responses import ORJSONResponse, RedirectResponse
+from pydantic import BaseModel
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import Session, relationship, sessionmaker
 
-from database import database_manager
-from errors import ExpiredOAuthToken, InternalServerError, InvalidOAuthToken
+from ..auth import get_user
+from ..clients import get_tripit_client
+from ..config import settings
+from ..database import SessionLocal, models
 
-logger = Logger()
-oauth_router: SubRouter = SubRouter(__name__, prefix="/oauth")
+# Create a database session
+db = SessionLocal()
+router = APIRouter(prefix="/oauth")
 
 
-class InitiateResponse(JSONResponse):
+class InitiateResponse(BaseModel):
     redirect_to: str
 
 
-@oauth_router.get("/initiate", auth_required=True)
-async def initiate_oauth(r: Request, global_dependencies) -> InitiateResponse:
-    client = global_dependencies["tripit_client"]
-    request_token, request_secret = await client.get_request_token()
-    with database_manager() as db:
-        db.store_oauth_state(request_token, request_secret)
-    auth_url = client.get_authorization_url(
-        request_token, "http://pints.me/oauth/callback"
+@router.post("/initiate")
+async def initiate_oauth(
+    tripit_client: str = Depends(get_tripit_client), user=Depends(get_user)
+) -> InitiateResponse:
+    request_token, request_secret = await tripit_client.get_request_token()
+    oauth_state = models.OauthState(
+        request_token=request_token, request_secret=request_secret, user_id=user.id
     )
-    return {"redirect_to": auth_url}
+    db.add(oauth_state)
+    auth_url = tripit_client.get_authorization_url(
+        request_token, f"http://{settings.DOMAIN_NAME}/oauth/callback"
+    )
+    db.commit()
+    return InitiateResponse(redirect_to=auth_url)
 
 
-class CallbackRequestParams(QueryParams):
-    oauth_token: str
-
-
-class CallbackResponse(JSONResponse):
-    redirect_to: str
-
-
-@oauth_router.get("/callback")
+@router.get("/callback")
 async def oauth_callback(
-    r: Request, query_params: CallbackRequestParams, global_dependencies
-) -> CallbackResponse:
+    oauth_token: str, tripit_client: str = Depends(get_tripit_client)
+):
     """Handle OAuth callback from TripIt"""
-    oauth_token = query_params.get("oauth_token")
-    client = global_dependencies["tripit_client"]
-    with database_manager() as db:
-        state = db.get_oauth_state(oauth_token)
-
-        if time() - state.timestamp > 1800:
-            db.delete_oauth_state(oauth_token)
-            raise ExpiredOAuthToken()
+    state = db.query(OauthState).filter(OauthState.request_token == oauth_token).first()
+    if not state:
+        raise HTTPException(status_code=401, detail="Invalid OAuth token")
+    if datetime.now() - state.timestamp > timedelta(minutes=30):
+        db.delete(state)
+        db.commit()
+        raise HTTPException(
+            status_code=400, detail="OAuth token has expired. Please try again."
+        )
 
     try:
-        access_token, access_secret = await client.get_access_token(
+        access_token, access_secret = await tripit_client.get_access_token(
             state.request_token, state.request_secret
         )
     except Exception as e:
         logger.error("Failed to get Access token: %s" % str(e))
-        raise InvalidOAuthToken()
+        raise HTTPException(status_code=401, detail="Invalid OAuth token")
 
-    try:
-        with database_manager() as db:
-            db.store_tokens(access_token, access_secret)
-            db.delete_oauth_state(oauth_token)
-        return {"redirect_to": "/oauth/success"}
-    except Exception as e:
-        logger.error("Failed to store tokens: %s" % str(e))
-        raise InternalServerError()
+    user_token = UserTokens(
+        access_token=access_token, access_secret=access_secret, user_id=state.user_id
+    )
+    db.add(user_token)
+    db.delete(state)
+    db.commit()
+    return RedirectResponse(url="/oauth/success")

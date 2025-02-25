@@ -17,3 +17,14 @@ class OauthState(Base):
         return (
             f"<OauthState(request_token={self.request_token}, user_id={self.user_id})>"
         )
+
+
+class UserTokens(Base):
+    __tablename__ = "user_tokens"
+
+    access_token = Column(String, primary_key=True)
+    access_secret = Column(String, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"))
+
+    def __repr__(self):
+        return f"<UserTokens(access_token={self.access_token}, user_id={self.user_id})>"
