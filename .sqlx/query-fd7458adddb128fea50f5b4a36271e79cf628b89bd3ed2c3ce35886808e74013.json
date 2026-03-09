@@ -1,0 +1,68 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT\n                       travel_type,\n                       origin_name,\n                       origin_lat,\n                       origin_lng,\n                       dest_name,\n                       dest_lat,\n                       dest_lng,\n                       start_date,\n                       end_date\n                   FROM hops\n                   WHERE user_id = ? AND travel_type = ?\n                   ORDER BY start_date ASC",
+  "describe": {
+    "columns": [
+      {
+        "name": "travel_type",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "origin_name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "origin_lat",
+        "ordinal": 2,
+        "type_info": "Float"
+      },
+      {
+        "name": "origin_lng",
+        "ordinal": 3,
+        "type_info": "Float"
+      },
+      {
+        "name": "dest_name",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "dest_lat",
+        "ordinal": 5,
+        "type_info": "Float"
+      },
+      {
+        "name": "dest_lng",
+        "ordinal": 6,
+        "type_info": "Float"
+      },
+      {
+        "name": "start_date",
+        "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "end_date",
+        "ordinal": 8,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      false,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "fd7458adddb128fea50f5b4a36271e79cf628b89bd3ed2c3ce35886808e74013"
+}

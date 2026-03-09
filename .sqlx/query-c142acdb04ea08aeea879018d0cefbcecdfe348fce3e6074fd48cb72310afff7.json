@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE sync_state SET sync_status = 'idle' WHERE sync_status = 'running'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "c142acdb04ea08aeea879018d0cefbcecdfe348fce3e6074fd48cb72310afff7"
+}

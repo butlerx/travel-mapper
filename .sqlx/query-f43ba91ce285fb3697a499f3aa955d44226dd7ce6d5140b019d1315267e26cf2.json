@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE sync_jobs SET status = 'failed', error_message = ?, completed_at = datetime('now') WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "f43ba91ce285fb3697a499f3aa955d44226dd7ce6d5140b019d1315267e26cf2"
+}

@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT token_secret_enc, nonce, user_id FROM oauth_request_tokens WHERE token = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "token_secret_enc",
+        "ordinal": 0,
+        "type_info": "Blob"
+      },
+      {
+        "name": "nonce",
+        "ordinal": 1,
+        "type_info": "Blob"
+      },
+      {
+        "name": "user_id",
+        "ordinal": 2,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "c1cb8a9f1fa31492637422cf1b40d065d460f0cf06cf215adb42752d8fbb6aba"
+}

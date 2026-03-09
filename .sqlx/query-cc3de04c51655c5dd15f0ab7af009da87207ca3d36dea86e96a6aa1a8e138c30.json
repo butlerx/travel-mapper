@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO sync_jobs (user_id, status) VALUES (?, 'pending')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "cc3de04c51655c5dd15f0ab7af009da87207ca3d36dea86e96a6aa1a8e138c30"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO user_tripit_credentials (\n               user_id,\n               access_token_enc,\n               access_token_secret_enc,\n               nonce_token,\n               nonce_secret\n           ) VALUES (?, ?, ?, ?, ?)\n           ON CONFLICT(user_id) DO UPDATE SET\n               access_token_enc = excluded.access_token_enc,\n               access_token_secret_enc = excluded.access_token_secret_enc,\n               nonce_token = excluded.nonce_token,\n               nonce_secret = excluded.nonce_secret,\n               updated_at = datetime('now')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 5
+    },
+    "nullable": []
+  },
+  "hash": "e3b98505bf81de6fb48676198012ae5be6621ce04a52525dd542b24772d2ce49"
+}

@@ -1,0 +1,36 @@
+include = ["**/*.toml", "*.toml"]
+
+[formatting]
+align_comments       = true
+align_entries        = true
+allowed_blank_lines  = 2
+array_auto_collapse  = true        # Collapse into one line if array is under column width
+array_auto_expand    = true        # Expand into multiple lines if array is over column width
+array_trailing_comma = true
+compact_entries      = false
+reorder_arrays       = false
+name                 = "pyproject"
+
+[[rule]]
+include = ["**/uv.lock", "uv.lock"]
+name    = "uv"
+
+[rule.schema]
+enabled = true
+path    = "https://raw.githubusercontent.com/SchemaStore/schemastore/master/src/schemas/json/uv.json"
+
+[[rule]]
+include = ["**/pyproject.toml", "pyproject.toml"]
+name    = "pyproject"
+
+[rule.schema]
+enabled = false
+# TODO re-enable when the upstream schema doesn't have invalid references.
+
+[[rule]]
+include = ["**/.ruff.toml", "**/ruff.toml"]
+name    = "ruff"
+
+[rule.schema]
+enabled = false
+path    = "https://raw.githubusercontent.com/astral-sh/ruff/main/ruff.schema.json"

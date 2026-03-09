@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM oauth_request_tokens WHERE token = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "d9a26004127a21149ea50f8f8d93b1243f8793815c6b2d9b52c13d3ac9d64a6b"
+}

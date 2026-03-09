@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT COUNT(*) FROM sync_jobs WHERE user_id = ? AND status IN ('pending', 'running')",
+  "describe": {
+    "columns": [
+      {
+        "name": "COUNT(*)",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "22320dc7a549d74d29220ea9d0eab415aea7c37073be0c0d17ba424a9ab8d2fd"
+}

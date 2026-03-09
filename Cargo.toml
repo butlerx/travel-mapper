@@ -1,0 +1,66 @@
+[package]
+name        = "travel-mapper"
+version     = "0.1.0"
+edition     = "2024"
+description = "TripIt travel history web server with API and SQLite storage"
+license     = "MIT"
+
+[lib]
+name = "travel_export"
+path = "src/lib.rs"
+
+[[bin]]
+name = "server"
+path = "src/bin/server.rs"
+
+[dependencies]
+aes-gcm = "0.10"
+aide = { version = "0.15", features = [
+  "axum",
+  "axum-json",
+  "axum-query",
+  "axum-form",
+  "axum-extra-cookie",
+  "swagger",
+] }
+
+argon2             = "0.5"
+async-trait        = "0.1"
+axum               = "0.8"
+axum-extra         = { version = "0.10", features = ["cookie"] }
+base64             = "0.22"
+clap               = { version = "4", features = ["derive", "env"] }
+csv                = "1"
+hmac               = "0.12"
+indexmap           = "2"
+leptos             = { version = "0.8" }
+leptos_axum        = { version = "0.8" }
+leptos_meta        = { version = "0.8" }
+leptos_router      = { version = "0.8" }
+percent-encoding   = "2"
+rand               = "0.8"
+reqwest            = { version = "0.12", features = ["json"] }
+schemars           = { version = "0.9", features = ["uuid1"] }
+serde              = { version = "1", features = ["derive"] }
+serde_json         = "1"
+serde_urlencoded   = "0.7"
+sha1               = "0.10"
+sha2               = "0.10"
+sqlx               = { version = "0.8", features = ["runtime-tokio", "sqlite", "macros"] }
+thiserror          = "2"
+tokio              = { version = "1", features = ["full"] }
+tower-http         = { version = "0.6", features = ["cors", "trace"] }
+tracing            = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+url                = "2"
+uuid               = { version = "1", features = ["v4"] }
+
+[dev-dependencies]
+tower = { version = "0.5", features = ["util"] }
+
+[features]
+ssr = ["leptos/ssr", "leptos_meta/ssr", "leptos_router/ssr"]
+
+[profile.release]
+lto   = true
+strip = true

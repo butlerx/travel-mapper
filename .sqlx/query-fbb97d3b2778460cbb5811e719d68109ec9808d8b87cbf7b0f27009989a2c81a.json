@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE sync_jobs SET status = 'pending', started_at = NULL WHERE status = 'running'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "fbb97d3b2778460cbb5811e719d68109ec9808d8b87cbf7b0f27009989a2c81a"
+}

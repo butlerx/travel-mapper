@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO sync_state (user_id) VALUES (?) ON CONFLICT(user_id) DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "782fa1fbaf94b25a9155f58316d4ee6b2f67e703535bad1b420c8379c618b163"
+}

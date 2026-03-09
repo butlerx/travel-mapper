@@ -1,0 +1,44 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT\n               last_sync_at,\n               last_modified_since,\n               sync_status,\n               trips_fetched,\n               hops_fetched\n           FROM sync_state\n           WHERE user_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "last_sync_at",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "last_modified_since",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "sync_status",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "trips_fetched",
+        "ordinal": 3,
+        "type_info": "Integer"
+      },
+      {
+        "name": "hops_fetched",
+        "ordinal": 4,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "a6396ca5d59b97477fbf9628d02b952110b9a40bcc8778131e1919a56ad40187"
+}

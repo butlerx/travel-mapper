@@ -1,0 +1,88 @@
+[tools]
+rust                   = { version = "stable", profile = "default", components = "rust-analyser" }
+prek                   = "latest"
+taplo                  = "latest"
+"cargo:cargo-binstall" = "latest"
+"cargo:cargo-nextest"  = "0.9.129"
+"cargo:cargo-watch"    = "latest"
+"cargo:sqlx-cli"       = { version = "latest", features = "sqlite" }
+
+[env]
+_.file = ".env"
+
+[tasks.build]
+description = "Build the project"
+usage       = 'arg "[args]" var=#true help="Additional arguments passed to cargo build"'
+run         = "cargo build ${usage_args:-}"
+alias       = "b"
+sources     = ["Cargo.lock", "Cargo.toml", "src/**/*.rs"]
+outputs     = ["target/debug/server"]
+
+
+[tasks."build:release"]
+description = "Build release binary"
+usage       = 'arg "[args]" var=#true help="Additional arguments passed to cargo build"'
+run         = "cargo build --release ${usage_args:-}"
+sources     = ["Cargo.lock", "Cargo.toml", "src/**/*.rs"]
+outputs     = ["target/release/server"]
+
+[tasks.serve]
+description = "Start the server with auto-reload on changes"
+run         = "cargo watch -x 'run --bin server'"
+
+[tasks.lint]
+description = "Lint code with clippy"
+usage       = 'arg "[args]" var=#true help="Additional arguments passed to cargo clippy"'
+run         = "cargo clippy --all-targets --all-features ${usage_args:-} -- -D warnings"
+
+[tasks."lint:fix"]
+description = "Fix lint issues"
+usage       = 'arg "[args]" var=#true help="Additional arguments passed to cargo clippy"'
+run         = "cargo clippy --fix --all-targets --all-features --allow-staged ${usage_args:-} -- -D warnings"
+
+[tasks.format]
+description = "Format code"
+usage       = 'arg "[args]" var=#true help="Additional arguments passed to cargo fmt"'
+run         = "cargo fmt ${usage_args:-}"
+alias       = "f"
+
+[tasks."format:check"]
+description = "Check code formatting"
+usage       = 'arg "[args]" var=#true help="Additional arguments passed to cargo fmt"'
+run         = "cargo fmt --check ${usage_args:-}"
+
+[tasks.check]
+description = "Run all checks (lint + format)"
+depends     = ["lint", "format:check"]
+
+[tasks.test]
+description = "Run tests with cargo"
+usage       = 'arg "[args]" var=#true help="Additional arguments passed to cargo test"'
+run         = "cargo nextest run --all-targets --all-features ${usage_args:-}"
+alias       = "t"
+
+[tasks."db:create"]
+description = "Create the SQLite database"
+run         = "sqlx database create"
+
+[tasks."db:migrate"]
+description = "Run database migrations"
+run         = "sqlx migrate run"
+depends     = ["db:create"]
+sources     = ["migrations/*.sql"]
+
+[tasks."db:reset"]
+description = "Drop and recreate the database, then run migrations"
+run         = ["sqlx database drop -y", "sqlx database create", "sqlx migrate run"]
+sources     = ["migrations/*.sql"]
+
+[tasks."db:prepare"]
+description = "Generate .sqlx/ query cache for offline compile-time checking"
+run         = "cargo sqlx prepare"
+depends     = ["db:migrate"]
+sources     = ["src/**/*.rs", "migrations/*.sql"]
+outputs     = [".sqlx/*.json"]
+
+[tasks.clean]
+description = "Clean build artifacts"
+run         = "rm -rf target"
