@@ -1,6 +1,9 @@
 use crate::{
     db,
-    server::{AppState, middleware::AuthUser, session::clear_session_cookie},
+    server::{
+        AppState, middleware::AuthUser, routes::types::StatusResponse,
+        session::clear_session_cookie,
+    },
 };
 use aide::transform::TransformOperation;
 use axum::{
@@ -10,14 +13,7 @@ use axum::{
     response::{IntoResponse, Redirect, Response},
 };
 use axum_extra::extract::CookieJar;
-use schemars::JsonSchema;
-use serde::Serialize;
 use serde_json::json;
-
-#[derive(Debug, Serialize, JsonSchema)]
-pub struct StatusResponse {
-    pub status: String,
-}
 
 /// Log out and invalidate the current session.
 pub async fn logout_handler(

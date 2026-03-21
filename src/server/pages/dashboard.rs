@@ -1,6 +1,8 @@
 use crate::{
     db,
-    server::{AppState, components::DashboardPage, middleware::AuthUser},
+    server::{
+        AppState, components::DashboardPage, middleware::AuthUser, routes::hops::HopResponse,
+    },
 };
 use axum::{
     extract::{Query, State},
@@ -29,7 +31,8 @@ pub async fn dashboard_page(
     .unwrap_or_default();
 
     let hop_count = hops.len();
-    let hops_json = serde_json::to_string(&hops).unwrap_or_default();
+    let responses: Vec<HopResponse> = hops.into_iter().map(HopResponse::from).collect();
+    let hops_json = serde_json::to_string(&responses).unwrap_or_default();
 
     let html = view! {
         <DashboardPage
@@ -45,7 +48,7 @@ pub async fn dashboard_page(
 mod tests {
     use crate::{
         db,
-        models::TravelType,
+        db::hops::TravelType,
         server::{create_router, test_helpers::helpers::*},
     };
     use axum::{

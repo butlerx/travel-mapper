@@ -1,6 +1,5 @@
 use crate::{
     db,
-    models::TravelHop,
     server::{AppState, middleware::AuthUser, routes::types::ErrorResponse},
 };
 use aide::transform::TransformOperation;
@@ -11,8 +10,82 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use schemars::JsonSchema;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
+
+/// API response type for a single travel hop.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct HopResponse {
+    pub travel_type: HopTravelType,
+    pub origin_name: String,
+    pub origin_lat: Option<f64>,
+    pub origin_lng: Option<f64>,
+    pub dest_name: String,
+    pub dest_lat: Option<f64>,
+    pub dest_lng: Option<f64>,
+    pub start_date: String,
+    pub end_date: String,
+}
+
+/// API representation of travel type.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum HopTravelType {
+    Air,
+    Rail,
+    Cruise,
+    Transport,
+}
+
+impl HopTravelType {
+    #[must_use]
+    pub const fn emoji(&self) -> &'static str {
+        match self {
+            Self::Air => "✈️",
+            Self::Rail => "🚆",
+            Self::Cruise => "🚢",
+            Self::Transport => "🚗",
+        }
+    }
+}
+
+impl std::fmt::Display for HopTravelType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Air => write!(f, "air"),
+            Self::Rail => write!(f, "rail"),
+            Self::Cruise => write!(f, "cruise"),
+            Self::Transport => write!(f, "transport"),
+        }
+    }
+}
+
+impl From<db::hops::TravelType> for HopTravelType {
+    fn from(t: db::hops::TravelType) -> Self {
+        match t {
+            db::hops::TravelType::Air => Self::Air,
+            db::hops::TravelType::Rail => Self::Rail,
+            db::hops::TravelType::Cruise => Self::Cruise,
+            db::hops::TravelType::Transport => Self::Transport,
+        }
+    }
+}
+
+impl From<db::hops::Row> for HopResponse {
+    fn from(hop: db::hops::Row) -> Self {
+        Self {
+            travel_type: hop.travel_type.into(),
+            origin_name: hop.origin_name,
+            origin_lat: hop.origin_lat,
+            origin_lng: hop.origin_lng,
+            dest_name: hop.dest_name,
+            dest_lat: hop.dest_lat,
+            dest_lng: hop.dest_lng,
+            start_date: hop.start_date,
+            end_date: hop.end_date,
+        }
+    }
+}
 
 #[derive(Deserialize, JsonSchema)]
 pub struct HopQuery {
@@ -43,16 +116,18 @@ pub async fn hops_handler(
         }
     };
 
+    let responses: Vec<HopResponse> = hops.into_iter().map(HopResponse::from).collect();
+
     match negotiate_format(&headers) {
-        ResponseFormat::Json => (StatusCode::OK, Json(json!(hops))).into_response(),
-        ResponseFormat::Csv => build_csv_response(&hops),
-        ResponseFormat::Html => build_html_response(&hops),
+        ResponseFormat::Json => (StatusCode::OK, Json(json!(responses))).into_response(),
+        ResponseFormat::Csv => build_csv_response(&responses),
+        ResponseFormat::Html => build_html_response(&responses),
     }
 }
 
 pub fn hops_handler_docs(op: TransformOperation) -> TransformOperation {
     op.description("List travel hops for the authenticated user.")
-        .response::<200, Json<Vec<TravelHop>>>()
+        .response::<200, Json<Vec<HopResponse>>>()
         .response::<500, Json<ErrorResponse>>()
         .tag("hops")
 }
@@ -84,7 +159,7 @@ fn negotiate_format(headers: &HeaderMap) -> ResponseFormat {
 }
 
 #[must_use]
-fn build_csv_response(hops: &[TravelHop]) -> Response {
+fn build_csv_response(hops: &[HopResponse]) -> Response {
     let mut writer = csv::Writer::from_writer(Vec::new());
     if let Err(err) = writer.write_record([
         "travel_type",
@@ -158,7 +233,7 @@ fn build_csv_response(hops: &[TravelHop]) -> Response {
 }
 
 #[must_use]
-fn build_html_response(hops: &[TravelHop]) -> Response {
+fn build_html_response(hops: &[HopResponse]) -> Response {
     use leptos::prelude::*;
 
     let rows = hops
@@ -230,9 +305,9 @@ fn opt_f64_to_string(val: Option<f64>) -> String {
 
 #[cfg(test)]
 mod tests {
+    use super::{HopResponse, HopTravelType};
     use crate::{
-        db,
-        models::{TravelHop, TravelType},
+        db::{self, hops::TravelType},
         server::create_router,
         server::test_helpers::helpers::*,
     };
@@ -383,11 +458,11 @@ mod tests {
         let body = to_bytes(response.into_body(), usize::MAX)
             .await
             .expect("failed to read response body");
-        let parsed: Vec<TravelHop> =
+        let parsed: Vec<HopResponse> =
             serde_json::from_slice(&body).expect("body should be valid JSON array");
 
         assert_eq!(parsed.len(), 2);
-        assert_eq!(parsed[0].travel_type, TravelType::Rail);
+        assert_eq!(parsed[0].travel_type, HopTravelType::Rail);
     }
 
     #[tokio::test]
@@ -434,9 +509,9 @@ mod tests {
         let body = to_bytes(response.into_body(), usize::MAX)
             .await
             .expect("failed to read response body");
-        let parsed: Vec<TravelHop> = serde_json::from_slice(&body).expect("valid json");
+        let parsed: Vec<HopResponse> = serde_json::from_slice(&body).expect("valid json");
         assert_eq!(parsed.len(), 1);
-        assert_eq!(parsed[0].travel_type, TravelType::Rail);
+        assert_eq!(parsed[0].travel_type, HopTravelType::Rail);
     }
 
     #[tokio::test]

@@ -1,6 +1,52 @@
-use crate::models::{TravelHop, TravelType};
 use sqlx::SqlitePool;
 
+/// The type of travel for a hop.
+#[derive(Debug, Clone, PartialEq)]
+pub enum TravelType {
+    Air,
+    Rail,
+    Cruise,
+    Transport,
+}
+
+impl std::fmt::Display for TravelType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Air => write!(f, "air"),
+            Self::Rail => write!(f, "rail"),
+            Self::Cruise => write!(f, "cruise"),
+            Self::Transport => write!(f, "transport"),
+        }
+    }
+}
+
+impl TravelType {
+    #[must_use]
+    pub const fn emoji(&self) -> &'static str {
+        match self {
+            Self::Air => "✈️",
+            Self::Rail => "🚆",
+            Self::Cruise => "🚢",
+            Self::Transport => "🚗",
+        }
+    }
+}
+
+/// A single origin -> destination travel hop.
+#[derive(Debug, Clone)]
+pub struct Row {
+    pub travel_type: TravelType,
+    pub origin_name: String,
+    pub origin_lat: Option<f64>,
+    pub origin_lng: Option<f64>,
+    pub dest_name: String,
+    pub dest_lat: Option<f64>,
+    pub dest_lng: Option<f64>,
+    pub start_date: String,
+    pub end_date: String,
+}
+
+/// Internal row type for sqlx `query_as!` macro (`SQLite` stores `travel_type` as text).
 struct HopRow {
     travel_type: String,
     origin_name: String,
@@ -13,7 +59,7 @@ struct HopRow {
     end_date: String,
 }
 
-impl TryFrom<HopRow> for TravelHop {
+impl TryFrom<HopRow> for Row {
     type Error = sqlx::Error;
 
     fn try_from(row: HopRow) -> Result<Self, Self::Error> {
@@ -57,7 +103,7 @@ fn scoped_trip_id(user_id: i64, trip_id: &str) -> String {
 pub struct Create<'a> {
     pub trip_id: &'a str,
     pub user_id: i64,
-    pub hops: &'a [TravelHop],
+    pub hops: &'a [Row],
 }
 
 impl Create<'_> {
@@ -119,7 +165,7 @@ impl GetAll<'_> {
     /// # Errors
     ///
     /// Returns an error if the query fails or a row cannot be mapped.
-    pub async fn execute(&self, pool: &SqlitePool) -> Result<Vec<TravelHop>, sqlx::Error> {
+    pub async fn execute(&self, pool: &SqlitePool) -> Result<Vec<Row>, sqlx::Error> {
         let rows = match self.travel_type_filter {
             Some(filter) => {
                 sqlx::query_as!(
@@ -166,7 +212,7 @@ impl GetAll<'_> {
             }
         };
 
-        rows.into_iter().map(TravelHop::try_from).collect()
+        rows.into_iter().map(Row::try_from).collect()
     }
 }
 
@@ -197,16 +243,15 @@ impl DeleteForTrip<'_> {
 mod tests {
     use super::*;
     use crate::db::tests::{test_pool, test_user};
-    use crate::models::TravelType;
 
     fn sample_hop(
-        travel_type: crate::models::TravelType,
+        travel_type: TravelType,
         origin: &str,
         dest: &str,
         start_date: &str,
         end_date: &str,
-    ) -> crate::models::TravelHop {
-        crate::models::TravelHop {
+    ) -> Row {
+        Row {
             travel_type,
             origin_name: origin.to_string(),
             origin_lat: Some(1.0),

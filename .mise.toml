@@ -1,5 +1,5 @@
 [tools]
-rust                   = { version = "stable", profile = "default", components = "rust-analyser" }
+rust                   = { version = "stable", profile = "default", components = "rust-analyzer" }
 prek                   = "latest"
 taplo                  = "latest"
 "cargo:cargo-binstall" = "latest"
@@ -29,6 +29,10 @@ outputs     = ["target/release/server"]
 [tasks.serve]
 description = "Start the server with auto-reload on changes"
 run         = "cargo watch -x 'run --bin server'"
+
+[tasks.worker]
+description = "Start the background sync worker"
+run         = "cargo run --bin sync-worker"
 
 [tasks.lint]
 description = "Lint code with clippy"

@@ -1,13 +1,9 @@
 [package]
-name        = "travel-mapper"
+name        = "travel_mapper"
 version     = "0.1.0"
 edition     = "2024"
 description = "TripIt travel history web server with API and SQLite storage"
-license     = "MIT"
-
-[lib]
-name = "travel_export"
-path = "src/lib.rs"
+license     = "Apache-2.0"
 
 [[bin]]
 name = "server"

@@ -2,7 +2,7 @@
 pub(crate) mod helpers {
     use crate::{
         db,
-        models::{TravelHop, TravelType},
+        db::hops::{Row as Hop, TravelType},
         server::AppState,
         tripit::{FetchError, TripItApi},
     };
@@ -136,8 +136,8 @@ pub(crate) mod helpers {
         dest: &str,
         start: &str,
         end: &str,
-    ) -> TravelHop {
-        TravelHop {
+    ) -> Hop {
+        Hop {
             travel_type,
             origin_name: origin.to_string(),
             origin_lat: Some(1.0),

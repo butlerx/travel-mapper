@@ -1,7 +1,7 @@
 use crate::{
     db,
     server::{AppState, middleware::AuthUser, routes::types::ErrorResponse},
-    worker::{SyncResult, sync_all},
+    worker::{SyncOutcome, sync_all},
 };
 use aide::transform::TransformOperation;
 use axum::{
@@ -13,6 +13,23 @@ use axum::{
 use schemars::JsonSchema;
 use serde::Serialize;
 use serde_json::json;
+
+#[derive(Debug, Serialize, JsonSchema)]
+pub struct SyncResponse {
+    pub trips_fetched: u64,
+    pub hops_fetched: u64,
+    pub duration_ms: u64,
+}
+
+impl From<SyncOutcome> for SyncResponse {
+    fn from(outcome: SyncOutcome) -> Self {
+        Self {
+            trips_fetched: outcome.trips_fetched,
+            hops_fetched: outcome.hops_fetched,
+            duration_ms: outcome.duration_ms,
+        }
+    }
+}
 
 #[derive(Debug, Serialize, JsonSchema)]
 pub struct SyncQueuedResponse {
@@ -37,7 +54,10 @@ pub async fn sync_handler(
     if let Some(override_api) = &state.tripit_override {
         let result = sync_all(override_api.as_ref(), &state.db, auth.user_id).await;
         return match result {
-            Ok(r) => (StatusCode::OK, Json(json!(r))).into_response(),
+            Ok(r) => {
+                let response = SyncResponse::from(r);
+                (StatusCode::OK, Json(json!(response))).into_response()
+            }
             Err(err) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(json!({ "error": format!("sync failed: {err}") })),
@@ -101,7 +121,7 @@ pub async fn sync_handler(
 
 pub fn sync_handler_docs(op: TransformOperation) -> TransformOperation {
     op.description("Trigger a TripIt sync for the authenticated user.")
-        .response::<200, Json<SyncResult>>()
+        .response::<200, Json<SyncResponse>>()
         .response::<202, Json<SyncQueuedResponse>>()
         .response::<409, Json<ErrorResponse>>()
         .response::<500, Json<ErrorResponse>>()

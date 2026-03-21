@@ -3744,7 +3744,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "travel-mapper"
+name = "travel_mapper"
 version = "0.1.0"
 dependencies = [
  "aes-gcm",

@@ -1,5 +1,5 @@
 use crate::{
-    auth::crypto::{decrypt_token, encrypt_token},
+    auth::{decrypt_token, encrypt_token},
     db,
     server::{AppState, middleware::AuthUser, routes::ErrorResponse},
     tripit::TripItConsumer,

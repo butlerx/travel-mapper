@@ -3,8 +3,6 @@ use crate::{
     db,
     tripit::{self, FetchError, TripItApi, TripItAuth, TripItClient},
 };
-use schemars::JsonSchema;
-use serde::Serialize;
 use serde_json::Value;
 use sqlx::SqlitePool;
 use std::{collections::HashSet, time::Instant};
@@ -12,8 +10,8 @@ use tokio::sync::watch;
 
 const FULL_SYNC_TRIP_ID: &str = "full-sync";
 
-#[derive(Debug, Serialize, JsonSchema)]
-pub struct SyncResult {
+#[derive(Debug)]
+pub struct SyncOutcome {
     pub trips_fetched: u64,
     pub hops_fetched: u64,
     pub duration_ms: u64,
@@ -41,7 +39,7 @@ pub async fn sync_all(
     api: &dyn TripItApi,
     pool: &SqlitePool,
     user_id: i64,
-) -> Result<SyncResult, SyncError> {
+) -> Result<SyncOutcome, SyncError> {
     let started_at = Instant::now();
     let mut state = db::sync_state::GetOrCreate { user_id }
         .execute(pool)
@@ -95,7 +93,7 @@ pub async fn sync_all(
         .execute(pool)
         .await?;
 
-        Ok(SyncResult {
+        Ok(SyncOutcome {
             trips_fetched,
             hops_fetched,
             duration_ms: u64::try_from(started_at.elapsed().as_millis()).unwrap_or(u64::MAX),
@@ -228,7 +226,7 @@ enum WorkerError {
 async fn build_client_and_sync(
     config: &SyncWorkerConfig,
     job: &db::sync_jobs::Row,
-) -> Result<SyncResult, WorkerError> {
+) -> Result<SyncOutcome, WorkerError> {
     let creds = db::credentials::Get {
         user_id: job.user_id,
     }

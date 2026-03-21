@@ -1,11 +1,6 @@
 use clap::Parser;
 use leptos::prelude::LeptosOptions;
 use std::time::Duration;
-use tracing_subscriber::prelude::*;
-use travel_export::{
-    db,
-    server::{self, AppState},
-};
 
 #[derive(Parser)]
 #[command(about = "Run the travel-export Axum server")]
@@ -38,26 +33,6 @@ enum ServerError {
     Bind(#[from] std::io::Error),
 }
 
-fn init_tracing() {
-    #[cfg(debug_assertions)]
-    let log_layer = tracing_subscriber::fmt::layer()
-        .pretty()
-        .with_span_events(tracing_subscriber::fmt::format::FmtSpan::CLOSE);
-
-    #[cfg(not(debug_assertions))]
-    let log_layer = tracing_subscriber::fmt::layer()
-        .json()
-        .set_span_events(tracing_subscriber::fmt::format::FmtSpan::CLOSE);
-
-    tracing_subscriber::registry()
-        .with(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info,tower_http=debug")),
-        )
-        .with(log_layer)
-        .init()
-}
-
 fn parse_encryption_key(hex: &str) -> Result<[u8; 32], ServerError> {
     if hex.len() != 64 {
         return Err(ServerError::InvalidEncryptionKey);
@@ -75,9 +50,9 @@ async fn run() -> Result<(), ServerError> {
     let cli = Cli::parse();
 
     let encryption_key = parse_encryption_key(&cli.encryption_key)?;
-    let pool = db::create_pool(&cli.database_url).await?;
+    let pool = travel_mapper::db::create_pool(&cli.database_url).await?;
 
-    let state = AppState {
+    let state = travel_mapper::server::AppState {
         leptos_options: LeptosOptions::builder()
             .output_name("travel-mapper")
             .build(),
@@ -87,7 +62,7 @@ async fn run() -> Result<(), ServerError> {
         tripit_consumer_secret: cli.consumer_secret,
         tripit_override: None,
     };
-    let app = server::create_router(state);
+    let app = travel_mapper::server::create_router(state);
 
     let address = format!("0.0.0.0:{}", cli.port);
     let listener = tokio::net::TcpListener::bind(&address).await?;
@@ -111,7 +86,7 @@ async fn shutdown_signal() {
 
 #[tokio::main]
 async fn main() {
-    init_tracing();
+    travel_mapper::telemetry::init();
 
     if let Err(error) = run().await {
         eprintln!("Error: {error}");

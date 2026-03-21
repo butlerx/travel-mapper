@@ -1,5 +1,5 @@
 use crate::{
-    auth::crypto::{CryptoError, encrypt_token},
+    auth::{CryptoError, encrypt_token},
     db,
     server::{AppState, middleware::AuthUser, routes::ErrorResponse},
 };

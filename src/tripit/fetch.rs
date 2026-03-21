@@ -1,11 +1,20 @@
 //! `TripIt` API client and travel-object parsers.
 
 use super::auth::{AuthError, TripItAuth};
-use crate::models::{TravelHop, TravelType, coerce_float};
+use crate::db::hops::{Row as Hop, TravelType};
 use serde_json::Value;
 use thiserror::Error;
 
 const TRIPIT_API_BASE: &str = "https://api.tripit.com/v1";
+
+/// Attempt to parse a JSON value as f64, returning None on failure.
+fn coerce_float(val: &Value) -> Option<f64> {
+    match val {
+        Value::Number(n) => n.as_f64(),
+        Value::String(s) if !s.is_empty() => s.parse().ok(),
+        _ => None,
+    }
+}
 
 #[async_trait::async_trait]
 pub trait TripItApi: Send + Sync {
@@ -155,10 +164,10 @@ fn get_date(val: &Value, datetime_key: &str) -> String {
         .to_string()
 }
 
-fn parse_air(obj: &Value) -> Vec<TravelHop> {
+fn parse_air(obj: &Value) -> Vec<Hop> {
     ensure_list(&obj["Segment"])
         .into_iter()
-        .map(|seg| TravelHop {
+        .map(|seg| Hop {
             travel_type: TravelType::Air,
             origin_name: get_str(seg, "start_airport_code"),
             origin_lat: coerce_float(&seg["start_airport_latitude"]),
@@ -172,7 +181,7 @@ fn parse_air(obj: &Value) -> Vec<TravelHop> {
         .collect()
 }
 
-fn parse_rail(obj: &Value) -> Vec<TravelHop> {
+fn parse_rail(obj: &Value) -> Vec<Hop> {
     ensure_list(&obj["Segment"])
         .into_iter()
         .map(|seg| {
@@ -198,7 +207,7 @@ fn parse_rail(obj: &Value) -> Vec<TravelHop> {
                 }
             };
 
-            TravelHop {
+            Hop {
                 travel_type: TravelType::Rail,
                 origin_name,
                 origin_lat: slat,
@@ -213,7 +222,7 @@ fn parse_rail(obj: &Value) -> Vec<TravelHop> {
         .collect()
 }
 
-fn parse_cruise(obj: &Value) -> Vec<TravelHop> {
+fn parse_cruise(obj: &Value) -> Vec<Hop> {
     let start_addr = &obj["StartLocationAddress"];
     let end_addr = &obj["EndLocationAddress"];
     let (slat, slng) = extract_coords(start_addr);
@@ -236,7 +245,7 @@ fn parse_cruise(obj: &Value) -> Vec<TravelHop> {
         }
     };
 
-    vec![TravelHop {
+    vec![Hop {
         travel_type: TravelType::Cruise,
         origin_name,
         origin_lat: slat,
@@ -249,7 +258,7 @@ fn parse_cruise(obj: &Value) -> Vec<TravelHop> {
     }]
 }
 
-fn parse_transport(obj: &Value) -> Vec<TravelHop> {
+fn parse_transport(obj: &Value) -> Vec<Hop> {
     let nested = &obj["Segment"];
     let items = if nested.is_null() {
         vec![obj]
@@ -282,7 +291,7 @@ fn parse_transport(obj: &Value) -> Vec<TravelHop> {
                 }
             };
 
-            TravelHop {
+            Hop {
                 travel_type: TravelType::Transport,
                 origin_name,
                 origin_lat: slat,
@@ -297,10 +306,7 @@ fn parse_transport(obj: &Value) -> Vec<TravelHop> {
         .collect()
 }
 
-async fn fetch_trip_objects(
-    api: &dyn TripItApi,
-    trip_id: &str,
-) -> Result<Vec<TravelHop>, FetchError> {
+async fn fetch_trip_objects(api: &dyn TripItApi, trip_id: &str) -> Result<Vec<Hop>, FetchError> {
     let data = api.get_trip_objects(trip_id).await?;
 
     let mut hops = Vec::new();
@@ -358,7 +364,7 @@ async fn fetch_paginated(api: &dyn TripItApi, past: bool) -> Result<Vec<Value>, 
 /// # Errors
 ///
 /// Returns `FetchError` if any API request or JSON parse fails.
-pub async fn fetch_all_hops(api: &dyn TripItApi) -> Result<Vec<TravelHop>, FetchError> {
+pub async fn fetch_all_hops(api: &dyn TripItApi) -> Result<Vec<Hop>, FetchError> {
     let mut all_trips = Vec::new();
 
     tracing::info!("Fetching past trips...");
@@ -723,6 +729,31 @@ mod tests {
     fn parse_transport_handles_empty_segment_array() {
         let obj = json!({"Segment": []});
         assert!(parse_transport(&obj).is_empty());
+    }
+
+    #[test]
+    fn coerce_float_handles_number_value() {
+        assert_eq!(coerce_float(&json!(12.34)), Some(12.34));
+    }
+
+    #[test]
+    fn coerce_float_handles_string_number() {
+        assert_eq!(coerce_float(&json!("56.78")), Some(56.78));
+    }
+
+    #[test]
+    fn coerce_float_handles_empty_string() {
+        assert_eq!(coerce_float(&json!("")), None);
+    }
+
+    #[test]
+    fn coerce_float_handles_null() {
+        assert_eq!(coerce_float(&json!(null)), None);
+    }
+
+    #[test]
+    fn coerce_float_handles_non_numeric_string() {
+        assert_eq!(coerce_float(&json!("not-a-number")), None);
     }
 
     #[tokio::test]

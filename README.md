@@ -1,20 +1,21 @@
-# TripIt Travel Server
+# Travel Mapper
 
-Multi-user web server that syncs TripIt travel history to a local SQLite database
-and serves it via JSON, CSV, and HTML APIs.
+Sync your TripIt travel history to a local database and explore it through a web
+dashboard, API, or CSV export for tools like Kepler.gl.
 
 ## Features
 
-- Multi-user support with registration and login
-- Dual auth: session cookies (browser) + API keys (programmatic)
-- Per-user TripIt OAuth credentials, encrypted at rest with AES-256-GCM
-- Content negotiation via `Accept` header: JSON, CSV, HTML
-- HTML responses rendered with Maud templates
-- Per-user sync and hop isolation
-- Compile-time checked SQL queries via `sqlx::query!` macros
-- SQLite with WAL mode
-- Retry with exponential backoff for TripIt API calls
-- Graceful shutdown on Ctrl+C
+- **One-click TripIt sync** — connect your TripIt account and import all your
+  trips
+- **Web dashboard** — view your travel history, sync status, and travel map in
+  the browser
+- **Multiple export formats** — get your hops as JSON, CSV, or an HTML table
+- **Multi-user** — each user connects their own TripIt account with isolated
+  data
+- **API keys** — generate keys for programmatic or scripted access
+- **Background sync** — sync jobs run in the background so you're never waiting
+- **Self-hosted** — runs on SQLite, no external database needed
+- **Interactive API docs** — Swagger UI at `/docs` for exploring the API
 
 ## Requirements
 
@@ -49,9 +50,7 @@ Fill in your credentials in `.env`:
 ```bash
 TRIPIT_CONSUMER_KEY=your_consumer_key
 TRIPIT_CONSUMER_SECRET=your_consumer_secret
-ENCRYPTION_KEY=your_64_char_hex_key
 DATABASE_URL=sqlite:travel.db
-PORT=3000
 ```
 
 Generate an encryption key:
@@ -60,21 +59,29 @@ Generate an encryption key:
 openssl rand -hex 32
 ```
 
+Add it to `.env`:
+
+```bash
+ENCRYPTION_KEY=your_64_char_hex_key
+```
+
 ### 4. Start the server
 
 ```bash
 mise run serve
 ```
 
-Or run directly:
-
-```bash
-cargo run --bin server
-```
-
 The server starts on `http://localhost:3000` by default.
 
-### 5. Register and configure
+### 5. Start the sync worker
+
+The sync worker runs as a separate process that polls for pending sync jobs:
+
+```bash
+mise run worker
+```
+
+### 6. Register and configure
 
 Register a user:
 
@@ -100,7 +107,13 @@ curl -b cookies.txt -X POST http://localhost:3000/auth/api-keys \
   -d '{"label":"cli"}'
 ```
 
-Store your TripIt OAuth tokens (obtained from TripIt's OAuth flow):
+Connect your TripIt account via the OAuth flow:
+
+1. Visit `http://localhost:3000/auth/tripit/connect` while logged in
+2. Authorize the app on TripIt
+3. You'll be redirected back and credentials are stored automatically
+
+Or store TripIt OAuth tokens manually:
 
 ```bash
 curl -b cookies.txt -X PUT http://localhost:3000/auth/tripit \
@@ -116,6 +129,8 @@ curl -b cookies.txt -X POST http://localhost:3000/sync
 
 ## API Endpoints
 
+Full API documentation is available at `/docs` (Swagger UI) and `/openapi.json`.
+
 ### Public
 
 #### Health Check
@@ -127,7 +142,7 @@ GET /health
 Returns server status and last sync timestamp.
 
 ```json
-{"status": "ok", "last_sync": "2025-03-15 12:00:00"}
+{ "status": "ok", "last_sync": "2025-03-15 12:00:00" }
 ```
 
 ### Auth (public)
@@ -139,7 +154,7 @@ POST /auth/register
 ```
 
 ```json
-{"username": "alice", "password": "secret"}
+{ "username": "alice", "password": "secret" }
 ```
 
 Returns `201 Created` with `{"id": 1, "username": "alice"}`.
@@ -151,7 +166,7 @@ POST /auth/login
 ```
 
 ```json
-{"username": "alice", "password": "secret"}
+{ "username": "alice", "password": "secret" }
 ```
 
 Returns a `session_id` cookie and `{"id": 1, "username": "alice"}`.
@@ -159,6 +174,7 @@ Returns a `session_id` cookie and `{"id": 1, "username": "alice"}`.
 ### Authenticated
 
 All authenticated endpoints accept either:
+
 - **Session cookie**: `Cookie: session_id=<token>` (from login)
 - **API key**: `Authorization: Bearer <api-key>` (from `/auth/api-keys`)
 
@@ -177,10 +193,11 @@ POST /auth/api-keys
 ```
 
 ```json
-{"label": "my-key"}
+{ "label": "my-key" }
 ```
 
-Returns `{"id": 1, "key": "...", "label": "my-key"}`. The `key` value is only shown once.
+Returns `{"id": 1, "key": "...", "label": "my-key"}`. The `key` value is only
+shown once.
 
 #### Store TripIt Credentials
 
@@ -189,10 +206,27 @@ PUT /auth/tripit
 ```
 
 ```json
-{"access_token": "...", "access_token_secret": "..."}
+{ "access_token": "...", "access_token_secret": "..." }
 ```
 
 Stores your TripIt OAuth tokens encrypted at rest. Required before syncing.
+
+#### TripIt OAuth Connect
+
+```
+GET /auth/tripit/connect
+```
+
+Starts the OAuth flow by redirecting to TripIt for authorization.
+
+#### TripIt OAuth Callback
+
+```
+GET /auth/tripit/callback?oauth_token=...
+```
+
+Handles the redirect from TripIt, exchanges the request token for an access
+token, and stores the credentials.
 
 #### Sync Trips
 
@@ -200,10 +234,11 @@ Stores your TripIt OAuth tokens encrypted at rest. Required before syncing.
 POST /sync
 ```
 
-Triggers a full sync from TripIt using your stored credentials.
+Enqueues a sync job. If a sync worker is running, it will process the job in the
+background. For browser requests, redirects back to the dashboard on completion.
 
 ```json
-{"trips_fetched": 42, "hops_fetched": 287, "duration_ms": 15230}
+{ "trips_fetched": 42, "hops_fetched": 287, "duration_ms": 15230 }
 ```
 
 #### Get Hops
@@ -213,15 +248,29 @@ GET /hops
 GET /hops?type=air
 ```
 
-Returns your travel hops. Optionally filter by type (`air`, `rail`, `cruise`, `transport`).
+Returns your travel hops. Optionally filter by type (`air`, `rail`, `cruise`,
+`transport`).
 
 Response format is determined by the `Accept` header:
 
-| Accept Header | Response Format |
-|---|---|
-| `application/json` (default) | JSON array |
-| `text/csv` | CSV download |
-| `text/html` | HTML table |
+| Accept Header                | Response Format |
+| ---------------------------- | --------------- |
+| `application/json` (default) | JSON array      |
+| `text/csv`                   | CSV download    |
+| `text/html`                  | HTML table      |
+
+### Pages
+
+The server also serves rendered HTML pages:
+
+| Path         | Description                                    |
+| ------------ | ---------------------------------------------- |
+| `/`          | Landing page                                   |
+| `/register`  | Registration form                              |
+| `/login`     | Login form                                     |
+| `/dashboard` | User dashboard with sync status and travel map |
+| `/settings`  | Account settings                               |
+| `/docs`      | Swagger UI for API documentation               |
 
 ## Visualising in Kepler.gl
 
@@ -239,56 +288,12 @@ Response format is determined by the `Accept` header:
 
 ## Environment Variables
 
-| Variable | Required | Default | Description |
-|---|---|---|---|
-| `TRIPIT_CONSUMER_KEY` | Yes | -- | Shared TripIt API consumer key |
-| `TRIPIT_CONSUMER_SECRET` | Yes | -- | Shared TripIt API consumer secret |
-| `ENCRYPTION_KEY` | Yes | -- | 32-byte hex key (64 hex chars) for AES-256-GCM |
-| `DATABASE_URL` | No | `sqlite:travel.db` | SQLite database URL |
-| `PORT` | No | `3000` | Server port |
-| `RUST_LOG` | No | -- | Log level (e.g. `info`, `debug`) |
-
-## Project Structure
-
-```
-travel-export/
-├── .env                     # Your credentials (never commit)
-├── .env.example             # Credentials template
-├── .mise.toml               # Tool versions and tasks
-├── Cargo.toml               # Project metadata and dependencies
-├── migrations/
-│   ├── 001_initial.sql      # Base schema (segments, sync_state)
-│   ├── 002_multi_user.sql   # Multi-user schema (users, sessions, api_keys, credentials)
-│   ├── 003_oauth_request_tokens.sql  # OAuth request token storage
-│   ├── 004_sync_jobs.sql    # Background sync job queue
-│   └── 005_rename_segments_to_hops.sql  # Rename segments → hops
-└── src/
-    ├── lib.rs               # Library root (clippy::pedantic enabled)
-    ├── models.rs            # Travel hop types
-    ├── db.rs                # SQLite access layer (compile-time checked queries)
-    ├── auth.rs              # Auth module root
-    ├── auth/
-    │   ├── crypto.rs        # AES-256-GCM encrypt/decrypt
-    │   ├── handlers.rs      # Register, login, logout, API keys, TripIt credentials
-    │   ├── middleware.rs     # AuthUser extractor (session cookie + API key)
-    │   └── password.rs      # Argon2 password hashing
-    ├── routes.rs            # Routes module root
-    ├── routes/
-    │   ├── handlers.rs      # Health, hops, sync handlers
-    │   ├── pages.rs         # Dashboard and landing page templates
-    │   └── response.rs      # Content negotiation (JSON/CSV/HTML)
-    ├── server.rs            # Server module root
-    ├── server/
-    │   ├── state.rs         # AppState, router setup
-    │   └── sync.rs          # Per-user TripIt sync orchestration
-    ├── tripit.rs            # TripIt module root
-    ├── tripit/
-    │   ├── auth.rs          # OAuth 1.0 HMAC-SHA1 signing
-    │   └── fetch.rs         # TripIt API client + response parsers
-    └── bin/
-        └── server.rs        # Server binary entry point
-```
-
-## License
-
-MIT
+| Variable                  | Required | Default            | Description                                    |
+| ------------------------- | -------- | ------------------ | ---------------------------------------------- |
+| `TRIPIT_CONSUMER_KEY`     | Yes      | --                 | Shared TripIt API consumer key                 |
+| `TRIPIT_CONSUMER_SECRET`  | Yes      | --                 | Shared TripIt API consumer secret              |
+| `ENCRYPTION_KEY`          | Yes      | --                 | 32-byte hex key (64 hex chars) for AES-256-GCM |
+| `DATABASE_URL`            | No       | `sqlite:travel.db` | SQLite database URL                            |
+| `PORT`                    | No       | `3000`             | Server port                                    |
+| `SYNC_POLL_INTERVAL_SECS` | No       | `5`                | Sync worker poll interval in seconds           |
+| `RUST_LOG`                | No       | --                 | Log level (e.g. `info`, `debug`)               |

@@ -5,3 +5,8 @@ use serde::Serialize;
 pub struct ErrorResponse {
     pub error: String,
 }
+
+#[derive(Debug, Serialize, JsonSchema)]
+pub struct StatusResponse {
+    pub status: String,
+}
