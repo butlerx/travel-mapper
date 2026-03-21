@@ -1,19 +1,18 @@
+use super::{
+    ErrorResponse, MultiFormatResponse, ResponseFormat, StatusResponse, multi_format_docs,
+    negotiate_format,
+};
 use crate::{
     db,
-    server::{
-        AppState, middleware::AuthUser, routes::types::StatusResponse,
-        session::clear_session_cookie,
-    },
+    server::{AppState, middleware::AuthUser, session::clear_session_cookie},
 };
 use aide::transform::TransformOperation;
 use axum::{
-    Json,
     extract::State,
-    http::{HeaderMap, StatusCode, header},
+    http::{HeaderMap, StatusCode},
     response::{IntoResponse, Redirect, Response},
 };
 use axum_extra::extract::CookieJar;
-use serde_json::json;
 
 /// Log out and invalidate the current session.
 pub async fn logout_handler(
@@ -31,24 +30,26 @@ pub async fn logout_handler(
     }
     let _ = auth;
 
-    let wants_html = headers
-        .get(header::ACCEPT)
-        .and_then(|v| v.to_str().ok())
-        .is_some_and(|v| v.contains("text/html"));
-
+    let format = negotiate_format(&headers);
     let updated_jar = jar.remove(clear_session_cookie());
     (
         updated_jar,
-        if wants_html {
+        if format == ResponseFormat::Html {
             Redirect::to("/login").into_response()
         } else {
-            (StatusCode::OK, Json(json!({ "status": "ok" }))).into_response()
+            let response = StatusResponse {
+                status: "ok".to_string(),
+            };
+            StatusResponse::single_format_response(&response, format, StatusCode::OK)
         },
     )
 }
 
 pub fn logout_handler_docs(op: TransformOperation) -> TransformOperation {
-    op.description("Log out and invalidate the current session.")
-        .response::<200, Json<StatusResponse>>()
-        .tag("auth")
+    multi_format_docs!(
+        op.description("Log out and invalidate the current session."),
+        200 => StatusResponse,
+        401 => ErrorResponse,
+    )
+    .tag("auth")
 }

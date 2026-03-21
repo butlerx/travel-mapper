@@ -1,43 +1,71 @@
+use super::ErrorResponse;
+use super::types::{
+    MultiFormatResponse, add_multi_format_docs, multi_format_docs, negotiate_format,
+    opt_f64_to_string,
+};
 use crate::{
     db,
-    server::{AppState, middleware::AuthUser, routes::types::ErrorResponse},
+    server::{AppState, middleware::AuthUser},
 };
 use aide::transform::TransformOperation;
 use axum::{
     Json,
     extract::{Query, State},
-    http::{HeaderMap, StatusCode, header},
-    response::{IntoResponse, Response},
+    http::{HeaderMap, StatusCode},
+    response::Response,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 
 /// API response type for a single travel hop.
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
 pub struct HopResponse {
+    /// Mode of transport for this hop.
     pub travel_type: HopTravelType,
+    /// Name of the origin location (airport code, city, or station).
     pub origin_name: String,
+    /// Latitude of the origin location.
     pub origin_lat: Option<f64>,
+    /// Longitude of the origin location.
     pub origin_lng: Option<f64>,
+    /// Name of the destination location (airport code, city, or station).
     pub dest_name: String,
+    /// Latitude of the destination location.
     pub dest_lat: Option<f64>,
+    /// Longitude of the destination location.
     pub dest_lng: Option<f64>,
+    /// Departure date in `YYYY-MM-DD` format.
     pub start_date: String,
+    /// Arrival date in `YYYY-MM-DD` format.
     pub end_date: String,
 }
 
-/// API representation of travel type.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
+/// Mode of transport for a travel hop.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum HopTravelType {
+    /// Flight segment.
+    #[default]
     Air,
+    /// Train or rail segment.
     Rail,
+    /// Cruise or ferry segment.
     Cruise,
+    /// Ground transport (car, bus, taxi, etc.).
     Transport,
 }
 
 impl HopTravelType {
+    #[must_use]
+    pub const fn as_str(&self) -> &'static str {
+        match self {
+            Self::Air => "air",
+            Self::Rail => "rail",
+            Self::Cruise => "cruise",
+            Self::Transport => "transport",
+        }
+    }
+
     #[must_use]
     pub const fn emoji(&self) -> &'static str {
         match self {
@@ -87,81 +115,10 @@ impl From<db::hops::Row> for HopResponse {
     }
 }
 
-#[derive(Deserialize, JsonSchema)]
-pub struct HopQuery {
-    #[serde(rename = "type")]
-    travel_type: Option<String>,
-}
+impl MultiFormatResponse for HopResponse {
+    const HTML_TITLE: &'static str = "Travel Hops";
 
-pub async fn hops_handler(
-    State(state): State<AppState>,
-    auth: AuthUser,
-    Query(query): Query<HopQuery>,
-    headers: HeaderMap,
-) -> Response {
-    let hops = match (db::hops::GetAll {
-        user_id: auth.user_id,
-        travel_type_filter: query.travel_type.as_deref(),
-    })
-    .execute(&state.db)
-    .await
-    {
-        Ok(hops) => hops,
-        Err(err) => {
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": format!("failed to fetch hops: {err}") })),
-            )
-                .into_response();
-        }
-    };
-
-    let responses: Vec<HopResponse> = hops.into_iter().map(HopResponse::from).collect();
-
-    match negotiate_format(&headers) {
-        ResponseFormat::Json => (StatusCode::OK, Json(json!(responses))).into_response(),
-        ResponseFormat::Csv => build_csv_response(&responses),
-        ResponseFormat::Html => build_html_response(&responses),
-    }
-}
-
-pub fn hops_handler_docs(op: TransformOperation) -> TransformOperation {
-    op.description("List travel hops for the authenticated user.")
-        .response::<200, Json<Vec<HopResponse>>>()
-        .response::<500, Json<ErrorResponse>>()
-        .tag("hops")
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum ResponseFormat {
-    Json,
-    Csv,
-    Html,
-}
-
-fn negotiate_format(headers: &HeaderMap) -> ResponseFormat {
-    let accept = headers
-        .get(header::ACCEPT)
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("");
-
-    for part in accept.split(',') {
-        let media = part.split(';').next().unwrap_or("").trim();
-        match media {
-            "text/html" => return ResponseFormat::Html,
-            "text/csv" => return ResponseFormat::Csv,
-            "application/json" => return ResponseFormat::Json,
-            _ => {}
-        }
-    }
-
-    ResponseFormat::Json
-}
-
-#[must_use]
-fn build_csv_response(hops: &[HopResponse]) -> Response {
-    let mut writer = csv::Writer::from_writer(Vec::new());
-    if let Err(err) = writer.write_record([
+    const CSV_HEADERS: &'static [&'static str] = &[
         "travel_type",
         "origin_name",
         "origin_lat",
@@ -171,136 +128,81 @@ fn build_csv_response(hops: &[HopResponse]) -> Response {
         "dest_lng",
         "start_date",
         "end_date",
-    ]) {
-        return (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("failed to write CSV header: {err}"),
-        )
-            .into_response();
+    ];
+
+    fn csv_row(&self) -> Vec<String> {
+        vec![
+            self.travel_type.to_string(),
+            self.origin_name.clone(),
+            opt_f64_to_string(self.origin_lat),
+            opt_f64_to_string(self.origin_lng),
+            self.dest_name.clone(),
+            opt_f64_to_string(self.dest_lat),
+            opt_f64_to_string(self.dest_lng),
+            self.start_date.clone(),
+            self.end_date.clone(),
+        ]
     }
 
-    for hop in hops {
-        if let Err(err) = writer.write_record([
-            hop.travel_type.to_string(),
-            hop.origin_name.clone(),
-            opt_f64_to_string(hop.origin_lat),
-            opt_f64_to_string(hop.origin_lng),
-            hop.dest_name.clone(),
-            opt_f64_to_string(hop.dest_lat),
-            opt_f64_to_string(hop.dest_lng),
-            hop.start_date.clone(),
-            hop.end_date.clone(),
-        ]) {
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("failed to write CSV record: {err}"),
-            )
-                .into_response();
-        }
+    fn html_cells(&self) -> Vec<String> {
+        vec![
+            format!("{} {}", self.travel_type.emoji(), self.travel_type),
+            self.origin_name.clone(),
+            opt_f64_to_string(self.origin_lat),
+            opt_f64_to_string(self.origin_lng),
+            self.dest_name.clone(),
+            opt_f64_to_string(self.dest_lat),
+            opt_f64_to_string(self.dest_lng),
+            self.start_date.clone(),
+            self.end_date.clone(),
+        ]
     }
+}
 
-    if let Err(err) = writer.flush() {
-        return (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("failed to flush CSV writer: {err}"),
-        )
-            .into_response();
-    }
+#[derive(Deserialize, JsonSchema)]
+pub struct HopQuery {
+    #[serde(rename = "type")]
+    travel_type: Option<HopTravelType>,
+}
 
-    let body = match writer.into_inner() {
-        Ok(bytes) => bytes,
+pub async fn hops_handler(
+    State(state): State<AppState>,
+    auth: AuthUser,
+    Query(query): Query<HopQuery>,
+    headers: HeaderMap,
+) -> Response {
+    let format = negotiate_format(&headers);
+    let hops = match (db::hops::GetAll {
+        user_id: auth.user_id,
+        travel_type_filter: query.travel_type.as_ref().map(HopTravelType::as_str),
+    })
+    .execute(&state.db)
+    .await
+    {
+        Ok(hops) => hops,
         Err(err) => {
-            return (
+            return ErrorResponse::into_format_response(
+                format!("failed to fetch hops: {err}"),
+                format,
                 StatusCode::INTERNAL_SERVER_ERROR,
-                format!("failed to build CSV response body: {}", err.into_error()),
-            )
-                .into_response();
+            );
         }
     };
 
-    (
-        StatusCode::OK,
-        [
-            (header::CONTENT_TYPE, "text/csv; charset=utf-8"),
-            (
-                header::CONTENT_DISPOSITION,
-                "attachment; filename=\"hops.csv\"",
-            ),
-        ],
-        body,
+    let responses: Vec<HopResponse> = hops.into_iter().map(HopResponse::from).collect();
+    HopResponse::into_format_response(&responses, format, StatusCode::OK)
+}
+
+pub fn hops_handler_docs(op: TransformOperation) -> TransformOperation {
+    multi_format_docs!(
+        op.description("List travel hops for the authenticated user.")
+            .response_with::<200, Json<Vec<HopResponse>>, _>(|mut res| {
+                add_multi_format_docs::<HopResponse>(res.inner());
+                res
+            }),
+        401 | 500 => ErrorResponse,
     )
-        .into_response()
-}
-
-#[must_use]
-fn build_html_response(hops: &[HopResponse]) -> Response {
-    use leptos::prelude::*;
-
-    let rows = hops
-        .iter()
-        .map(|hop| {
-            let travel_type = format!("{} {}", hop.travel_type.emoji(), hop.travel_type);
-            let origin = hop.origin_name.clone();
-            let origin_lat = opt_f64_to_string(hop.origin_lat);
-            let origin_lng = opt_f64_to_string(hop.origin_lng);
-            let dest = hop.dest_name.clone();
-            let dest_lat = opt_f64_to_string(hop.dest_lat);
-            let dest_lng = opt_f64_to_string(hop.dest_lng);
-            let start = hop.start_date.clone();
-            let end = hop.end_date.clone();
-            view! {
-                <tr>
-                    <td>{travel_type}</td>
-                    <td>{origin}</td>
-                    <td>{origin_lat}</td>
-                    <td>{origin_lng}</td>
-                    <td>{dest}</td>
-                    <td>{dest_lat}</td>
-                    <td>{dest_lng}</td>
-                    <td>{start}</td>
-                    <td>{end}</td>
-                </tr>
-            }
-        })
-        .collect::<Vec<_>>();
-
-    let html = view! {
-        <!DOCTYPE html>
-        <html lang="en">
-            <head>
-                <meta charset="utf-8" />
-                <title>"Travel Hops"</title>
-                <link rel="stylesheet" href="/static/style.css" />
-            </head>
-            <body>
-                <h1>"Travel Hops"</h1>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>"Type"</th>
-                            <th>"Origin"</th>
-                            <th>"Origin Lat"</th>
-                            <th>"Origin Lng"</th>
-                            <th>"Destination"</th>
-                            <th>"Dest Lat"</th>
-                            <th>"Dest Lng"</th>
-                            <th>"Start Date"</th>
-                            <th>"End Date"</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {rows}
-                    </tbody>
-                </table>
-            </body>
-        </html>
-    };
-
-    axum::response::Html(html.to_html()).into_response()
-}
-
-fn opt_f64_to_string(val: Option<f64>) -> String {
-    val.map_or_else(String::new, |v| v.to_string())
+    .tag("hops")
 }
 
 #[cfg(test)]
@@ -635,9 +537,9 @@ mod tests {
         let body = body_text(response).await;
         assert!(body.contains("<table>"));
         assert!(body.contains("Travel Hops"));
-        assert!(body.contains("Type"));
-        assert!(body.contains("Origin"));
-        assert!(body.contains("Destination"));
+        assert!(body.contains("travel_type"));
+        assert!(body.contains("origin_name"));
+        assert!(body.contains("dest_name"));
         assert!(body.contains("Paris"));
         assert!(body.contains("London"));
     }

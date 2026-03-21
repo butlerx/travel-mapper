@@ -2,13 +2,14 @@ use crate::{
     db,
     server::{AppState, pages::unauthorized_page},
 };
-use aide::OperationInput;
+use aide::{OperationInput, generate::GenContext, openapi::Operation};
 use axum::{
     extract::FromRequestParts,
     http::{StatusCode, header, request::Parts},
     response::{IntoResponse, Response},
 };
 use axum_extra::extract::CookieJar;
+use indexmap::IndexMap;
 use serde_json::json;
 use sha2::{Digest, Sha256};
 
@@ -17,7 +18,23 @@ pub struct AuthUser {
     pub user_id: i64,
 }
 
-impl OperationInput for AuthUser {}
+impl OperationInput for AuthUser {
+    fn operation_input(_ctx: &mut GenContext, operation: &mut Operation) {
+        let has_bearer = operation.security.iter().any(|s| s.contains_key("bearer"));
+        let has_cookie = operation.security.iter().any(|s| s.contains_key("cookie"));
+
+        if !has_bearer {
+            operation
+                .security
+                .push(IndexMap::from([("bearer".to_string(), Vec::new())]));
+        }
+        if !has_cookie {
+            operation
+                .security
+                .push(IndexMap::from([("cookie".to_string(), Vec::new())]));
+        }
+    }
+}
 
 fn sha256_hex(value: &str) -> String {
     let digest = Sha256::digest(value.as_bytes());

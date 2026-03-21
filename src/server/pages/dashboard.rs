@@ -1,8 +1,6 @@
 use crate::{
     db,
-    server::{
-        AppState, components::DashboardPage, middleware::AuthUser, routes::hops::HopResponse,
-    },
+    server::{AppState, components::DashboardPage, middleware::AuthUser, routes::HopResponse},
 };
 use axum::{
     extract::{Query, State},

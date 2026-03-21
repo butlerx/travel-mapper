@@ -758,7 +758,7 @@ mod tests {
 
     #[tokio::test]
     async fn get_retries_on_server_error() {
-        use super::super::auth::TripItAuth;
+        use crate::tripit::auth::TripItAuth;
         use std::sync::Arc;
         use std::sync::atomic::{AtomicU32, Ordering};
         use tokio::io::AsyncWriteExt;

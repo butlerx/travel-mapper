@@ -1,24 +1,27 @@
+use super::{
+    ErrorResponse, MultiFormatResponse, StatusResponse, multi_format_docs, negotiate_format,
+};
 use crate::{
     auth::{CryptoError, encrypt_token},
     db,
-    server::{AppState, middleware::AuthUser, routes::ErrorResponse},
+    server::{AppState, middleware::AuthUser},
 };
 use aide::transform::TransformOperation;
 use axum::{
     Json,
     extract::State,
-    http::StatusCode,
-    response::{IntoResponse, Response},
+    http::{HeaderMap, StatusCode},
+    response::Response,
 };
 use schemars::JsonSchema;
 use serde::Deserialize;
-use serde_json::json;
 
-use super::StatusResponse;
-
+/// `TripIt` OAuth credentials to store.
 #[derive(Deserialize, JsonSchema)]
 pub struct TripItCredentialsRequest {
+    /// OAuth access token obtained from `TripIt`.
     pub access_token: String,
+    /// OAuth access token secret obtained from `TripIt`.
     pub access_token_secret: String,
 }
 
@@ -26,6 +29,7 @@ pub struct TripItCredentialsRequest {
 pub async fn store_tripit_credentials_handler(
     State(state): State<AppState>,
     auth: AuthUser,
+    headers: HeaderMap,
     Json(body): Json<TripItCredentialsRequest>,
 ) -> Response {
     let token_encrypted = encrypt_token(&body.access_token, &state.encryption_key);
@@ -41,11 +45,12 @@ pub async fn store_tripit_credentials_handler(
                     CryptoError::Encrypt => "encryption failed".to_string(),
                     other => format!("failed to encrypt credentials: {other}"),
                 };
-                return (
+                let format = negotiate_format(&headers);
+                return ErrorResponse::into_format_response(
+                    message,
+                    format,
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(json!({ "error": message })),
-                )
-                    .into_response();
+                );
             }
         };
 
@@ -59,18 +64,29 @@ pub async fn store_tripit_credentials_handler(
     .execute(&state.db)
     .await
     {
-        Ok(()) => (StatusCode::OK, Json(json!({ "status": "ok" }))).into_response(),
-        Err(err) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({ "error": format!("failed to store credentials: {err}") })),
-        )
-            .into_response(),
+        Ok(()) => {
+            let format = negotiate_format(&headers);
+            let response = StatusResponse {
+                status: "ok".to_string(),
+            };
+            StatusResponse::single_format_response(&response, format, StatusCode::OK)
+        }
+        Err(err) => {
+            let format = negotiate_format(&headers);
+            ErrorResponse::into_format_response(
+                format!("failed to store credentials: {err}"),
+                format,
+                StatusCode::INTERNAL_SERVER_ERROR,
+            )
+        }
     }
 }
 
 pub fn store_tripit_credentials_handler_docs(op: TransformOperation) -> TransformOperation {
-    op.description("Store TripIt OAuth access tokens (encrypted at rest).")
-        .response::<200, Json<StatusResponse>>()
-        .response::<500, Json<ErrorResponse>>()
-        .tag("tripit")
+    multi_format_docs!(
+        op.description("Store TripIt OAuth access tokens (encrypted at rest)."),
+        200 => StatusResponse,
+        401 | 500 => ErrorResponse,
+    )
+    .tag("tripit")
 }

@@ -1,6 +1,6 @@
+use super::{ErrorResponse, MultiFormatResponse, multi_format_docs, negotiate_format};
 use crate::server::{
     AppState,
-    routes::ErrorResponse,
     session::{create_user_session, is_form_request, session_cookie, verify_credentials},
 };
 use aide::transform::TransformOperation;
@@ -13,18 +13,32 @@ use axum::{
 use axum_extra::extract::CookieJar;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 
+/// Credentials for logging in.
 #[derive(Deserialize, JsonSchema)]
 pub struct LoginRequest {
+    /// Account username.
     pub username: String,
+    /// Account password.
     pub password: String,
 }
 
-#[derive(Debug, Serialize, JsonSchema)]
+/// Successful authentication response.
+#[derive(Debug, Default, Serialize, JsonSchema)]
 pub struct AuthResponse {
+    /// Unique user identifier.
     pub id: i64,
+    /// Username of the authenticated user.
     pub username: String,
+}
+
+impl MultiFormatResponse for AuthResponse {
+    const HTML_TITLE: &'static str = "Authentication";
+    const CSV_HEADERS: &'static [&'static str] = &["id", "username"];
+
+    fn csv_row(&self) -> Vec<String> {
+        vec![self.id.to_string(), self.username.clone()]
+    }
 }
 
 /// Log in with username and password.
@@ -51,13 +65,14 @@ pub async fn login_handler(
                     Redirect::to("/login?error=Invalid+form+data").into_response(),
                 )
             } else {
+                let format = negotiate_format(&headers);
                 (
                     jar,
-                    (
+                    ErrorResponse::into_format_response(
+                        format!("invalid request body: {err}"),
+                        format,
                         StatusCode::BAD_REQUEST,
-                        Json(json!({ "error": format!("invalid request body: {err}") })),
-                    )
-                        .into_response(),
+                    ),
                 )
             };
         }
@@ -72,7 +87,8 @@ pub async fn login_handler(
                 if is_form && status == StatusCode::UNAUTHORIZED {
                     Redirect::to("/login?error=Invalid+credentials").into_response()
                 } else {
-                    (status, Json(json!({ "error": msg }))).into_response()
+                    let format = negotiate_format(&headers);
+                    ErrorResponse::into_format_response(msg, format, status)
                 },
             );
         }
@@ -81,7 +97,11 @@ pub async fn login_handler(
     let token = match create_user_session(&state.db, user.id).await {
         Ok((t, _)) => t,
         Err((status, msg)) => {
-            return (jar, (status, Json(json!({ "error": msg }))).into_response());
+            let format = negotiate_format(&headers);
+            return (
+                jar,
+                ErrorResponse::into_format_response(msg, format, status),
+            );
         }
     };
 
@@ -91,22 +111,34 @@ pub async fn login_handler(
         if is_form {
             Redirect::to("/dashboard").into_response()
         } else {
-            (
-                StatusCode::OK,
-                Json(json!({ "id": user.id, "username": user.username })),
-            )
-                .into_response()
+            let format = negotiate_format(&headers);
+            let response = AuthResponse {
+                id: user.id,
+                username: user.username,
+            };
+            AuthResponse::single_format_response(&response, format, StatusCode::OK)
         },
     )
 }
 
 pub fn login_handler_docs(op: TransformOperation) -> TransformOperation {
-    op.description("Log in with username and password.")
-        .response::<200, Json<AuthResponse>>()
-        .response::<400, Json<ErrorResponse>>()
-        .response::<401, Json<ErrorResponse>>()
-        .response::<500, Json<ErrorResponse>>()
-        .tag("auth")
+    multi_format_docs!(
+        op.description("Log in with username and password. Accepts JSON or form-encoded body.")
+            .input::<Json<LoginRequest>>()
+            .with(|mut op| {
+                if let Some(aide::openapi::ReferenceOr::Item(body)) =
+                    &mut op.inner_mut().request_body
+                    && let Some(json_media) = body.content.get("application/json").cloned()
+                {
+                    body.content
+                        .insert("application/x-www-form-urlencoded".to_string(), json_media);
+                }
+                op
+            }),
+        200 => AuthResponse,
+        400 | 401 | 500 => ErrorResponse,
+    )
+    .tag("auth")
 }
 
 #[cfg(test)]

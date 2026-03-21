@@ -10,8 +10,8 @@ mod navbar;
 mod settings_page;
 mod shell;
 
-pub use auth_page::AuthFormPage;
-pub use dashboard_page::DashboardPage;
-pub use error_page::ErrorPage;
-pub use landing_page::LandingPage;
-pub use settings_page::SettingsPage;
+pub(crate) use auth_page::AuthFormPage;
+pub(crate) use dashboard_page::DashboardPage;
+pub(crate) use error_page::ErrorPage;
+pub(crate) use landing_page::LandingPage;
+pub(crate) use settings_page::SettingsPage;

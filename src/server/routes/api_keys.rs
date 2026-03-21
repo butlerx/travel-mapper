@@ -1,4 +1,5 @@
 use super::ErrorResponse;
+use super::types::{MultiFormatResponse, multi_format_docs, negotiate_format};
 use crate::{
     db,
     server::{AppState, middleware::AuthUser, session::sha256_hex},
@@ -7,31 +8,39 @@ use aide::transform::TransformOperation;
 use axum::{
     Json,
     extract::State,
-    http::StatusCode,
-    response::{IntoResponse, Response},
+    http::{HeaderMap, StatusCode},
+    response::Response,
 };
 use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use rand::RngCore;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ApiKeyRequest {
     pub label: Option<String>,
 }
 
-#[derive(Debug, Serialize, JsonSchema)]
+#[derive(Debug, Default, Serialize, JsonSchema)]
 pub struct ApiKeyResponse {
     pub id: i64,
     pub key: String,
     pub label: String,
 }
 
-/// Create a new API key for programmatic access.
+impl MultiFormatResponse for ApiKeyResponse {
+    const HTML_TITLE: &'static str = "API Key Created";
+    const CSV_HEADERS: &'static [&'static str] = &["id", "key", "label"];
+
+    fn csv_row(&self) -> Vec<String> {
+        vec![self.id.to_string(), self.key.clone(), self.label.clone()]
+    }
+}
+
 pub async fn create_api_key_handler(
     State(state): State<AppState>,
     auth: AuthUser,
+    headers: HeaderMap,
     Json(body): Json<ApiKeyRequest>,
 ) -> Response {
     let mut key_bytes = [0_u8; 32];
@@ -48,24 +57,29 @@ pub async fn create_api_key_handler(
     .execute(&state.db)
     .await
     {
-        Ok(id) => (
-            StatusCode::OK,
-            Json(json!({ "id": id, "key": key, "label": label })),
-        )
-            .into_response(),
-        Err(err) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({ "error": format!("failed to create api key: {err}") })),
-        )
-            .into_response(),
+        Ok(id) => {
+            let response = ApiKeyResponse { id, key, label };
+            let format = negotiate_format(&headers);
+            ApiKeyResponse::single_format_response(&response, format, StatusCode::OK)
+        }
+        Err(err) => {
+            let format = negotiate_format(&headers);
+            ErrorResponse::into_format_response(
+                format!("failed to create api key: {err}"),
+                format,
+                StatusCode::INTERNAL_SERVER_ERROR,
+            )
+        }
     }
 }
 
 pub fn create_api_key_handler_docs(op: TransformOperation) -> TransformOperation {
-    op.description("Create a new API key for programmatic access.")
-        .response::<200, Json<ApiKeyResponse>>()
-        .response::<500, Json<ErrorResponse>>()
-        .tag("auth")
+    multi_format_docs!(
+        op.description("Create a new API key for programmatic access."),
+        200 => ApiKeyResponse,
+        401 | 500 => ErrorResponse,
+    )
+    .tag("auth")
 }
 
 #[cfg(test)]

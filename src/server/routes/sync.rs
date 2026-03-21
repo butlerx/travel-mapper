@@ -1,23 +1,26 @@
+use super::{ErrorResponse, MultiFormatResponse, multi_format_docs, negotiate_format};
 use crate::{
     db,
-    server::{AppState, middleware::AuthUser, routes::types::ErrorResponse},
+    server::{AppState, middleware::AuthUser},
     worker::{SyncOutcome, sync_all},
 };
 use aide::transform::TransformOperation;
 use axum::{
-    Json,
     extract::State,
     http::{HeaderMap, StatusCode, header},
     response::{IntoResponse, Redirect, Response},
 };
 use schemars::JsonSchema;
 use serde::Serialize;
-use serde_json::json;
 
-#[derive(Debug, Serialize, JsonSchema)]
+/// Response returned when a sync completes immediately.
+#[derive(Debug, Default, Serialize, JsonSchema)]
 pub struct SyncResponse {
+    /// Number of trips fetched from `TripIt`.
     pub trips_fetched: u64,
+    /// Number of individual travel hops extracted.
     pub hops_fetched: u64,
+    /// Wall-clock duration of the sync in milliseconds.
     pub duration_ms: u64,
 }
 
@@ -31,10 +34,35 @@ impl From<SyncOutcome> for SyncResponse {
     }
 }
 
-#[derive(Debug, Serialize, JsonSchema)]
+impl MultiFormatResponse for SyncResponse {
+    const HTML_TITLE: &'static str = "Sync Result";
+    const CSV_HEADERS: &'static [&'static str] = &["trips_fetched", "hops_fetched", "duration_ms"];
+
+    fn csv_row(&self) -> Vec<String> {
+        vec![
+            self.trips_fetched.to_string(),
+            self.hops_fetched.to_string(),
+            self.duration_ms.to_string(),
+        ]
+    }
+}
+
+/// Response returned when a sync job is enqueued for background processing.
+#[derive(Debug, Default, Serialize, JsonSchema)]
 pub struct SyncQueuedResponse {
+    /// Status message, e.g. `"sync queued"`.
     pub status: String,
+    /// Identifier of the enqueued sync job.
     pub job_id: i64,
+}
+
+impl MultiFormatResponse for SyncQueuedResponse {
+    const HTML_TITLE: &'static str = "Sync Queued";
+    const CSV_HEADERS: &'static [&'static str] = &["status", "job_id"];
+
+    fn csv_row(&self) -> Vec<String> {
+        vec![self.status.clone(), self.job_id.to_string()]
+    }
 }
 
 fn is_form_request(headers: &HeaderMap) -> bool {
@@ -51,18 +79,20 @@ pub async fn sync_handler(
 ) -> Response {
     let is_form = is_form_request(&headers);
 
+    let format = negotiate_format(&headers);
+
     if let Some(override_api) = &state.tripit_override {
         let result = sync_all(override_api.as_ref(), &state.db, auth.user_id).await;
         return match result {
             Ok(r) => {
                 let response = SyncResponse::from(r);
-                (StatusCode::OK, Json(json!(response))).into_response()
+                SyncResponse::single_format_response(&response, format, StatusCode::OK)
             }
-            Err(err) => (
+            Err(err) => ErrorResponse::into_format_response(
+                format!("sync failed: {err}"),
+                format,
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": format!("sync failed: {err}") })),
-            )
-                .into_response(),
+            ),
         };
     }
 
@@ -76,20 +106,20 @@ pub async fn sync_handler(
             return if is_form {
                 Redirect::to("/dashboard?error=Sync+already+queued").into_response()
             } else {
-                (
+                ErrorResponse::into_format_response(
+                    "sync already queued or running",
+                    format,
                     StatusCode::CONFLICT,
-                    Json(json!({ "error": "sync already queued or running" })),
                 )
-                    .into_response()
             };
         }
         Ok(false) => {}
         Err(err) => {
-            return (
+            return ErrorResponse::into_format_response(
+                format!("database error: {err}"),
+                format,
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": format!("database error: {err}") })),
-            )
-                .into_response();
+            );
         }
     }
 
@@ -104,28 +134,29 @@ pub async fn sync_handler(
             if is_form {
                 Redirect::to("/dashboard").into_response()
             } else {
-                (
-                    StatusCode::ACCEPTED,
-                    Json(json!({ "status": "sync queued", "job_id": job_id })),
-                )
-                    .into_response()
+                let response = SyncQueuedResponse {
+                    status: "sync queued".to_string(),
+                    job_id,
+                };
+                SyncQueuedResponse::single_format_response(&response, format, StatusCode::ACCEPTED)
             }
         }
-        Err(err) => (
+        Err(err) => ErrorResponse::into_format_response(
+            format!("failed to enqueue sync: {err}"),
+            format,
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({ "error": format!("failed to enqueue sync: {err}") })),
-        )
-            .into_response(),
+        ),
     }
 }
 
 pub fn sync_handler_docs(op: TransformOperation) -> TransformOperation {
-    op.description("Trigger a TripIt sync for the authenticated user.")
-        .response::<200, Json<SyncResponse>>()
-        .response::<202, Json<SyncQueuedResponse>>()
-        .response::<409, Json<ErrorResponse>>()
-        .response::<500, Json<ErrorResponse>>()
-        .tag("sync")
+    multi_format_docs!(
+        op.description("Trigger a TripIt sync for the authenticated user."),
+        200 => SyncResponse,
+        202 => SyncQueuedResponse,
+        401 | 409 | 500 => ErrorResponse,
+    )
+    .tag("sync")
 }
 
 #[cfg(test)]

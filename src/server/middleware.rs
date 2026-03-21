@@ -1,5 +1,5 @@
 //! Authentication and authorization middleware.
 
-pub mod auth;
+mod auth;
 
-pub use auth::AuthUser;
+pub(crate) use auth::AuthUser;

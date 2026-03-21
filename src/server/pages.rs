@@ -8,20 +8,19 @@ mod register;
 mod settings;
 mod unauthorized;
 
-pub use dashboard::dashboard_page;
-pub use landing::landing_page;
-pub use login::login_page;
-pub use not_found::not_found_page;
-pub use register::register_page;
-pub use settings::settings_page;
-pub use unauthorized::unauthorized_page;
+pub(super) use dashboard::dashboard_page;
+pub(super) use landing::landing_page;
+pub(super) use login::login_page;
+pub(super) use not_found::not_found_page;
+pub(super) use register::register_page;
+pub(super) use settings::settings_page;
+pub(super) use unauthorized::unauthorized_page;
 
-use crate::{db, server::AppState};
+use super::{AppState, components::ErrorPage};
+use crate::db;
 use axum_extra::extract::CookieJar;
 use leptos::prelude::*;
 use serde::Deserialize;
-
-use crate::server::components::ErrorPage;
 
 /// Check whether the request carries a valid, non-expired session cookie.
 async fn has_valid_session(jar: &CookieJar, state: &AppState) -> bool {
@@ -46,8 +45,8 @@ async fn has_valid_session(jar: &CookieJar, state: &AppState) -> bool {
 }
 
 #[derive(Deserialize, Default)]
-pub struct FormFeedback {
-    pub error: Option<String>,
+pub(super) struct FormFeedback {
+    pub(super) error: Option<String>,
 }
 
 fn render_error_page(

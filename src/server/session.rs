@@ -7,7 +7,7 @@ use sha2::{Digest, Sha256};
 use uuid::Uuid;
 
 #[must_use]
-pub fn sha256_hex(value: &str) -> String {
+pub(crate) fn sha256_hex(value: &str) -> String {
     let digest = Sha256::digest(value.as_bytes());
     digest
         .iter()
@@ -19,7 +19,7 @@ pub fn sha256_hex(value: &str) -> String {
 }
 
 #[must_use]
-pub fn session_cookie(token: &str) -> Cookie<'static> {
+pub(crate) fn session_cookie(token: &str) -> Cookie<'static> {
     Cookie::build(("session_id", token.to_string()))
         .http_only(true)
         .same_site(SameSite::Lax)
@@ -28,7 +28,7 @@ pub fn session_cookie(token: &str) -> Cookie<'static> {
 }
 
 #[must_use]
-pub fn clear_session_cookie() -> Cookie<'static> {
+pub(crate) fn clear_session_cookie() -> Cookie<'static> {
     Cookie::build(("session_id", String::new()))
         .http_only(true)
         .same_site(SameSite::Lax)
@@ -36,7 +36,7 @@ pub fn clear_session_cookie() -> Cookie<'static> {
         .build()
 }
 
-pub fn is_form_request(headers: &HeaderMap) -> bool {
+pub(crate) fn is_form_request(headers: &HeaderMap) -> bool {
     headers
         .get(header::CONTENT_TYPE)
         .and_then(|v| v.to_str().ok())
@@ -48,7 +48,7 @@ pub fn is_form_request(headers: &HeaderMap) -> bool {
 /// # Errors
 ///
 /// Returns a status code and message if the session cannot be created.
-pub async fn create_user_session(
+pub(crate) async fn create_user_session(
     db: &sqlx::SqlitePool,
     user_id: i64,
 ) -> Result<(String, String), (StatusCode, String)> {
@@ -95,7 +95,7 @@ pub async fn create_user_session(
 /// # Errors
 ///
 /// Returns a status code and message if credentials are invalid or a database error occurs.
-pub async fn verify_credentials(
+pub(crate) async fn verify_credentials(
     db: &sqlx::SqlitePool,
     username: &str,
     password: &str,

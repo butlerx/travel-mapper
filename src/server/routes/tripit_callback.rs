@@ -1,22 +1,24 @@
+use super::{ErrorResponse, multi_format_docs, negotiate_format};
 use crate::{
     auth::{decrypt_token, encrypt_token},
     db,
-    server::{AppState, middleware::AuthUser, routes::ErrorResponse},
+    server::{AppState, middleware::AuthUser},
     tripit::TripItConsumer,
 };
 use aide::transform::TransformOperation;
 use axum::{
-    Json,
     extract::{Query, State},
-    http::StatusCode,
+    http::{HeaderMap, StatusCode},
     response::{IntoResponse, Redirect, Response},
 };
+use indexmap::IndexMap;
 use schemars::JsonSchema;
 use serde::Deserialize;
-use serde_json::json;
 
+/// Query parameters for the `TripIt` OAuth callback.
 #[derive(Deserialize, JsonSchema)]
 pub struct TripItCallbackQuery {
+    /// OAuth request token returned by `TripIt` after user authorization.
     pub oauth_token: String,
 }
 
@@ -24,6 +26,7 @@ pub struct TripItCallbackQuery {
 pub async fn tripit_callback_handler(
     State(state): State<AppState>,
     auth: AuthUser,
+    headers: HeaderMap,
     Query(query): Query<TripItCallbackQuery>,
 ) -> Response {
     let stored = match (db::oauth_tokens::Get {
@@ -34,27 +37,30 @@ pub async fn tripit_callback_handler(
     {
         Ok(Some(row)) => row,
         Ok(None) => {
-            return (
+            let format = negotiate_format(&headers);
+            return ErrorResponse::into_format_response(
+                "unknown or expired oauth_token",
+                format,
                 StatusCode::BAD_REQUEST,
-                Json(json!({ "error": "unknown or expired oauth_token" })),
-            )
-                .into_response();
+            );
         }
         Err(err) => {
-            return (
+            let format = negotiate_format(&headers);
+            return ErrorResponse::into_format_response(
+                format!("failed to lookup request token: {err}"),
+                format,
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": format!("failed to lookup request token: {err}") })),
-            )
-                .into_response();
+            );
         }
     };
 
     if stored.user_id != auth.user_id {
-        return (
+        let format = negotiate_format(&headers);
+        return ErrorResponse::into_format_response(
+            "request token belongs to another user",
+            format,
             StatusCode::FORBIDDEN,
-            Json(json!({ "error": "request token belongs to another user" })),
-        )
-            .into_response();
+        );
     }
 
     let token_secret = match decrypt_token(
@@ -65,11 +71,12 @@ pub async fn tripit_callback_handler(
         Ok(secret) => secret,
         Err(err) => {
             tracing::error!("decrypt request token secret: {err}");
-            return (
+            let format = negotiate_format(&headers);
+            return ErrorResponse::into_format_response(
+                "failed to decrypt request token secret",
+                format,
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": "failed to decrypt request token secret" })),
-            )
-                .into_response();
+            );
         }
     };
 
@@ -130,10 +137,42 @@ pub async fn tripit_callback_handler(
 }
 
 pub fn tripit_callback_handler_docs(op: TransformOperation) -> TransformOperation {
-    op.description("TripIt OAuth callback — exchanges request token for access token.")
-        .response::<302, ()>()
-        .response::<400, Json<ErrorResponse>>()
-        .response::<403, Json<ErrorResponse>>()
-        .response::<500, Json<ErrorResponse>>()
-        .tag("tripit")
+    multi_format_docs!(
+        op.description("TripIt OAuth callback — exchanges request token for access token.")
+            .response_with::<302, (), _>(|mut res| {
+                let response = res.inner();
+                response.description =
+                    "Redirect to settings page after storing credentials.".to_string();
+                response.headers.insert(
+                    "Location".to_string(),
+                    aide::openapi::ReferenceOr::Item(aide::openapi::Header {
+                        description: Some(
+                            "Settings page URL, possibly with a status query parameter."
+                                .to_string(),
+                        ),
+                        style: aide::openapi::HeaderStyle::Simple,
+                        required: false,
+                        deprecated: None,
+                        format: aide::openapi::ParameterSchemaOrContent::Schema(
+                            aide::openapi::SchemaObject {
+                                json_schema: schemars::Schema::from(serde_json::Map::from_iter(
+                                    [(
+                                        "type".to_owned(),
+                                        serde_json::Value::String("string".to_owned()),
+                                    )],
+                                )),
+                                external_docs: None,
+                                example: None,
+                            },
+                        ),
+                        example: None,
+                        examples: IndexMap::default(),
+                        extensions: IndexMap::default(),
+                    }),
+                );
+                res
+            }),
+        400 | 401 | 403 | 500 => ErrorResponse,
+    )
+    .tag("tripit")
 }

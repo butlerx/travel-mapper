@@ -1,9 +1,11 @@
+use super::{
+    AuthResponse, ErrorResponse, MultiFormatResponse, multi_format_docs, negotiate_format,
+};
 use crate::{
     auth::hash_password,
     db,
     server::{
         AppState,
-        routes::ErrorResponse,
         session::{create_user_session, is_form_request, session_cookie},
     },
 };
@@ -17,11 +19,13 @@ use axum::{
 use axum_extra::extract::CookieJar;
 use schemars::JsonSchema;
 use serde::Deserialize;
-use serde_json::json;
 
+/// Credentials for creating a new account.
 #[derive(Deserialize, JsonSchema)]
 pub struct RegisterRequest {
+    /// Desired username (must be unique).
     pub username: String,
+    /// Password for the new account.
     pub password: String,
 }
 
@@ -49,13 +53,14 @@ pub async fn register_handler(
                     Redirect::to("/register?error=Invalid+form+data").into_response(),
                 )
             } else {
+                let format = negotiate_format(&headers);
                 (
                     jar,
-                    (
+                    ErrorResponse::into_format_response(
+                        format!("invalid request body: {err}"),
+                        format,
                         StatusCode::BAD_REQUEST,
-                        Json(json!({ "error": format!("invalid request body: {err}") })),
-                    )
-                        .into_response(),
+                    ),
                 )
             };
         }
@@ -66,20 +71,32 @@ pub async fn register_handler(
     let hash = match hash_password(&body.password) {
         Ok(hash) => hash,
         Err(err) => {
+            let format = negotiate_format(&headers);
             return (
                 jar,
-                (
+                ErrorResponse::into_format_response(
+                    format!("failed to hash password: {err}"),
+                    format,
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(json!({ "error": format!("failed to hash password: {err}") })),
-                )
-                    .into_response(),
+                ),
             );
         }
     };
 
+    create_and_authenticate(state, jar, &headers, is_form, &body.username, &hash).await
+}
+
+async fn create_and_authenticate(
+    state: AppState,
+    jar: CookieJar,
+    headers: &HeaderMap,
+    is_form: bool,
+    username: &str,
+    hash: &str,
+) -> (CookieJar, Response) {
     match (db::users::Create {
-        username: &body.username,
-        password_hash: &hash,
+        username,
+        password_hash: hash,
     })
     .execute(&state.db)
     .await
@@ -88,7 +105,11 @@ pub async fn register_handler(
             let token = match create_user_session(&state.db, id).await {
                 Ok((t, _)) => t,
                 Err((status, msg)) => {
-                    return (jar, (status, Json(json!({ "error": msg }))).into_response());
+                    let format = negotiate_format(headers);
+                    return (
+                        jar,
+                        ErrorResponse::into_format_response(msg, format, status),
+                    );
                 }
             };
 
@@ -98,11 +119,12 @@ pub async fn register_handler(
                 if is_form {
                     Redirect::to("/dashboard").into_response()
                 } else {
-                    (
-                        StatusCode::CREATED,
-                        Json(json!({ "id": id, "username": body.username })),
-                    )
-                        .into_response()
+                    let format = negotiate_format(headers);
+                    let response = AuthResponse {
+                        id,
+                        username: username.to_owned(),
+                    };
+                    AuthResponse::single_format_response(&response, format, StatusCode::CREATED)
                 },
             )
         }
@@ -111,31 +133,46 @@ pub async fn register_handler(
             if is_form {
                 Redirect::to("/register?error=Username+already+exists").into_response()
             } else {
-                (
+                let format = negotiate_format(headers);
+                ErrorResponse::into_format_response(
+                    "username already exists",
+                    format,
                     StatusCode::CONFLICT,
-                    Json(json!({ "error": "username already exists" })),
                 )
-                    .into_response()
             },
         ),
-        Err(err) => (
-            jar,
+        Err(err) => {
+            let format = negotiate_format(headers);
             (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": format!("failed to create user: {err}") })),
+                jar,
+                ErrorResponse::into_format_response(
+                    format!("failed to create user: {err}"),
+                    format,
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                ),
             )
-                .into_response(),
-        ),
+        }
     }
 }
 
 pub fn register_handler_docs(op: TransformOperation) -> TransformOperation {
-    op.description("Register a new user account.")
-        .response::<201, Json<crate::server::routes::AuthResponse>>()
-        .response::<400, Json<ErrorResponse>>()
-        .response::<409, Json<ErrorResponse>>()
-        .response::<500, Json<ErrorResponse>>()
-        .tag("auth")
+    multi_format_docs!(
+        op.description("Register a new user account. Accepts JSON or form-encoded body.")
+            .input::<Json<RegisterRequest>>()
+            .with(|mut op| {
+                if let Some(aide::openapi::ReferenceOr::Item(body)) =
+                    &mut op.inner_mut().request_body
+                    && let Some(json_media) = body.content.get("application/json").cloned()
+                {
+                    body.content
+                        .insert("application/x-www-form-urlencoded".to_string(), json_media);
+                }
+                op
+            }),
+        201 => AuthResponse,
+        400 | 409 | 500 => ErrorResponse,
+    )
+    .tag("auth")
 }
 
 #[cfg(test)]
