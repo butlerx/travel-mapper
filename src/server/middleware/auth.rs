@@ -1,4 +1,7 @@
-use crate::{db, routes::unauthorized_page, server::AppState};
+use crate::{
+    db,
+    server::{AppState, pages::unauthorized_page},
+};
 use aide::OperationInput;
 use axum::{
     extract::FromRequestParts,

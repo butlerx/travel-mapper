@@ -1,15 +1,14 @@
 use crate::{
-    auth::{
-        create_api_key_handler, create_api_key_handler_docs, login_handler, login_handler_docs,
-        logout_handler, logout_handler_docs, register_handler, register_handler_docs,
-        store_tripit_credentials_handler, store_tripit_credentials_handler_docs,
-        tripit_callback_handler, tripit_callback_handler_docs, tripit_connect_handler,
-        tripit_connect_handler_docs,
+    server::pages::{
+        dashboard_page, landing_page, login_page, not_found_page, register_page, settings_page,
     },
-    routes::{
-        dashboard_page, health_handler, health_handler_docs, hops_handler, hops_handler_docs,
-        landing_page, login_page, not_found_page, register_page, serve_css, serve_js,
-        settings_page, sync_handler, sync_handler_docs,
+    server::routes::{
+        create_api_key_handler, create_api_key_handler_docs, health_handler, health_handler_docs,
+        hops_handler, hops_handler_docs, login_handler, login_handler_docs, logout_handler,
+        logout_handler_docs, register_handler, register_handler_docs, serve_css, serve_js,
+        store_tripit_credentials_handler, store_tripit_credentials_handler_docs, sync_handler,
+        sync_handler_docs, tripit_callback_handler, tripit_callback_handler_docs,
+        tripit_connect_handler, tripit_connect_handler_docs,
     },
     tripit::TripItApi,
 };

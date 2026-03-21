@@ -3,6 +3,11 @@ use argon2::{
     password_hash::{PasswordHasher, SaltString, rand_core::OsRng},
 };
 
+/// Hash a plaintext password using Argon2.
+///
+/// # Errors
+///
+/// Returns an error if hashing fails (e.g. invalid parameters or RNG failure).
 pub fn hash_password(password: &str) -> Result<String, argon2::password_hash::Error> {
     let argon2 = Argon2::default();
     let salt = SaltString::generate(&mut OsRng);
@@ -10,6 +15,11 @@ pub fn hash_password(password: &str) -> Result<String, argon2::password_hash::Er
     Ok(hash.to_string())
 }
 
+/// Verify a plaintext password against an Argon2 hash.
+///
+/// # Errors
+///
+/// Returns an error if the hash is malformed or verification fails.
 pub fn verify_password(password: &str, hash: &str) -> Result<bool, argon2::password_hash::Error> {
     let argon2 = Argon2::default();
     let parsed_hash = PasswordHash::new(hash)?;

@@ -13,6 +13,10 @@ path = "src/lib.rs"
 name = "server"
 path = "src/bin/server.rs"
 
+[[bin]]
+name = "sync-worker"
+path = "src/bin/sync_worker.rs"
+
 [dependencies]
 aes-gcm = "0.10"
 aide = { version = "0.15", features = [

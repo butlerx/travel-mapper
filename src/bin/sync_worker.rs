@@ -1,14 +1,11 @@
 use clap::Parser;
-use leptos::prelude::LeptosOptions;
 use std::time::Duration;
+use tokio::sync::watch;
 use tracing_subscriber::prelude::*;
-use travel_export::{
-    db,
-    server::{self, AppState},
-};
+use travel_export::{db, worker::SyncWorkerConfig};
 
 #[derive(Parser)]
-#[command(about = "Run the travel-export Axum server")]
+#[command(about = "Background sync worker that processes TripIt sync jobs")]
 struct Cli {
     #[arg(long, env = "TRIPIT_CONSUMER_KEY")]
     consumer_key: String,
@@ -22,20 +19,17 @@ struct Cli {
     #[arg(long, env = "DATABASE_URL", default_value = "sqlite:travel.db")]
     database_url: String,
 
-    #[arg(long, env = "PORT", default_value_t = 3000)]
-    port: u16,
+    #[arg(long, env = "SYNC_POLL_INTERVAL_SECS", default_value_t = 5)]
+    poll_interval_secs: u64,
 }
 
 #[derive(Debug, thiserror::Error)]
-enum ServerError {
+enum WorkerError {
     #[error("invalid ENCRYPTION_KEY: expected exactly 32 bytes hex")]
     InvalidEncryptionKey,
 
     #[error("failed to create database pool: {0}")]
     Database(#[from] sqlx::Error),
-
-    #[error("failed to bind TCP listener: {0}")]
-    Bind(#[from] std::io::Error),
 }
 
 fn init_tracing() {
@@ -52,51 +46,54 @@ fn init_tracing() {
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info,tower_http=debug")),
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
         )
         .with(log_layer)
-        .init()
+        .init();
 }
 
-fn parse_encryption_key(hex: &str) -> Result<[u8; 32], ServerError> {
+fn parse_encryption_key(hex: &str) -> Result<[u8; 32], WorkerError> {
     if hex.len() != 64 {
-        return Err(ServerError::InvalidEncryptionKey);
+        return Err(WorkerError::InvalidEncryptionKey);
     }
 
     let mut out = [0_u8; 32];
     for (idx, chunk) in hex.as_bytes().chunks(2).enumerate() {
-        let pair = std::str::from_utf8(chunk).map_err(|_| ServerError::InvalidEncryptionKey)?;
-        out[idx] = u8::from_str_radix(pair, 16).map_err(|_| ServerError::InvalidEncryptionKey)?;
+        let pair = std::str::from_utf8(chunk).map_err(|_| WorkerError::InvalidEncryptionKey)?;
+        out[idx] = u8::from_str_radix(pair, 16).map_err(|_| WorkerError::InvalidEncryptionKey)?;
     }
     Ok(out)
 }
 
-async fn run() -> Result<(), ServerError> {
+async fn run() -> Result<(), WorkerError> {
     let cli = Cli::parse();
 
     let encryption_key = parse_encryption_key(&cli.encryption_key)?;
     let pool = db::create_pool(&cli.database_url).await?;
 
-    let state = AppState {
-        leptos_options: LeptosOptions::builder()
-            .output_name("travel-mapper")
-            .build(),
-        db: pool,
+    let (_shutdown_tx, shutdown_rx) = watch::channel(false);
+
+    let config = SyncWorkerConfig {
+        pool,
         encryption_key,
-        tripit_consumer_key: cli.consumer_key,
-        tripit_consumer_secret: cli.consumer_secret,
-        tripit_override: None,
+        consumer_key: cli.consumer_key,
+        consumer_secret: cli.consumer_secret,
+        poll_interval: Duration::from_secs(cli.poll_interval_secs),
     };
-    let app = server::create_router(state);
 
-    let address = format!("0.0.0.0:{}", cli.port);
-    let listener = tokio::net::TcpListener::bind(&address).await?;
-    tracing::info!("Listening on http://{address}");
+    tracing::info!(
+        poll_interval_secs = cli.poll_interval_secs,
+        "starting sync worker"
+    );
 
-    axum::serve(listener, app)
-        .with_graceful_shutdown(shutdown_signal())
-        .await
-        .map_err(ServerError::Bind)?;
+    tokio::select! {
+        result = travel_export::worker::run_sync_worker(config, shutdown_rx) => {
+            result.map_err(WorkerError::Database)?;
+        }
+        _ = shutdown_signal() => {
+            tracing::info!("shutting down sync worker");
+        }
+    }
 
     Ok(())
 }

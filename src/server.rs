@@ -1,7 +1,12 @@
-//! Application state, router setup, and sync orchestration.
+//! Application state, router setup, and request handling.
 
+pub mod components;
+pub mod middleware;
+pub mod pages;
+pub mod routes;
+pub mod session;
 mod state;
-mod sync;
+#[cfg(test)]
+pub(crate) mod test_helpers;
 
 pub use state::{AppState, create_router};
-pub use sync::{SyncError, SyncResult, SyncWorkerConfig, run_sync_worker, sync_all};
