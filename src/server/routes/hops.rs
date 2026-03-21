@@ -144,18 +144,26 @@ impl MultiFormatResponse for HopResponse {
         ]
     }
 
-    fn html_cells(&self) -> Vec<String> {
-        vec![
-            format!("{} {}", self.travel_type.emoji(), self.travel_type),
-            self.origin_name.clone(),
-            opt_f64_to_string(self.origin_lat),
-            opt_f64_to_string(self.origin_lng),
-            self.dest_name.clone(),
-            opt_f64_to_string(self.dest_lat),
-            opt_f64_to_string(self.dest_lng),
-            self.start_date.clone(),
-            self.end_date.clone(),
-        ]
+    fn html_card(&self) -> String {
+        let emoji = self.travel_type.emoji();
+        let travel_type = self.travel_type.as_str();
+        let origin = &self.origin_name;
+        let dest = &self.dest_name;
+        let date = &self.start_date;
+
+        format!(
+            "<div class=\"data-card hop-card\">\
+             <div class=\"hop-card-route\">\
+             <span class=\"hop-card-place\">{origin}</span>\
+             <span class=\"hop-card-arrow\">→</span>\
+             <span class=\"hop-card-place\">{dest}</span>\
+             </div>\
+             <div class=\"hop-card-meta\">\
+             <span class=\"hop-card-badge\">{emoji} {travel_type}</span>\
+             <span class=\"hop-card-date\">{date}</span>\
+             </div>\
+             </div>"
+        )
     }
 }
 
@@ -535,11 +543,8 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
         let body = body_text(response).await;
-        assert!(body.contains("<table>"));
+        assert!(body.contains("data-card"));
         assert!(body.contains("Travel Hops"));
-        assert!(body.contains("travel_type"));
-        assert!(body.contains("origin_name"));
-        assert!(body.contains("dest_name"));
         assert!(body.contains("Paris"));
         assert!(body.contains("London"));
     }

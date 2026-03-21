@@ -14,4 +14,6 @@ pub(crate) use auth_page::AuthFormPage;
 pub(crate) use dashboard_page::DashboardPage;
 pub(crate) use error_page::ErrorPage;
 pub(crate) use landing_page::LandingPage;
+pub(crate) use navbar::NavBar;
 pub(crate) use settings_page::SettingsPage;
+pub(crate) use shell::Shell;

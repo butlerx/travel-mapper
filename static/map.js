@@ -1,6 +1,6 @@
 (function () {
   var allHops = window.allHops || [];
-  var isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  var isDark = true;
 
   var map = L.map('map', {
     zoomControl: true,
@@ -14,12 +14,6 @@
     minZoom: 2,
   }).setView([48, 10], 4);
 
-  var lightTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png', {
-    attribution:
-      '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
-    maxZoom: 19,
-    subdomains: 'abcd',
-  });
   var darkTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png', {
     attribution:
       '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
@@ -27,26 +21,13 @@
     subdomains: 'abcd',
   });
 
-  if (isDark) darkTiles.addTo(map);
-  else lightTiles.addTo(map);
-
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function (e) {
-    isDark = e.matches;
-    if (e.matches) {
-      map.removeLayer(lightTiles);
-      darkTiles.addTo(map);
-    } else {
-      map.removeLayer(darkTiles);
-      lightTiles.addTo(map);
-    }
-    applyFilters();
-  });
+  darkTiles.addTo(map);
 
   var colors = {
-    air: '#0077bb',
-    rail: '#ee7733',
-    cruise: '#cc3311',
-    transport: '#009988',
+    air: '#38bdf8',
+    rail: '#f59e0b',
+    cruise: '#f43f5e',
+    transport: '#10b981',
   };
   var emojis = {
     air: '\u2708\uFE0F',
@@ -127,9 +108,67 @@
     return points;
   }
 
+  function renderJourneyCards(hops) {
+    var sidebar = document.getElementById('journey-sidebar');
+    if (!sidebar) return;
+
+    var sorted = hops.slice().sort(function (a, b) {
+      return b.start_date.localeCompare(a.start_date);
+    });
+
+    var html = '<h3 class="journey-sidebar-heading">Recent Journeys (' + sorted.length + ')</h3>';
+
+    if (sorted.length === 0) {
+      html += '<div class="journey-empty">No journeys match the current filters.</div>';
+      sidebar.innerHTML = html;
+      return;
+    }
+
+    sorted.forEach(function (hop) {
+      var emoji = emojis[hop.travel_type] || '';
+      var typeLabel = hop.travel_type.charAt(0).toUpperCase() + hop.travel_type.slice(1);
+      var dist = '';
+      if (
+        hop.origin_lat != null &&
+        hop.origin_lng != null &&
+        hop.dest_lat != null &&
+        hop.dest_lng != null
+      ) {
+        var km = haversineKm(hop.origin_lat, hop.origin_lng, hop.dest_lat, hop.dest_lng);
+        dist = km < 1 ? '<1 km' : Math.round(km).toLocaleString() + ' km';
+      }
+
+      html +=
+        '<div class="journey-card">' +
+        '<div class="journey-route">' +
+        '<span class="journey-origin">' + hop.origin_name + '</span>' +
+        '<span class="journey-arrow">\u2192</span>' +
+        '<span class="journey-dest">' + hop.dest_name + '</span>' +
+        '</div>' +
+        '<div class="journey-meta">' +
+        '<span class="journey-badge badge-' + hop.travel_type + '">' + emoji + ' ' + typeLabel + '</span>' +
+        '<span class="journey-date">' + hop.start_date + '</span>' +
+        (dist ? '<span class="journey-distance">' + dist + '</span>' : '') +
+        '</div>' +
+        '</div>';
+    });
+
+    sidebar.innerHTML = html;
+  }
+
   function renderHops(hops) {
     routeLayer.clearLayers();
     var bounds = [];
+
+    var routeFreq = {};
+    hops.forEach(function (hop) {
+      if (hop.origin_name && hop.dest_name) {
+        var key1 = hop.origin_name + '→' + hop.dest_name;
+        var key2 = hop.dest_name + '→' + hop.origin_name;
+        var key = key1 < key2 ? key1 : key2;
+        routeFreq[key] = (routeFreq[key] || 0) + 1;
+      }
+    });
 
     hops.forEach(function (hop) {
       if (
@@ -151,6 +190,24 @@
       var startD = hop.start_date || '';
       var endD = hop.end_date || '';
       var dateStr = startD === endD ? startD : startD + ' \u2192 ' + endD;
+
+      var key1 = hop.origin_name + '→' + hop.dest_name;
+      var key2 = hop.dest_name + '→' + hop.origin_name;
+      var key = key1 < key2 ? key1 : key2;
+      var freq = routeFreq[key] || 1;
+
+      var weight = 2;
+      var opacity = 0.6;
+      if (freq >= 10) {
+        weight = 5.5;
+        opacity = 0.9;
+      } else if (freq >= 5) {
+        weight = 4;
+        opacity = 0.8;
+      } else if (freq >= 2) {
+        weight = 3;
+        opacity = 0.7;
+      }
 
       var popup =
         '<div class="hop-popup">' +
@@ -208,8 +265,8 @@
         });
         L.polyline(shifted, {
           color: color,
-          weight: 2.5,
-          opacity: 0.75,
+          weight: weight,
+          opacity: opacity,
         })
           .bindPopup(popup, { maxWidth: 320, className: 'hop-popup-container' })
           .addTo(routeLayer);
@@ -246,9 +303,9 @@
       offsets.forEach(function (offset) {
         L.circleMarker([c.lat, c.lng + offset], {
           radius: r,
-          color: isDark ? '#e5e5e5' : '#404040',
+          color: '#1e3a5f',
           weight: 1.5,
-          fillColor: isDark ? '#f5f5f5' : '#171717',
+          fillColor: '#38bdf8',
           fillOpacity: 0.85,
         })
           .bindTooltip(c.name, { direction: 'top', offset: [0, -r], className: 'city-tooltip' })
@@ -261,7 +318,7 @@
         return (
           h.origin_lat != null && h.origin_lng != null && h.dest_lat != null && h.dest_lng != null
         );
-      }).length + ' routes shown';
+      }).length + ' journeys';
 
     if (bounds.length > 0) {
       map.fitBounds(bounds, { padding: [40, 40] });
@@ -277,10 +334,12 @@
       return true;
     });
     renderHops(filtered);
+    renderJourneyCards(filtered);
   }
 
   document.getElementById('filter-type').addEventListener('change', applyFilters);
   document.getElementById('filter-year').addEventListener('change', applyFilters);
 
   renderHops(allHops);
+  renderJourneyCards(allHops);
 })();

@@ -132,7 +132,7 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
         let body = body_text(response).await;
-        assert!(body.contains("<table>"));
+        assert!(body.contains("data-card"));
         assert!(body.contains("Health Check"));
         assert!(body.contains("ok"));
     }

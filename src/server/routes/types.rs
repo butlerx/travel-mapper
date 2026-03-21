@@ -93,11 +93,25 @@ pub trait MultiFormatResponse: Serialize + Default + Sized {
     /// Return the values for a single CSV row, aligned with [`CSV_HEADERS`].
     fn csv_row(&self) -> Vec<String>;
 
-    /// Render a single item as an HTML table row.
+    /// Render a single item as a card HTML fragment.
     ///
-    /// Each element becomes one `<td>`.
-    fn html_cells(&self) -> Vec<String> {
-        self.csv_row()
+    /// Default builds a generic key-value card from headers + cells.
+    fn html_card(&self) -> String {
+        let fields: String = Self::CSV_HEADERS
+            .iter()
+            .zip(self.csv_row())
+            .filter(|(_, v)| !v.is_empty())
+            .fold(String::new(), |mut acc, (h, v)| {
+                let _ = write!(
+                    acc,
+                    "<div class=\"data-card-field\">\
+                     <span class=\"data-card-label\">{h}</span>\
+                     <span class=\"data-card-value\">{v}</span>\
+                     </div>"
+                );
+                acc
+            });
+        format!("<div class=\"data-card\">{fields}</div>")
     }
 
     /// Build the final [`Response`] in the requested format.
@@ -185,46 +199,23 @@ fn build_csv<T: MultiFormatResponse>(items: &[T]) -> Response {
 }
 
 fn build_html<T: MultiFormatResponse>(items: &[T]) -> Response {
+    use crate::server::components::{NavBar, Shell};
+
     let title = T::HTML_TITLE;
-    let headers = T::CSV_HEADERS;
-
-    let header_cells = headers
-        .iter()
-        .map(|h| view! { <th>{*h}</th> })
-        .collect::<Vec<_>>();
-
-    let rows = items
-        .iter()
-        .map(|item| {
-            let cells = item
-                .html_cells()
-                .into_iter()
-                .map(|c| view! { <td>{c}</td> })
-                .collect::<Vec<_>>();
-            view! { <tr>{cells}</tr> }
-        })
-        .collect::<Vec<_>>();
+    let cards: String = items.iter().map(T::html_card).collect();
+    let count = items.len();
 
     let html = view! {
-        <!DOCTYPE html>
-        <html lang="en">
-            <head>
-                <meta charset="utf-8" />
-                <title>{title}</title>
-                <link rel="stylesheet" href="/static/style.css" />
-            </head>
-            <body>
-                <h1>{title}</h1>
-                <table>
-                    <thead>
-                        <tr>{header_cells}</tr>
-                    </thead>
-                    <tbody>
-                        {rows}
-                    </tbody>
-                </table>
-            </body>
-        </html>
+        <Shell title=title.to_owned()>
+            <NavBar current="hops" />
+            <main class="data-page">
+                <div class="data-page-header">
+                    <h1>{title}</h1>
+                    <span class="data-page-count">{format!("{count} records")}</span>
+                </div>
+                <div class="data-card-list" inner_html=cards />
+            </main>
+        </Shell>
     };
 
     axum::response::Html(html.to_html()).into_response()

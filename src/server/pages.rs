@@ -1,6 +1,6 @@
 //! Page handlers for HTML views.
 
-mod dashboard;
+pub(crate) mod dashboard;
 mod landing;
 mod login;
 mod not_found;

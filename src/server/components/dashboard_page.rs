@@ -1,17 +1,47 @@
+mod map_controls;
+mod stats_bar;
+
 use super::{navbar::NavBar, shell::Shell};
+use crate::server::pages::dashboard::TravelStats;
 use leptos::prelude::*;
+use map_controls::MapControls;
+use stats_bar::StatsBar;
+
+fn format_distance(km: u64) -> String {
+    if km >= 1_000_000 {
+        let whole = km / 1_000_000;
+        let frac = (km % 1_000_000) / 100_000;
+        format!("{whole}.{frac}M km")
+    } else if km >= 10_000 {
+        format!("{}k km", km / 1_000)
+    } else {
+        format!("{km} km")
+    }
+}
+
+fn format_year_range(first: Option<&String>, last: Option<&String>) -> String {
+    match (first, last) {
+        (Some(f), Some(l)) if f == l => f.clone(),
+        (Some(f), Some(l)) => format!("{f}\u{2013}{l}"),
+        _ => "\u{2014}".to_owned(),
+    }
+}
 
 #[component]
 pub fn DashboardPage(
     hops_json: String,
     hop_count: usize,
+    stats: TravelStats,
     #[prop(optional_no_strip)] error: Option<String>,
 ) -> impl IntoView {
     let has_hops = hop_count > 0;
     let hops_script = format!("window.allHops={hops_json};");
 
+    let distance = format_distance(stats.total_distance_km);
+    let year_range = format_year_range(stats.first_year.as_ref(), stats.last_year.as_ref());
+
     view! {
-        <Shell title="Dashboard".to_owned()>
+        <Shell title="Dashboard".to_owned() body_class="dashboard-layout">
             <NavBar current="dashboard" />
             {error.map(|e| view! {
                 <div class="alert alert-error" role="alert">{e}</div>
@@ -19,42 +49,13 @@ pub fn DashboardPage(
 
             {if has_hops {
                 view! {
-                    <div id="map"></div>
-                    <div class="map-controls">
-                        <div class="map-filters">
-                            <label for="filter-type">{"\u{1F3F7}\u{FE0F} Type"}</label>
-                            <select id="filter-type">
-                                <option value="all">"All Types"</option>
-                                <option value="air">{"\u{2708}\u{FE0F} Air"}</option>
-                                <option value="rail">{"\u{1F686} Rail"}</option>
-                                <option value="cruise">{"\u{1F6A2} Cruise"}</option>
-                                <option value="transport">{"\u{1F697} Transport"}</option>
-                            </select>
-                            <label for="filter-year">{"\u{1F4C5} Year"}</label>
-                            <select id="filter-year">
-                                <option value="all">"All Years"</option>
-                            </select>
+                    <StatsBar stats=stats distance=distance year_range=year_range />
+                    <div class="dashboard-main">
+                        <div class="dashboard-map-col">
+                            <div id="map"></div>
+                            <MapControls hop_count=hop_count />
                         </div>
-                        <div class="map-legend">
-                            <h3>{"\u{1F5FA}\u{FE0F} Routes"}</h3>
-                            <div class="legend-item">
-                                <div class="legend-swatch legend-air"></div>
-                                <span>{"\u{2708}\u{FE0F} Air"}</span>
-                            </div>
-                            <div class="legend-item">
-                                <div class="legend-swatch legend-rail"></div>
-                                <span>{"\u{1F686} Rail"}</span>
-                            </div>
-                            <div class="legend-item">
-                                <div class="legend-swatch legend-cruise"></div>
-                                <span>{"\u{1F6A2} Cruise"}</span>
-                            </div>
-                            <div class="legend-item">
-                                <div class="legend-swatch legend-transport"></div>
-                                <span>{"\u{1F697} Transport"}</span>
-                            </div>
-                            <div class="legend-count" id="hop-count">{hop_count}" hops"</div>
-                        </div>
+                        <aside id="journey-sidebar" class="journey-sidebar"></aside>
                     </div>
                     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
                         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="

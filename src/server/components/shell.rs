@@ -1,7 +1,12 @@
 use leptos::prelude::*;
 
 #[component]
-pub fn Shell(title: String, children: Children) -> impl IntoView {
+pub fn Shell(
+    title: String,
+    #[prop(optional)] body_class: Option<&'static str>,
+    children: Children,
+) -> impl IntoView {
+    let class = body_class.unwrap_or_default();
     view! {
         <!DOCTYPE html>
         <html lang="en">
@@ -11,7 +16,7 @@ pub fn Shell(title: String, children: Children) -> impl IntoView {
                 <title>{format!("{title} — Travel Export")}</title>
                 <link rel="stylesheet" href="/static/style.css" />
             </head>
-            <body>
+            <body class=class>
                 {children()}
             </body>
         </html>
