@@ -46,7 +46,12 @@ pub async fn sync_handler(
         };
     }
 
-    match db::has_pending_or_running_sync_job(&state.db, auth.user_id).await {
+    match (db::sync_jobs::HasPendingOrRunning {
+        user_id: auth.user_id,
+    })
+    .execute(&state.db)
+    .await
+    {
         Ok(true) => {
             return if is_form {
                 Redirect::to("/dashboard?error=Sync+already+queued").into_response()
@@ -68,7 +73,12 @@ pub async fn sync_handler(
         }
     }
 
-    match db::enqueue_sync_job(&state.db, auth.user_id).await {
+    match (db::sync_jobs::Enqueue {
+        user_id: auth.user_id,
+    })
+    .execute(&state.db)
+    .await
+    {
         Ok(job_id) => {
             tracing::info!(user_id = auth.user_id, job_id, "sync job enqueued");
             if is_form {
@@ -153,7 +163,8 @@ mod tests {
     async fn post_sync_updates_sync_state() {
         let pool = test_pool().await;
         let cookie = auth_cookie_for_user(&pool, "alice").await;
-        let user = db::get_user_by_username(&pool, "alice")
+        let user = db::users::GetByUsername { username: "alice" }
+            .execute(&pool)
             .await
             .expect("lookup failed")
             .expect("missing user");
@@ -176,7 +187,8 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let sync_state = db::get_or_create_sync_state(&pool, user.id)
+        let sync_state = db::sync_state::GetOrCreate { user_id: user.id }
+            .execute(&pool)
             .await
             .expect("failed to fetch sync state");
         assert!(sync_state.last_sync_at.is_some());

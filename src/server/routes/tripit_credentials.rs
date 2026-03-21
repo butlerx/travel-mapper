@@ -49,14 +49,14 @@ pub async fn store_tripit_credentials_handler(
             }
         };
 
-    match db::upsert_tripit_credentials(
-        &state.db,
-        auth.user_id,
-        &access_token_enc,
-        &access_token_secret_enc,
-        &nonce_token,
-        &nonce_secret,
-    )
+    match (db::credentials::Upsert {
+        user_id: auth.user_id,
+        access_token_enc: &access_token_enc,
+        access_token_secret_enc: &access_token_secret_enc,
+        nonce_token: &nonce_token,
+        nonce_secret: &nonce_secret,
+    })
+    .execute(&state.db)
     .await
     {
         Ok(()) => (StatusCode::OK, Json(json!({ "status": "ok" }))).into_response(),

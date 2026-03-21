@@ -20,9 +20,13 @@ pub async fn dashboard_page(
     auth: AuthUser,
     Query(feedback): Query<DashboardFeedback>,
 ) -> Response {
-    let hops = db::get_all_hops(&state.db, auth.user_id, None)
-        .await
-        .unwrap_or_default();
+    let hops = db::hops::GetAll {
+        user_id: auth.user_id,
+        travel_type_filter: None,
+    }
+    .execute(&state.db)
+    .await
+    .unwrap_or_default();
 
     let hop_count = hops.len();
     let hops_json = serde_json::to_string(&hops).unwrap_or_default();
@@ -82,22 +86,23 @@ mod tests {
     async fn dashboard_with_hops_renders_map_controls_and_script() {
         let pool = test_pool().await;
         let cookie = auth_cookie_for_user(&pool, "alice").await;
-        let user = db::get_user_by_username(&pool, "alice")
+        let user = db::users::GetByUsername { username: "alice" }
+            .execute(&pool)
             .await
             .expect("lookup failed")
             .expect("missing user");
-        db::insert_hops(
-            &pool,
-            "trip-1",
-            user.id,
-            &[sample_hop(
+        db::hops::Create {
+            trip_id: "trip-1",
+            user_id: user.id,
+            hops: &[sample_hop(
                 TravelType::Air,
                 "LHR",
                 "JFK",
                 "2024-02-01",
                 "2024-02-01",
             )],
-        )
+        }
+        .execute(&pool)
         .await
         .expect("insert failed");
 

@@ -51,13 +51,13 @@ pub async fn tripit_connect_handler(
             }
         };
 
-    if let Err(err) = db::store_oauth_request_token(
-        &state.db,
-        &request_token.token,
-        &secret_enc,
-        &nonce,
-        auth.user_id,
-    )
+    if let Err(err) = (db::oauth_tokens::Create {
+        token: &request_token.token,
+        token_secret_enc: &secret_enc,
+        nonce: &nonce,
+        user_id: auth.user_id,
+    })
+    .execute(&state.db)
     .await
     {
         tracing::error!("store oauth request token: {err}");

@@ -27,7 +27,11 @@ pub async fn logout_handler(
     auth: AuthUser,
 ) -> (CookieJar, Response) {
     if let Some(cookie) = jar.get("session_id") {
-        let _ = db::delete_session(&state.db, cookie.value()).await;
+        let _ = (db::sessions::Delete {
+            token: cookie.value(),
+        })
+        .execute(&state.db)
+        .await;
     }
     let _ = auth;
 

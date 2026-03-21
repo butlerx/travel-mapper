@@ -26,7 +26,12 @@ pub async fn tripit_callback_handler(
     auth: AuthUser,
     Query(query): Query<TripItCallbackQuery>,
 ) -> Response {
-    let stored = match db::get_oauth_request_token(&state.db, &query.oauth_token).await {
+    let stored = match (db::oauth_tokens::Get {
+        token: &query.oauth_token,
+    })
+    .execute(&state.db)
+    .await
+    {
         Ok(Some(row)) => row,
         Ok(None) => {
             return (
@@ -68,7 +73,11 @@ pub async fn tripit_callback_handler(
         }
     };
 
-    let _ = db::delete_oauth_request_token(&state.db, &query.oauth_token).await;
+    let _ = (db::oauth_tokens::Delete {
+        token: &query.oauth_token,
+    })
+    .execute(&state.db)
+    .await;
 
     let consumer = TripItConsumer::new(
         state.tripit_consumer_key.clone(),
@@ -103,14 +112,14 @@ pub async fn tripit_callback_handler(
             }
         };
 
-    if let Err(err) = db::upsert_tripit_credentials(
-        &state.db,
-        auth.user_id,
-        &access_token_enc,
-        &access_token_secret_enc,
-        &nonce_token,
-        &nonce_secret,
-    )
+    if let Err(err) = (db::credentials::Upsert {
+        user_id: auth.user_id,
+        access_token_enc: &access_token_enc,
+        access_token_secret_enc: &access_token_secret_enc,
+        nonce_token: &nonce_token,
+        nonce_secret: &nonce_secret,
+    })
+    .execute(&state.db)
     .await
     {
         tracing::error!("upsert tripit credentials: {err}");

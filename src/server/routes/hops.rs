@@ -26,7 +26,13 @@ pub async fn hops_handler(
     Query(query): Query<HopQuery>,
     headers: HeaderMap,
 ) -> Response {
-    let hops = match db::get_all_hops(&state.db, auth.user_id, query.travel_type.as_deref()).await {
+    let hops = match (db::hops::GetAll {
+        user_id: auth.user_id,
+        travel_type_filter: query.travel_type.as_deref(),
+    })
+    .execute(&state.db)
+    .await
+    {
         Ok(hops) => hops,
         Err(err) => {
             return (
@@ -258,22 +264,23 @@ mod tests {
     async fn access_hops_with_session_cookie_returns_ok() {
         let pool = test_pool().await;
         let cookie = auth_cookie_for_user(&pool, "alice").await;
-        let user = db::get_user_by_username(&pool, "alice")
+        let user = db::users::GetByUsername { username: "alice" }
+            .execute(&pool)
             .await
             .expect("lookup failed")
             .expect("missing user");
-        db::insert_hops(
-            &pool,
-            "trip-1",
-            user.id,
-            &[sample_hop(
+        db::hops::Create {
+            trip_id: "trip-1",
+            user_id: user.id,
+            hops: &[sample_hop(
                 TravelType::Air,
                 "LHR",
                 "JFK",
                 "2024-01-01",
                 "2024-01-01",
             )],
-        )
+        }
+        .execute(&pool)
         .await
         .expect("insert failed");
 
@@ -295,22 +302,23 @@ mod tests {
     async fn access_hops_with_api_key_returns_ok() {
         let pool = test_pool().await;
         let _ = auth_cookie_for_user(&pool, "alice").await;
-        let user = db::get_user_by_username(&pool, "alice")
+        let user = db::users::GetByUsername { username: "alice" }
+            .execute(&pool)
             .await
             .expect("lookup failed")
             .expect("missing user");
-        db::insert_hops(
-            &pool,
-            "trip-1",
-            user.id,
-            &[sample_hop(
+        db::hops::Create {
+            trip_id: "trip-1",
+            user_id: user.id,
+            hops: &[sample_hop(
                 TravelType::Rail,
                 "Paris",
                 "London",
                 "2024-01-01",
                 "2024-01-01",
             )],
-        )
+        }
+        .execute(&pool)
         .await
         .expect("insert failed");
         api_key_for_user(&pool, "alice", "my-api-key").await;
@@ -334,7 +342,8 @@ mod tests {
     async fn get_hops_json_returns_inserted_hops() {
         let pool = test_pool().await;
         let cookie = auth_cookie_for_user(&pool, "alice").await;
-        let user = db::get_user_by_username(&pool, "alice")
+        let user = db::users::GetByUsername { username: "alice" }
+            .execute(&pool)
             .await
             .expect("lookup failed")
             .expect("missing user");
@@ -348,9 +357,14 @@ mod tests {
             ),
             sample_hop(TravelType::Air, "LHR", "JFK", "2024-02-01", "2024-02-01"),
         ];
-        db::insert_hops(&pool, "trip-1", user.id, &hops)
-            .await
-            .expect("insert failed");
+        db::hops::Create {
+            trip_id: "trip-1",
+            user_id: user.id,
+            hops: &hops,
+        }
+        .execute(&pool)
+        .await
+        .expect("insert failed");
 
         let app = create_router(test_app_state(pool));
         let response = app
@@ -380,7 +394,8 @@ mod tests {
     async fn get_hops_json_filters_by_type() {
         let pool = test_pool().await;
         let cookie = auth_cookie_for_user(&pool, "alice").await;
-        let user = db::get_user_by_username(&pool, "alice")
+        let user = db::users::GetByUsername { username: "alice" }
+            .execute(&pool)
             .await
             .expect("lookup failed")
             .expect("missing user");
@@ -394,9 +409,14 @@ mod tests {
                 "2024-01-01",
             ),
         ];
-        db::insert_hops(&pool, "trip-1", user.id, &hops)
-            .await
-            .expect("insert failed");
+        db::hops::Create {
+            trip_id: "trip-1",
+            user_id: user.id,
+            hops: &hops,
+        }
+        .execute(&pool)
+        .await
+        .expect("insert failed");
 
         let app = create_router(test_app_state(pool));
         let response = app
@@ -423,22 +443,23 @@ mod tests {
     async fn get_hops_with_accept_csv_returns_csv() {
         let pool = test_pool().await;
         let cookie = auth_cookie_for_user(&pool, "alice").await;
-        let user = db::get_user_by_username(&pool, "alice")
+        let user = db::users::GetByUsername { username: "alice" }
+            .execute(&pool)
             .await
             .expect("lookup failed")
             .expect("missing user");
-        db::insert_hops(
-            &pool,
-            "trip-1",
-            user.id,
-            &[sample_hop(
+        db::hops::Create {
+            trip_id: "trip-1",
+            user_id: user.id,
+            hops: &[sample_hop(
                 TravelType::Rail,
                 "Paris",
                 "London",
                 "2024-01-01",
                 "2024-01-01",
             )],
-        )
+        }
+        .execute(&pool)
         .await
         .expect("insert failed");
 
@@ -462,22 +483,23 @@ mod tests {
     async fn get_hops_with_accept_html_returns_html_table() {
         let pool = test_pool().await;
         let cookie = auth_cookie_for_user(&pool, "alice").await;
-        let user = db::get_user_by_username(&pool, "alice")
+        let user = db::users::GetByUsername { username: "alice" }
+            .execute(&pool)
             .await
             .expect("lookup failed")
             .expect("missing user");
-        db::insert_hops(
-            &pool,
-            "trip-1",
-            user.id,
-            &[sample_hop(
+        db::hops::Create {
+            trip_id: "trip-1",
+            user_id: user.id,
+            hops: &[sample_hop(
                 TravelType::Air,
                 "LHR",
                 "JFK",
                 "2024-02-01",
                 "2024-02-01",
             )],
-        )
+        }
+        .execute(&pool)
         .await
         .expect("insert failed");
 
@@ -500,22 +522,23 @@ mod tests {
     async fn get_hops_with_accept_html_contains_table_headers_and_hop_data() {
         let pool = test_pool().await;
         let cookie = auth_cookie_for_user(&pool, "alice").await;
-        let user = db::get_user_by_username(&pool, "alice")
+        let user = db::users::GetByUsername { username: "alice" }
+            .execute(&pool)
             .await
             .expect("lookup failed")
             .expect("missing user");
-        db::insert_hops(
-            &pool,
-            "trip-2",
-            user.id,
-            &[sample_hop(
+        db::hops::Create {
+            trip_id: "trip-2",
+            user_id: user.id,
+            hops: &[sample_hop(
                 TravelType::Rail,
                 "Paris",
                 "London",
                 "2024-01-01",
                 "2024-01-01",
             )],
-        )
+        }
+        .execute(&pool)
         .await
         .expect("insert failed");
 

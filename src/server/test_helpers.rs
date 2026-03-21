@@ -91,22 +91,27 @@ pub(crate) mod helpers {
     }
 
     pub async fn auth_cookie_for_user(pool: &SqlitePool, username: &str) -> String {
-        let user_id = db::create_user(pool, username, "hash")
-            .await
-            .expect("failed to create user");
-        db::create_session(
-            pool,
-            &format!("session-{username}"),
+        let user_id = db::users::Create {
+            username,
+            password_hash: "hash",
+        }
+        .execute(pool)
+        .await
+        .expect("failed to create user");
+        db::sessions::Create {
+            token: &format!("session-{username}"),
             user_id,
-            "2999-01-01 00:00:00",
-        )
+            expires_at: "2999-01-01 00:00:00",
+        }
+        .execute(pool)
         .await
         .expect("failed to create session");
         format!("session_id=session-{username}")
     }
 
     pub async fn api_key_for_user(pool: &SqlitePool, username: &str, key: &str) {
-        let user = db::get_user_by_username(pool, username)
+        let user = db::users::GetByUsername { username }
+            .execute(pool)
             .await
             .expect("user lookup failed")
             .expect("user missing");
@@ -115,9 +120,14 @@ pub(crate) mod helpers {
             let _ = write!(output, "{byte:02x}");
             output
         });
-        db::create_api_key(pool, user.id, &hex, "test")
-            .await
-            .expect("failed to create api key");
+        db::api_keys::Create {
+            user_id: user.id,
+            key_hash: &hex,
+            label: "test",
+        }
+        .execute(pool)
+        .await
+        .expect("failed to create api key");
     }
 
     pub fn sample_hop(

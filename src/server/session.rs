@@ -73,14 +73,19 @@ pub async fn create_user_session(
             }
         };
 
-    db::create_session(db, &token, user_id, &expires_at)
-        .await
-        .map_err(|err| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("failed to create session: {err}"),
-            )
-        })?;
+    db::sessions::Create {
+        token: &token,
+        user_id,
+        expires_at: &expires_at,
+    }
+    .execute(db)
+    .await
+    .map_err(|err| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("failed to create session: {err}"),
+        )
+    })?;
 
     Ok((token, expires_at))
 }
@@ -94,10 +99,11 @@ pub async fn verify_credentials(
     db: &sqlx::SqlitePool,
     username: &str,
     password: &str,
-) -> Result<db::UserRow, (StatusCode, String)> {
+) -> Result<db::users::Row, (StatusCode, String)> {
     use crate::auth::verify_password;
 
-    let user = db::get_user_by_username(db, username)
+    let user = db::users::GetByUsername { username }
+        .execute(db)
         .await
         .map_err(|err| {
             (

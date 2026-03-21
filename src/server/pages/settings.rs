@@ -21,12 +21,18 @@ pub async fn settings_page(
     auth: AuthUser,
     Query(feedback): Query<SettingsFeedback>,
 ) -> Response {
-    let has_tripit = db::has_tripit_credentials(&state.db, auth.user_id)
-        .await
-        .unwrap_or(false);
-    let sync_state = db::get_or_create_sync_state(&state.db, auth.user_id)
-        .await
-        .ok();
+    let has_tripit = db::credentials::Has {
+        user_id: auth.user_id,
+    }
+    .execute(&state.db)
+    .await
+    .unwrap_or(false);
+    let sync_state = db::sync_state::GetOrCreate {
+        user_id: auth.user_id,
+    }
+    .execute(&state.db)
+    .await
+    .ok();
 
     let html = view! {
         <SettingsPage
@@ -88,7 +94,8 @@ mod tests {
     async fn settings_page_with_tripit_and_sync_state_renders_connected_and_sync_now() {
         let pool = test_pool().await;
         let cookie = auth_cookie_for_user(&pool, "alice").await;
-        let user = db::get_user_by_username(&pool, "alice")
+        let user = db::users::GetByUsername { username: "alice" }
+            .execute(&pool)
             .await
             .expect("lookup failed")
             .expect("missing user");
@@ -98,27 +105,32 @@ mod tests {
         let (access_token_secret_enc, nonce_secret) =
             encrypt_token("secret", &key).expect("failed to encrypt access token secret");
 
-        db::upsert_tripit_credentials(
-            &pool,
-            user.id,
-            &access_token_enc,
-            &access_token_secret_enc,
-            &nonce_token,
-            &nonce_secret,
-        )
+        db::credentials::Upsert {
+            user_id: user.id,
+            access_token_enc: &access_token_enc,
+            access_token_secret_enc: &access_token_secret_enc,
+            nonce_token: &nonce_token,
+            nonce_secret: &nonce_secret,
+        }
+        .execute(&pool)
         .await
         .expect("failed to upsert tripit credentials");
 
-        let mut sync_state = db::get_or_create_sync_state(&pool, user.id)
+        let mut sync_state = db::sync_state::GetOrCreate { user_id: user.id }
+            .execute(&pool)
             .await
             .expect("failed to fetch sync state");
         sync_state.sync_status = "idle".to_string();
         sync_state.last_sync_at = Some("2026-01-02 03:04:05".to_string());
         sync_state.trips_fetched = 3;
         sync_state.hops_fetched = 12;
-        db::update_sync_state(&pool, user.id, &sync_state)
-            .await
-            .expect("failed to update sync state");
+        db::sync_state::Update {
+            user_id: user.id,
+            state: &sync_state,
+        }
+        .execute(&pool)
+        .await
+        .expect("failed to update sync state");
 
         let app = create_router(test_app_state(pool));
         let response = app

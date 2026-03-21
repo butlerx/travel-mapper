@@ -43,12 +43,19 @@ pub async fn sync_all(
     user_id: i64,
 ) -> Result<SyncResult, SyncError> {
     let started_at = Instant::now();
-    let mut state = db::get_or_create_sync_state(pool, user_id).await?;
+    let mut state = db::sync_state::GetOrCreate { user_id }
+        .execute(pool)
+        .await?;
 
     tracing::info!(user_id, "sync started");
 
     state.sync_status = "running".to_string();
-    db::update_sync_state(pool, user_id, &state).await?;
+    db::sync_state::Update {
+        user_id,
+        state: &state,
+    }
+    .execute(pool)
+    .await?;
 
     let sync_result = async {
         let trips_fetched = fetch_unique_trip_count(api).await?;
@@ -57,8 +64,19 @@ pub async fn sync_all(
         let hops = tripit::fetch_all_hops(api).await?;
         tracing::info!(user_id, hops = hops.len(), "fetched hops");
 
-        db::delete_hops_for_trip(pool, FULL_SYNC_TRIP_ID, user_id).await?;
-        let hops_fetched = db::insert_hops(pool, FULL_SYNC_TRIP_ID, user_id, &hops).await?;
+        db::hops::DeleteForTrip {
+            trip_id: FULL_SYNC_TRIP_ID,
+            user_id,
+        }
+        .execute(pool)
+        .await?;
+        let hops_fetched = db::hops::Create {
+            trip_id: FULL_SYNC_TRIP_ID,
+            user_id,
+            hops: &hops,
+        }
+        .execute(pool)
+        .await?;
 
         let now = sqlx::query_scalar!("SELECT datetime('now')")
             .fetch_one(pool)
@@ -70,7 +88,12 @@ pub async fn sync_all(
             i64::try_from(trips_fetched).map_err(|_| SyncError::CountOverflow("trips_fetched"))?;
         state.hops_fetched =
             i64::try_from(hops_fetched).map_err(|_| SyncError::CountOverflow("hops_fetched"))?;
-        db::update_sync_state(pool, user_id, &state).await?;
+        db::sync_state::Update {
+            user_id,
+            state: &state,
+        }
+        .execute(pool)
+        .await?;
 
         Ok(SyncResult {
             trips_fetched,
@@ -93,7 +116,12 @@ pub async fn sync_all(
 
     if sync_result.is_err() {
         state.sync_status = "idle".to_string();
-        let _ = db::update_sync_state(pool, user_id, &state).await;
+        let _ = db::sync_state::Update {
+            user_id,
+            state: &state,
+        }
+        .execute(pool)
+        .await;
     }
 
     sync_result
@@ -114,8 +142,12 @@ pub async fn run_sync_worker(
     config: SyncWorkerConfig,
     mut shutdown: watch::Receiver<bool>,
 ) -> Result<(), sqlx::Error> {
-    let reset_jobs = db::reset_stale_running_jobs(&config.pool).await?;
-    let reset_states = db::reset_stale_sync_states(&config.pool).await?;
+    let reset_jobs = db::sync_jobs::ResetStaleRunning
+        .execute(&config.pool)
+        .await?;
+    let reset_states = db::sync_jobs::ResetStaleSyncStates
+        .execute(&config.pool)
+        .await?;
     if reset_jobs > 0 || reset_states > 0 {
         tracing::info!(
             reset_jobs,
@@ -133,7 +165,7 @@ pub async fn run_sync_worker(
             () = tokio::time::sleep(config.poll_interval) => {}
         }
 
-        match db::claim_next_sync_job(&config.pool).await {
+        match db::sync_jobs::ClaimNext.execute(&config.pool).await {
             Ok(Some(job)) => {
                 tracing::info!(job_id = job.id, user_id = job.user_id, "claimed sync job");
                 process_sync_job(&config, &job).await;
@@ -146,7 +178,7 @@ pub async fn run_sync_worker(
     }
 }
 
-async fn process_sync_job(config: &SyncWorkerConfig, job: &db::SyncJobRow) {
+async fn process_sync_job(config: &SyncWorkerConfig, job: &db::sync_jobs::Row) {
     let result = build_client_and_sync(config, job).await;
 
     match result {
@@ -159,13 +191,22 @@ async fn process_sync_job(config: &SyncWorkerConfig, job: &db::SyncJobRow) {
                 duration_ms = sync_result.duration_ms,
                 "sync job completed",
             );
-            if let Err(err) = db::complete_sync_job(&config.pool, job.id).await {
+            if let Err(err) = (db::sync_jobs::Complete { job_id: job.id })
+                .execute(&config.pool)
+                .await
+            {
                 tracing::error!(job_id = job.id, error = %err, "failed to mark job completed");
             }
         }
         Err(err) => {
             tracing::error!(job_id = job.id, user_id = job.user_id, error = %err, "sync job failed");
-            if let Err(db_err) = db::fail_sync_job(&config.pool, job.id, &err.to_string()).await {
+            if let Err(db_err) = (db::sync_jobs::Fail {
+                job_id: job.id,
+                error_message: &err.to_string(),
+            })
+            .execute(&config.pool)
+            .await
+            {
                 tracing::error!(job_id = job.id, error = %db_err, "failed to mark job failed");
             }
         }
@@ -186,12 +227,15 @@ enum WorkerError {
 
 async fn build_client_and_sync(
     config: &SyncWorkerConfig,
-    job: &db::SyncJobRow,
+    job: &db::sync_jobs::Row,
 ) -> Result<SyncResult, WorkerError> {
-    let creds = db::get_tripit_credentials(&config.pool, job.user_id)
-        .await
-        .map_err(SyncError::Database)?
-        .ok_or(WorkerError::MissingCredentials(job.user_id))?;
+    let creds = db::credentials::Get {
+        user_id: job.user_id,
+    }
+    .execute(&config.pool)
+    .await
+    .map_err(SyncError::Database)?
+    .ok_or(WorkerError::MissingCredentials(job.user_id))?;
 
     let access_token = decrypt_token(
         &creds.access_token_enc,

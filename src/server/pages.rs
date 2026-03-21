@@ -28,7 +28,12 @@ async fn has_valid_session(jar: &CookieJar, state: &AppState) -> bool {
     let Some(cookie) = jar.get("session_id") else {
         return false;
     };
-    let Ok(Some(session)) = db::get_session(&state.db, cookie.value()).await else {
+    let Ok(Some(session)) = (db::sessions::Get {
+        token: cookie.value(),
+    })
+    .execute(&state.db)
+    .await
+    else {
         return false;
     };
     let Ok(Some(now)) = sqlx::query_scalar::<_, Option<String>>("SELECT datetime('now')")

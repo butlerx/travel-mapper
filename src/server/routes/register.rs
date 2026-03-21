@@ -77,7 +77,13 @@ pub async fn register_handler(
         }
     };
 
-    match db::create_user(&state.db, &body.username, &hash).await {
+    match (db::users::Create {
+        username: &body.username,
+        password_hash: &hash,
+    })
+    .execute(&state.db)
+    .await
+    {
         Ok(id) => {
             let token = match create_user_session(&state.db, id).await {
                 Ok((t, _)) => t,

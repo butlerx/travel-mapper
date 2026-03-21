@@ -40,7 +40,14 @@ pub async fn create_api_key_handler(
     let key_hash = sha256_hex(&key);
     let label = body.label.unwrap_or_default();
 
-    match db::create_api_key(&state.db, auth.user_id, &key_hash, &label).await {
+    match (db::api_keys::Create {
+        user_id: auth.user_id,
+        key_hash: &key_hash,
+        label: &label,
+    })
+    .execute(&state.db)
+    .await
+    {
         Ok(id) => (
             StatusCode::OK,
             Json(json!({ "id": id, "key": key, "label": label })),

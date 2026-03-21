@@ -62,7 +62,12 @@ impl FromRequestParts<AppState> for AuthUser {
             .and_then(|value| value.strip_prefix("Bearer "))
         {
             let key_hash = sha256_hex(auth_header);
-            if let Ok(Some(user_id)) = db::get_user_id_by_api_key_hash(&state.db, &key_hash).await {
+            if let Ok(Some(user_id)) = (db::api_keys::GetUserIdByHash {
+                key_hash: &key_hash,
+            })
+            .execute(&state.db)
+            .await
+            {
                 return Ok(Self { user_id });
             }
             return Err(unauthorized_response(parts));
@@ -70,7 +75,11 @@ impl FromRequestParts<AppState> for AuthUser {
 
         let jar = CookieJar::from_headers(&parts.headers);
         if let Some(cookie) = jar.get("session_id")
-            && let Ok(Some(session)) = db::get_session(&state.db, cookie.value()).await
+            && let Ok(Some(session)) = (db::sessions::Get {
+                token: cookie.value(),
+            })
+            .execute(&state.db)
+            .await
         {
             let now = sqlx::query_scalar::<_, Option<String>>("SELECT datetime('now')")
                 .fetch_one(&state.db)
