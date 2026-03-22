@@ -2,8 +2,8 @@ use super::{ErrorResponse, multi_format_docs, negotiate_format};
 use crate::{
     auth::encrypt_token,
     db,
+    integrations::tripit::TripItConsumer,
     server::{AppState, middleware::AuthUser},
-    tripit::TripItConsumer,
 };
 use aide::transform::TransformOperation;
 use axum::{
@@ -30,7 +30,7 @@ pub async fn tripit_connect_handler(
     let request_token = match consumer.request_token(&client).await {
         Ok(pair) => pair,
         Err(err) => {
-            tracing::error!("TripIt request_token failed: {err}");
+            tracing::error!(error = %err, "TripIt request_token failed");
             let format = negotiate_format(&headers);
             return ErrorResponse::into_format_response(
                 format!("failed to obtain request token: {err}"),
@@ -44,7 +44,7 @@ pub async fn tripit_connect_handler(
         match encrypt_token(&request_token.token_secret, &state.encryption_key) {
             Ok(pair) => pair,
             Err(err) => {
-                tracing::error!("encrypt request token secret: {err}");
+                tracing::error!(error = %err, "encrypt request token secret");
                 let format = negotiate_format(&headers);
                 return ErrorResponse::into_format_response(
                     "encryption failed",
@@ -63,7 +63,7 @@ pub async fn tripit_connect_handler(
     .execute(&state.db)
     .await
     {
-        tracing::error!("store oauth request token: {err}");
+        tracing::error!(error = %err, "store oauth request token");
         let format = negotiate_format(&headers);
         return ErrorResponse::into_format_response(
             format!("failed to store request token: {err}"),

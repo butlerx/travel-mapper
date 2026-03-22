@@ -221,10 +221,6 @@ fn build_html<T: MultiFormatResponse>(items: &[T]) -> Response {
     axum::response::Html(html.to_html()).into_response()
 }
 
-pub fn opt_f64_to_string(val: Option<f64>) -> String {
-    val.map_or_else(String::new, |v| v.to_string())
-}
-
 /// Add `text/csv` and `text/html` media types with derived examples to an
 /// `OpenAPI` response object.
 pub fn add_multi_format_docs<T: MultiFormatResponse>(response: &mut aide::openapi::Response) {

@@ -78,7 +78,7 @@ async fn run() -> Result<(), WorkerError> {
 
 async fn shutdown_signal() {
     if let Err(error) = tokio::signal::ctrl_c().await {
-        tracing::error!("failed to install ctrl+c handler: {error}");
+        tracing::error!(error = %error, "failed to install ctrl+c handler");
         tokio::time::sleep(Duration::from_millis(100)).await;
     }
     tracing::info!("shutdown signal received");

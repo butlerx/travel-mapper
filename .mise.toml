@@ -26,6 +26,11 @@ run         = "cargo build --release ${usage_args:-}"
 sources     = ["Cargo.lock", "Cargo.toml", "src/**/*.rs"]
 outputs     = ["target/release/server"]
 
+[tasks.dev]
+description = "Start server and sync worker together"
+depends     = ["seed", "serve", "worker"]
+wait_for    = []
+
 [tasks.serve]
 description = "Start the server with auto-reload on changes"
 run         = "cargo watch -x 'run --bin server'"
@@ -78,7 +83,6 @@ sources     = ["migrations/*.sql"]
 [tasks."db:reset"]
 description = "Drop and recreate the database, then run migrations"
 run         = ["sqlx database drop -y", "sqlx database create", "sqlx migrate run"]
-sources     = ["migrations/*.sql"]
 
 [tasks."db:prepare"]
 description = "Generate .sqlx/ query cache for offline compile-time checking"
@@ -86,6 +90,11 @@ run         = "cargo sqlx prepare"
 depends     = ["db:migrate"]
 sources     = ["src/**/*.rs", "migrations/*.sql"]
 outputs     = [".sqlx/*.json"]
+
+[tasks.seed]
+description = "Seed the database with test users for local development"
+run         = "cargo run --bin seed"
+depends     = ["db:migrate"]
 
 [tasks.clean]
 description = "Clean build artifacts"

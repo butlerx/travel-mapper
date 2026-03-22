@@ -1,0 +1,80 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT\n                           travel_type,\n                           origin_name,\n                           origin_lat,\n                           origin_lng,\n                           origin_country,\n                           dest_name,\n                           dest_lat,\n                           dest_lng,\n                           dest_country,\n                           start_date,\n                           end_date\n                       FROM hops\n                       WHERE user_id = ?\n                       ORDER BY start_date ASC",
+  "describe": {
+    "columns": [
+      {
+        "name": "travel_type",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "origin_name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "origin_lat",
+        "ordinal": 2,
+        "type_info": "Float"
+      },
+      {
+        "name": "origin_lng",
+        "ordinal": 3,
+        "type_info": "Float"
+      },
+      {
+        "name": "origin_country",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "dest_name",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "dest_lat",
+        "ordinal": 6,
+        "type_info": "Float"
+      },
+      {
+        "name": "dest_lng",
+        "ordinal": 7,
+        "type_info": "Float"
+      },
+      {
+        "name": "dest_country",
+        "ordinal": 8,
+        "type_info": "Text"
+      },
+      {
+        "name": "start_date",
+        "ordinal": 9,
+        "type_info": "Text"
+      },
+      {
+        "name": "end_date",
+        "ordinal": 10,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "019d457c6daba5bc0641e67efae0e7ea445f706fd776c4deb2949121dead434b"
+}

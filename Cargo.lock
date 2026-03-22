@@ -3764,6 +3764,7 @@ dependencies = [
  "leptos_router",
  "percent-encoding",
  "rand 0.8.5",
+ "regex",
  "reqwest",
  "schemars",
  "serde",

@@ -1,6 +1,7 @@
 //! HTTP route handlers and response formatting.
 
 mod api_keys;
+mod flighty;
 mod health;
 mod hops;
 mod login;
@@ -14,6 +15,7 @@ mod tripit_credentials;
 mod types;
 
 pub(super) use api_keys::{create_api_key_handler, create_api_key_handler_docs};
+pub(super) use flighty::import_flighty_handler;
 pub(super) use health::{health_handler, health_handler_docs};
 pub(super) use hops::{HopResponse, hops_handler, hops_handler_docs};
 pub(super) use login::{AuthResponse, login_handler, login_handler_docs};

@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "UPDATE sync_jobs\n           SET status = 'running', started_at = datetime('now')\n           WHERE id = (\n               SELECT id FROM sync_jobs WHERE status = 'pending' ORDER BY created_at ASC LIMIT 1\n           )\n           RETURNING id AS \"id!: i64\", user_id, status, error_message, created_at, started_at, completed_at",
+  "query": "UPDATE sync_jobs\n               SET status = 'running', started_at = datetime('now')\n               WHERE id = (\n                   SELECT id FROM sync_jobs WHERE status = 'pending' ORDER BY created_at ASC LIMIT 1\n               )\n               RETURNING id AS \"id!: i64\", user_id, status, error_message, created_at, started_at, completed_at",
   "describe": {
     "columns": [
       {
@@ -52,5 +52,5 @@
       true
     ]
   },
-  "hash": "1995c0ff00e0b986febb3adfd7a44aff5764fa74b313f673ef92b85846da042d"
+  "hash": "ef215d3df5832dab7f041d684c1959b9123ada9d4d298717359d0210a35aad2a"
 }

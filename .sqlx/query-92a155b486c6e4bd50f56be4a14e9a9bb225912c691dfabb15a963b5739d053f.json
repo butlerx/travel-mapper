@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE sync_state\n               SET\n                   last_sync_at = ?,\n                   last_modified_since = ?,\n                   sync_status = ?,\n                   trips_fetched = ?,\n                   hops_fetched = ?\n               WHERE user_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "92a155b486c6e4bd50f56be4a14e9a9bb225912c691dfabb15a963b5739d053f"
+}

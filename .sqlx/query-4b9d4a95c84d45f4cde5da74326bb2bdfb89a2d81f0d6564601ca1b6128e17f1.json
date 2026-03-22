@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT\n               last_sync_at,\n               last_modified_since,\n               sync_status,\n               trips_fetched,\n               hops_fetched\n           FROM sync_state\n           WHERE user_id = ?",
+  "query": "SELECT\n                   last_sync_at,\n                   last_modified_since,\n                   sync_status,\n                   trips_fetched,\n                   hops_fetched\n               FROM sync_state\n               WHERE user_id = ?",
   "describe": {
     "columns": [
       {
@@ -40,5 +40,5 @@
       false
     ]
   },
-  "hash": "a6396ca5d59b97477fbf9628d02b952110b9a40bcc8778131e1919a56ad40187"
+  "hash": "4b9d4a95c84d45f4cde5da74326bb2bdfb89a2d81f0d6564601ca1b6128e17f1"
 }

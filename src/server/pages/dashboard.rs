@@ -59,10 +59,12 @@ fn compute_stats(hops: &[HopResponse]) -> TravelStats {
             _ => {}
         }
 
-        if let (Some(o_lat), Some(o_lng), Some(d_lat), Some(d_lng)) =
-            (hop.origin_lat, hop.origin_lng, hop.dest_lat, hop.dest_lng)
+        if hop.origin_lat != 0.0
+            || hop.origin_lng != 0.0
+            || hop.dest_lat != 0.0
+            || hop.dest_lng != 0.0
         {
-            let km = haversine_km(o_lat, o_lng, d_lat, d_lng);
+            let km = haversine_km(hop.origin_lat, hop.origin_lng, hop.dest_lat, hop.dest_lng);
             if km.is_finite() && km > 0.0 {
                 stats.total_distance_km += positive_km_to_u64(km);
             }

@@ -2,8 +2,8 @@ use super::{ErrorResponse, multi_format_docs, negotiate_format};
 use crate::{
     auth::{decrypt_token, encrypt_token},
     db,
+    integrations::tripit::TripItConsumer,
     server::{AppState, middleware::AuthUser},
-    tripit::TripItConsumer,
 };
 use aide::transform::TransformOperation;
 use axum::{
@@ -70,7 +70,7 @@ pub async fn tripit_callback_handler(
     ) {
         Ok(secret) => secret,
         Err(err) => {
-            tracing::error!("decrypt request token secret: {err}");
+            tracing::error!(error = %err, "decrypt request token secret");
             let format = negotiate_format(&headers);
             return ErrorResponse::into_format_response(
                 "failed to decrypt request token secret",
@@ -91,7 +91,7 @@ pub async fn tripit_callback_handler(
         state.tripit_consumer_secret.clone(),
     );
 
-    let request_pair = crate::tripit::OAuthTokenPair {
+    let request_pair = crate::integrations::tripit::OAuthTokenPair {
         token: query.oauth_token.clone(),
         token_secret,
     };
@@ -100,7 +100,7 @@ pub async fn tripit_callback_handler(
     let access_token = match consumer.access_token(&client, &request_pair).await {
         Ok(pair) => pair,
         Err(err) => {
-            tracing::error!("TripIt access_token exchange failed: {err}");
+            tracing::error!(error = %err, "TripIt access_token exchange failed");
             return Redirect::to("/settings?error=TripIt+authorization+failed").into_response();
         }
     };
@@ -114,7 +114,7 @@ pub async fn tripit_callback_handler(
                 (token_ct, token_nonce, secret_ct, secret_nonce)
             }
             (Err(err), _) | (_, Err(err)) => {
-                tracing::error!("encrypt access token: {err}");
+                tracing::error!(error = %err, "encrypt access token");
                 return Redirect::to("/settings?error=Failed+to+store+credentials").into_response();
             }
         };
@@ -129,7 +129,7 @@ pub async fn tripit_callback_handler(
     .execute(&state.db)
     .await
     {
-        tracing::error!("upsert tripit credentials: {err}");
+        tracing::error!(error = %err, "upsert tripit credentials");
         return Redirect::to("/settings?error=Failed+to+store+credentials").into_response();
     }
 

@@ -172,10 +172,8 @@
 
     hops.forEach(function (hop) {
       if (
-        hop.origin_lat == null ||
-        hop.origin_lng == null ||
-        hop.dest_lat == null ||
-        hop.dest_lng == null
+        (!hop.origin_lat && !hop.origin_lng) ||
+        (!hop.dest_lat && !hop.dest_lng)
       )
         return;
 

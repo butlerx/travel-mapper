@@ -1,7 +1,6 @@
 use super::ErrorResponse;
 use super::types::{
     MultiFormatResponse, add_multi_format_docs, multi_format_docs, negotiate_format,
-    opt_f64_to_string,
 };
 use crate::{
     db,
@@ -25,15 +24,15 @@ pub struct HopResponse {
     /// Name of the origin location (airport code, city, or station).
     pub origin_name: String,
     /// Latitude of the origin location.
-    pub origin_lat: Option<f64>,
+    pub origin_lat: f64,
     /// Longitude of the origin location.
-    pub origin_lng: Option<f64>,
+    pub origin_lng: f64,
     /// Name of the destination location (airport code, city, or station).
     pub dest_name: String,
     /// Latitude of the destination location.
-    pub dest_lat: Option<f64>,
+    pub dest_lat: f64,
     /// Longitude of the destination location.
-    pub dest_lng: Option<f64>,
+    pub dest_lng: f64,
     /// Departure date in `YYYY-MM-DD` format.
     pub start_date: String,
     /// Arrival date in `YYYY-MM-DD` format.
@@ -134,11 +133,11 @@ impl MultiFormatResponse for HopResponse {
         vec![
             self.travel_type.to_string(),
             self.origin_name.clone(),
-            opt_f64_to_string(self.origin_lat),
-            opt_f64_to_string(self.origin_lng),
+            self.origin_lat.to_string(),
+            self.origin_lng.to_string(),
             self.dest_name.clone(),
-            opt_f64_to_string(self.dest_lat),
-            opt_f64_to_string(self.dest_lng),
+            self.dest_lat.to_string(),
+            self.dest_lng.to_string(),
             self.start_date.clone(),
             self.end_date.clone(),
         ]

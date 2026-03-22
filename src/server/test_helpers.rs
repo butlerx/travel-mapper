@@ -3,8 +3,8 @@ pub(crate) mod helpers {
     use crate::{
         db,
         db::hops::{Row as Hop, TravelType},
+        integrations::tripit::{FetchError, TripItApi},
         server::AppState,
-        tripit::{FetchError, TripItApi},
     };
     use axum::{body::to_bytes, response::Response};
     use serde_json::{Value, json};
@@ -140,13 +140,24 @@ pub(crate) mod helpers {
         Hop {
             travel_type,
             origin_name: origin.to_string(),
-            origin_lat: Some(1.0),
-            origin_lng: Some(2.0),
+            origin_lat: 1.0,
+            origin_lng: 2.0,
+            origin_country: None,
             dest_name: dest.to_string(),
-            dest_lat: Some(3.0),
-            dest_lng: Some(4.0),
+            dest_lat: 3.0,
+            dest_lng: 4.0,
+            dest_country: None,
             start_date: start.to_string(),
             end_date: end.to_string(),
+            raw_json: None,
+            origin_address_query: None,
+            dest_address_query: None,
+            origin_tz: None,
+            dest_tz: None,
+            flight_detail: None,
+            rail_detail: None,
+            cruise_detail: None,
+            transport_detail: None,
         }
     }
 

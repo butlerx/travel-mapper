@@ -14,6 +14,7 @@ use serde::Deserialize;
 pub struct SettingsFeedback {
     pub error: Option<String>,
     pub tripit: Option<String>,
+    pub flighty: Option<String>,
 }
 
 pub async fn settings_page(
@@ -43,6 +44,7 @@ pub async fn settings_page(
             hops_fetched=sync_state.as_ref().map(|s| s.hops_fetched)
             error=feedback.error
             tripit_connected=feedback.tripit
+            flighty_imported=feedback.flighty
         />
     };
     (StatusCode::OK, axum::response::Html(html.to_html())).into_response()
@@ -221,5 +223,55 @@ mod tests {
         assert!(body.contains("<nav"));
         assert!(body.contains("href=\"/settings\""));
         assert!(body.contains("aria-current=\"page\""));
+    }
+
+    #[tokio::test]
+    async fn settings_page_renders_flighty_import_section() {
+        let pool = test_pool().await;
+        let cookie = auth_cookie_for_user(&pool, "alice").await;
+        let app = create_router(test_app_state(pool));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/settings")
+                    .header(header::COOKIE, cookie)
+                    .body(Body::empty())
+                    .expect("failed to build request"),
+            )
+            .await
+            .expect("router request failed");
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = body_text(response).await;
+        assert!(body.contains("Flighty Import"));
+        assert!(body.contains("/import/flighty"));
+        assert!(body.contains("multipart/form-data"));
+        assert!(body.contains("Import Flights"));
+    }
+
+    #[tokio::test]
+    async fn settings_page_flighty_imported_feedback_renders_success_alert() {
+        let pool = test_pool().await;
+        let cookie = auth_cookie_for_user(&pool, "alice").await;
+        let app = create_router(test_app_state(pool));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/settings?flighty=42")
+                    .header(header::COOKIE, cookie)
+                    .body(Body::empty())
+                    .expect("failed to build request"),
+            )
+            .await
+            .expect("router request failed");
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = body_text(response).await;
+        assert!(body.contains("42 flights from Flighty"));
+        assert!(body.contains("alert-success"));
     }
 }

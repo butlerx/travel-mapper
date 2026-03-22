@@ -13,6 +13,10 @@ path = "src/bin/server.rs"
 name = "sync-worker"
 path = "src/bin/sync_worker.rs"
 
+[[bin]]
+name = "seed"
+path = "src/bin/seed.rs"
+
 [dependencies]
 aes-gcm = "0.10"
 aide = { version = "0.15", features = [
@@ -39,6 +43,7 @@ leptos_meta        = { version = "0.8" }
 leptos_router      = { version = "0.8" }
 percent-encoding   = "2"
 rand               = "0.8"
+regex              = "1"
 reqwest            = { version = "0.12", features = ["json"] }
 schemars           = { version = "0.9", features = ["uuid1"] }
 serde              = { version = "1", features = ["derive"] }

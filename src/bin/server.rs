@@ -66,7 +66,7 @@ async fn run() -> Result<(), ServerError> {
 
     let address = format!("0.0.0.0:{}", cli.port);
     let listener = tokio::net::TcpListener::bind(&address).await?;
-    tracing::info!("Listening on http://{address}");
+    tracing::info!(address, "listening");
 
     axum::serve(listener, app)
         .with_graceful_shutdown(shutdown_signal())
@@ -78,7 +78,7 @@ async fn run() -> Result<(), ServerError> {
 
 async fn shutdown_signal() {
     if let Err(error) = tokio::signal::ctrl_c().await {
-        tracing::error!("failed to install ctrl+c handler: {error}");
+        tracing::error!(error = %error, "failed to install ctrl+c handler");
         tokio::time::sleep(Duration::from_millis(100)).await;
     }
     tracing::info!("shutdown signal received");

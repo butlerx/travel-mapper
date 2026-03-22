@@ -65,23 +65,18 @@ Add it to `.env`:
 ENCRYPTION_KEY=your_64_char_hex_key
 ```
 
-### 4. Start the server
+### 4. Start the server and worker
 
 ```bash
-mise run serve
+mise run dev
 ```
 
-The server starts on `http://localhost:3000` by default.
+The server starts on `http://localhost:3000` by default. The sync worker runs as
+a separate process that polls for pending sync jobs.
 
-### 5. Start the sync worker
+### 5. Register and configure
 
-The sync worker runs as a separate process that polls for pending sync jobs:
-
-```bash
-mise run worker
-```
-
-### 6. Register and configure
+_Note_: the dev env will be seeded with a `test` user with the password `test`
 
 Register a user:
 

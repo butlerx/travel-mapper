@@ -1,9 +1,11 @@
 mod api_keys_section;
+mod flighty_section;
 mod sync_section;
 mod tripit_section;
 
 use super::{navbar::NavBar, shell::Shell};
 use api_keys_section::ApiKeysSection;
+use flighty_section::FlightySection;
 use leptos::prelude::*;
 use sync_section::SyncSection;
 use tripit_section::TripitSection;
@@ -17,6 +19,7 @@ pub fn SettingsPage(
     hops_fetched: Option<i64>,
     #[prop(optional_no_strip)] error: Option<String>,
     #[prop(optional_no_strip)] tripit_connected: Option<String>,
+    #[prop(optional_no_strip)] flighty_imported: Option<String>,
 ) -> impl IntoView {
     view! {
         <Shell title="Settings".to_owned()>
@@ -28,6 +31,11 @@ pub fn SettingsPage(
                 {tripit_connected.filter(|v| v == "connected").map(|_| view! {
                     <div class="alert alert-success" role="status">"TripIt account connected successfully!"</div>
                 })}
+                {flighty_imported.map(|count| view! {
+                    <div class="alert alert-success" role="status">
+                        {format!("Successfully imported {count} flights from Flighty!")}
+                    </div>
+                })}
 
                 <TripitSection has_tripit=has_tripit />
 
@@ -38,6 +46,8 @@ pub fn SettingsPage(
                     trips_fetched=trips_fetched
                     hops_fetched=hops_fetched
                 />
+
+                <FlightySection />
 
                 <ApiKeysSection />
             </main>

@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT\n               access_token_enc,\n               access_token_secret_enc,\n               nonce_token,\n               nonce_secret\n           FROM user_tripit_credentials\n           WHERE user_id = ?",
+  "query": "SELECT\n                   access_token_enc,\n                   access_token_secret_enc,\n                   nonce_token,\n                   nonce_secret\n               FROM user_tripit_credentials\n               WHERE user_id = ?",
   "describe": {
     "columns": [
       {
@@ -34,5 +34,5 @@
       false
     ]
   },
-  "hash": "047f543ead336bfc106c5d84130d9a803e719a0e187b246d9037990714107a35"
+  "hash": "731c0cc2054bb7dd716c0da768b5573eb6134ba309a77088fd632abfbe6eaab2"
 }

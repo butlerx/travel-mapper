@@ -1,16 +1,16 @@
 use crate::{
+    integrations::tripit::TripItApi,
     server::pages::{
         dashboard_page, landing_page, login_page, not_found_page, register_page, settings_page,
     },
     server::routes::{
         create_api_key_handler, create_api_key_handler_docs, health_handler, health_handler_docs,
-        hops_handler, hops_handler_docs, login_handler, login_handler_docs, logout_handler,
-        logout_handler_docs, register_handler, register_handler_docs, serve_css, serve_js,
-        store_tripit_credentials_handler, store_tripit_credentials_handler_docs, sync_handler,
-        sync_handler_docs, tripit_callback_handler, tripit_callback_handler_docs,
+        hops_handler, hops_handler_docs, import_flighty_handler, login_handler, login_handler_docs,
+        logout_handler, logout_handler_docs, register_handler, register_handler_docs, serve_css,
+        serve_js, store_tripit_credentials_handler, store_tripit_credentials_handler_docs,
+        sync_handler, sync_handler_docs, tripit_callback_handler, tripit_callback_handler_docs,
         tripit_connect_handler, tripit_connect_handler_docs,
     },
-    tripit::TripItApi,
 };
 use aide::{
     axum::{ApiRouter, IntoApiResponse, routing::get_with},
@@ -115,6 +115,10 @@ pub fn create_router(state: AppState) -> Router {
             aide::axum::routing::post_with(sync_handler, sync_handler_docs),
         )
         .api_route("/hops", get_with(hops_handler, hops_handler_docs))
+        .route(
+            "/import/flighty",
+            axum::routing::post(import_flighty_handler),
+        )
         .api_route(
             "/auth/register",
             aide::axum::routing::post_with(register_handler, register_handler_docs),

@@ -1,6 +1,7 @@
 use super::{ErrorResponse, MultiFormatResponse, multi_format_docs, negotiate_format};
 use crate::{
     db,
+    geocode::Geocoder,
     server::{AppState, middleware::AuthUser},
     worker::{SyncOutcome, sync_all},
 };
@@ -82,7 +83,8 @@ pub async fn sync_handler(
     let format = negotiate_format(&headers);
 
     if let Some(override_api) = &state.tripit_override {
-        let result = sync_all(override_api.as_ref(), &state.db, auth.user_id).await;
+        let geocoder = Geocoder::default();
+        let result = sync_all(override_api.as_ref(), &geocoder, &state.db, auth.user_id).await;
         return match result {
             Ok(r) => {
                 let response = SyncResponse::from(r);

@@ -344,6 +344,53 @@ input[type='password']:invalid:not(:placeholder-shown):not(:focus) {
   margin-bottom: var(--space-md);
 }
 
+/* File Input */
+.file-input {
+  width: 100%;
+  padding: var(--space-sm) 0.75rem;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  background: #0f172a;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.file-input:hover {
+  border-color: var(--color-text-muted);
+}
+
+.file-input:focus {
+  outline: none;
+  border-color: var(--color-focus);
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+}
+
+.file-input::file-selector-button {
+  padding: var(--space-xs) var(--space-sm);
+  margin-right: var(--space-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+
+.file-input::file-selector-button:hover {
+  background: var(--color-surface);
+  border-color: var(--color-text-muted);
+}
+
 .form-footer {
   margin-top: var(--space-lg);
   text-align: center;

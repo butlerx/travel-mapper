@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT OR REPLACE INTO oauth_request_tokens (token, token_secret_enc, nonce, user_id)\n               VALUES (?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "1d86cf67e5248548781b757b91c72e642580797310c77a0896db7b004fa8b4f9"
+}

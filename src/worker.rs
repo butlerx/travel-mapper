@@ -1,14 +1,12 @@
 use crate::{
     auth::decrypt_token,
     db,
-    tripit::{self, FetchError, TripItApi, TripItAuth, TripItClient},
+    geocode::Geocoder,
+    integrations::tripit::{self, FetchError, TripItApi, TripItAuth, TripItClient},
 };
-use serde_json::Value;
 use sqlx::SqlitePool;
-use std::{collections::HashSet, time::Instant};
+use std::time::Instant;
 use tokio::sync::watch;
-
-const FULL_SYNC_TRIP_ID: &str = "full-sync";
 
 #[derive(Debug)]
 pub struct SyncOutcome {
@@ -37,6 +35,7 @@ pub enum SyncError {
 /// on database errors, or [`SyncError::CountOverflow`] if counts exceed `i64`.
 pub async fn sync_all(
     api: &dyn TripItApi,
+    geocoder: &crate::geocode::Geocoder,
     pool: &SqlitePool,
     user_id: i64,
 ) -> Result<SyncOutcome, SyncError> {
@@ -56,25 +55,42 @@ pub async fn sync_all(
     .await?;
 
     let sync_result = async {
-        let trips_fetched = fetch_unique_trip_count(api).await?;
-        tracing::info!(user_id, trips_fetched, "fetched trip count");
+        let trips = tripit::fetch_trips(api, geocoder).await?;
+        let trips_fetched = u64::try_from(trips.len()).unwrap_or(u64::MAX);
+        tracing::info!(user_id, trips_fetched, "fetched trips from TripIt");
 
-        let hops = tripit::fetch_all_hops(api).await?;
-        tracing::info!(user_id, hops = hops.len(), "fetched hops");
+        let mut hops_fetched = 0_u64;
+        let mut active_trip_ids = Vec::with_capacity(trips.len());
+        for trip in &trips {
+            let tripit_trip_id = format!("tripit:{}", trip.trip_id);
+            active_trip_ids.push(trip.trip_id.clone());
 
-        db::hops::DeleteForTrip {
-            trip_id: FULL_SYNC_TRIP_ID,
+            let inserted = db::hops::ReplaceForTrip {
+                trip_id: &tripit_trip_id,
+                user_id,
+                hops: &trip.hops,
+            }
+            .execute(pool)
+            .await?;
+            hops_fetched += inserted;
+            tracing::debug!(
+                user_id,
+                trip_id = trip.trip_id,
+                display_name = trip.display_name,
+                inserted,
+                "imported trip",
+            );
+        }
+
+        let stale_deleted = db::hops::DeleteStaleTripItTrips {
             user_id,
+            active_trip_ids: &active_trip_ids,
         }
         .execute(pool)
         .await?;
-        let hops_fetched = db::hops::Create {
-            trip_id: FULL_SYNC_TRIP_ID,
-            user_id,
-            hops: &hops,
+        if stale_deleted > 0 {
+            tracing::info!(user_id, stale_deleted, "removed stale tripit hops");
         }
-        .execute(pool)
-        .await?;
 
         let now = sqlx::query_scalar!("SELECT datetime('now')")
             .fetch_one(pool)
@@ -255,57 +271,6 @@ async fn build_client_and_sync(
     );
     let client = TripItClient::new(auth);
 
-    Ok(sync_all(&client, &config.pool, job.user_id).await?)
-}
-
-fn list_field_as_vec(value: &Value, key: &str) -> Vec<Value> {
-    match value.get(key) {
-        Some(Value::Array(items)) => items.clone(),
-        Some(Value::Null) | None => Vec::new(),
-        Some(other) => vec![other.clone()],
-    }
-}
-
-fn parse_max_page(value: &Value) -> u64 {
-    value
-        .get("max_page")
-        .and_then(|max_page| {
-            max_page
-                .as_u64()
-                .or_else(|| max_page.as_str().and_then(|v| v.parse::<u64>().ok()))
-        })
-        .unwrap_or(1)
-}
-
-fn parse_trip_id(trip: &Value) -> Option<String> {
-    trip.get("id").and_then(|id| {
-        id.as_str()
-            .map(std::string::ToString::to_string)
-            .or_else(|| id.as_u64().map(|num| num.to_string()))
-    })
-}
-
-async fn fetch_unique_trip_count(api: &dyn TripItApi) -> Result<u64, FetchError> {
-    let mut seen = HashSet::new();
-
-    for past in [true, false] {
-        let mut page = 1_u64;
-        loop {
-            let data = api.list_trips(past, page, 25).await?;
-
-            for trip in list_field_as_vec(&data, "Trip") {
-                if let Some(id) = parse_trip_id(&trip) {
-                    let _ = seen.insert(id);
-                }
-            }
-
-            let max_page = parse_max_page(&data);
-            if page >= max_page {
-                break;
-            }
-            page += 1;
-        }
-    }
-
-    Ok(u64::try_from(seen.len()).unwrap_or(u64::MAX))
+    let geocoder = Geocoder::default();
+    Ok(sync_all(&client, &geocoder, &config.pool, job.user_id).await?)
 }
