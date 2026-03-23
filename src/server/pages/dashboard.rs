@@ -1,6 +1,14 @@
+/// Travel statistics computation from hop data.
+mod travel_stats;
+
 use crate::{
     db,
-    server::{AppState, components::DashboardPage, middleware::AuthUser, routes::HopResponse},
+    server::{
+        AppState,
+        components::{NavBar, Shell},
+        middleware::AuthUser,
+        routes::HopResponse,
+    },
 };
 use axum::{
     extract::{Query, State},
@@ -9,96 +17,14 @@ use axum::{
 };
 use leptos::prelude::*;
 use serde::Deserialize;
-use std::collections::HashSet;
+use travel_stats::{TravelStats, compute_stats, format_distance, format_year_range};
 
 #[derive(Deserialize, Default)]
 pub struct DashboardFeedback {
     pub error: Option<String>,
 }
 
-/// Stats computed from a user's travel hops.
-#[derive(Default, Clone)]
-pub struct TravelStats {
-    pub total_journeys: usize,
-    pub total_flights: usize,
-    pub total_rail: usize,
-    pub total_distance_km: u64,
-    pub airports_visited: usize,
-    pub cities_visited: usize,
-    pub first_year: Option<String>,
-    pub last_year: Option<String>,
-}
-
-fn haversine_km(lat1: f64, lng1: f64, lat2: f64, lng2: f64) -> f64 {
-    let r = 6371.0_f64;
-    let d_lat = (lat2 - lat1).to_radians();
-    let d_lng = (lng2 - lng1).to_radians();
-    let a = (d_lat / 2.0).sin().powi(2)
-        + lat1.to_radians().cos() * lat2.to_radians().cos() * (d_lng / 2.0).sin().powi(2);
-    r * 2.0 * a.sqrt().atan2((1.0 - a).sqrt())
-}
-
-#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-fn positive_km_to_u64(km: f64) -> u64 {
-    km.max(0.0).trunc() as u64
-}
-
-fn compute_stats(hops: &[HopResponse]) -> TravelStats {
-    let mut stats = TravelStats {
-        total_journeys: hops.len(),
-        ..Default::default()
-    };
-
-    let mut places: HashSet<String> = HashSet::new();
-    let mut years: Vec<&str> = Vec::new();
-
-    for hop in hops {
-        match hop.travel_type.as_str() {
-            "air" => stats.total_flights += 1,
-            "rail" => stats.total_rail += 1,
-            _ => {}
-        }
-
-        if hop.origin_lat != 0.0
-            || hop.origin_lng != 0.0
-            || hop.dest_lat != 0.0
-            || hop.dest_lng != 0.0
-        {
-            let km = haversine_km(hop.origin_lat, hop.origin_lng, hop.dest_lat, hop.dest_lng);
-            if km.is_finite() && km > 0.0 {
-                stats.total_distance_km += positive_km_to_u64(km);
-            }
-        }
-
-        places.insert(hop.origin_name.clone());
-        places.insert(hop.dest_name.clone());
-
-        if !hop.start_date.is_empty()
-            && let Some(y) = hop.start_date.get(..4)
-        {
-            years.push(y);
-        }
-    }
-
-    stats.cities_visited = places.len();
-    // For airport count, count only places referenced by air hops
-    let mut airports: HashSet<String> = HashSet::new();
-    for hop in hops {
-        if hop.travel_type.as_str() == "air" {
-            airports.insert(hop.origin_name.clone());
-            airports.insert(hop.dest_name.clone());
-        }
-    }
-    stats.airports_visited = airports.len();
-
-    years.sort_unstable();
-    stats.first_year = years.first().map(|y| (*y).to_owned());
-    stats.last_year = years.last().map(|y| (*y).to_owned());
-
-    stats
-}
-
-pub async fn dashboard_page(
+pub async fn page(
     State(state): State<AppState>,
     auth: AuthUser,
     Query(feedback): Query<DashboardFeedback>,
@@ -127,12 +53,143 @@ pub async fn dashboard_page(
     (StatusCode::OK, axum::response::Html(html.to_html())).into_response()
 }
 
+#[component]
+fn DashboardPage(
+    hops_json: String,
+    hop_count: usize,
+    stats: TravelStats,
+    #[prop(optional_no_strip)] error: Option<String>,
+) -> impl IntoView {
+    let has_hops = hop_count > 0;
+    let hops_script = format!("window.allHops={hops_json};");
+
+    let distance = format_distance(stats.total_distance_km);
+    let year_range = format_year_range(stats.first_year.as_ref(), stats.last_year.as_ref());
+
+    view! {
+        <Shell title="Dashboard".to_owned() body_class="dashboard-layout">
+            <NavBar current="dashboard" />
+            {error.map(|e| view! {
+                <div class="alert alert-error" role="alert">{e}</div>
+            })}
+
+            {if has_hops {
+                view! {
+                    <StatsBar stats=stats distance=distance year_range=year_range />
+                    <div class="dashboard-main">
+                        <div class="dashboard-map-col">
+                            <div id="map"></div>
+                            <MapControls hop_count=hop_count />
+                        </div>
+                        <aside id="journey-sidebar" class="journey-sidebar"></aside>
+                    </div>
+                    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+                        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+                        crossorigin="" />
+                    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+                        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+                        crossorigin=""></script>
+                    <script inner_html=hops_script></script>
+                    <script src="/static/map.js"></script>
+                }.into_any()
+            } else {
+                view! {
+                    <main class="container-wide">
+                        <section class="card">
+                            <div class="empty-state">
+                                <div class="empty-state-icon">{"\u{1F30D}"}</div>
+                                <p>"No hops yet. Connect TripIt in " <a href="/settings">"Settings"</a> " and sync to see your travel data."</p>
+                            </div>
+                        </section>
+                    </main>
+                }.into_any()
+            }}
+        </Shell>
+    }
+}
+
+#[component]
+fn MapControls(hop_count: usize) -> impl IntoView {
+    view! {
+        <div class="map-controls">
+            <div class="map-filters">
+                <label for="filter-type">{"\u{1F3F7}\u{FE0F} Type"}</label>
+                <select id="filter-type">
+                    <option value="all">"All Types"</option>
+                    <option value="air">{"\u{2708}\u{FE0F} Air"}</option>
+                    <option value="rail">{"\u{1F686} Rail"}</option>
+                    <option value="boat">{"\u{1F6A2} Boat"}</option>
+                    <option value="transport">{"\u{1F697} Transport"}</option>
+                </select>
+                <label for="filter-year">{"\u{1F4C5} Year"}</label>
+                <select id="filter-year">
+                    <option value="all">"All Years"</option>
+                </select>
+            </div>
+            <div class="map-legend">
+                <h3>{"\u{1F5FA}\u{FE0F} Routes"}</h3>
+                <div class="legend-item">
+                    <div class="legend-swatch legend-air"></div>
+                    <span>{"\u{2708}\u{FE0F} Air"}</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-swatch legend-rail"></div>
+                    <span>{"\u{1F686} Rail"}</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-swatch legend-boat"></div>
+                    <span>{"\u{1F6A2} Boat"}</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-swatch legend-transport"></div>
+                    <span>{"\u{1F697} Transport"}</span>
+                </div>
+                <div class="legend-count" id="hop-count">{hop_count}" journeys"</div>
+            </div>
+        </div>
+    }
+}
+
+#[component]
+fn StatsBar(stats: TravelStats, distance: String, year_range: String) -> impl IntoView {
+    view! {
+        <div class="dashboard-stats">
+            <div class="stat-row">
+                <div class="stat-card">
+                    <div class="stat-label">"Journeys"</div>
+                    <div class="stat-value">{stats.total_journeys}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">"Routes"</div>
+                    <div class="stat-value">{stats.total_flights + stats.total_rail}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">"Distance"</div>
+                    <div class="stat-value">{distance}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">"Places"</div>
+                    <div class="stat-value">{stats.cities_visited}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">"Countries"</div>
+                    <div class="stat-value">{stats.airports_visited}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">"Years"</div>
+                    <div class="stat-value">{year_range}</div>
+                </div>
+            </div>
+        </div>
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{
         db,
         db::hops::TravelType,
-        server::{create_router, test_helpers::helpers::*},
+        server::{create_router, test_helpers::*},
     };
     use axum::{
         body::Body,

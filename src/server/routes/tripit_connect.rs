@@ -15,7 +15,7 @@ use axum_extra::extract::Host;
 use indexmap::IndexMap;
 
 /// Start `TripIt` OAuth flow — redirects to `TripIt` authorization page.
-pub async fn tripit_connect_handler(
+pub async fn handler(
     State(state): State<AppState>,
     Host(host): Host,
     auth: AuthUser,
@@ -68,7 +68,7 @@ pub async fn tripit_connect_handler(
     Redirect::temporary(&authorize_url).into_response()
 }
 
-pub fn tripit_connect_handler_docs(op: TransformOperation) -> TransformOperation {
+pub fn handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
         op.description("Start TripIt OAuth flow — redirects to TripIt authorization page.")
             .response_with::<302, (), _>(|mut res| {

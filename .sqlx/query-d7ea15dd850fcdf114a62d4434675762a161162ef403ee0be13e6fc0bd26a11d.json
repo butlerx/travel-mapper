@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT OR REPLACE INTO rail_details (\n           hop_id,\n           carrier,\n           train_number,\n           service_class,\n           coach_number,\n           seats,\n           confirmation_num,\n           booking_site,\n           notes\n       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 9
+    },
+    "nullable": []
+  },
+  "hash": "d7ea15dd850fcdf114a62d4434675762a161162ef403ee0be13e6fc0bd26a11d"
+}

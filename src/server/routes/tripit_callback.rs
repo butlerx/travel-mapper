@@ -23,7 +23,7 @@ pub struct TripItCallbackQuery {
 }
 
 /// `TripIt` OAuth callback — exchanges request token for access token.
-pub async fn tripit_callback_handler(
+pub async fn handler(
     State(state): State<AppState>,
     auth: AuthUser,
     headers: HeaderMap,
@@ -121,7 +121,7 @@ pub async fn tripit_callback_handler(
     Redirect::to("/settings?tripit=connected").into_response()
 }
 
-pub fn tripit_callback_handler_docs(op: TransformOperation) -> TransformOperation {
+pub fn handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
         op.description("TripIt OAuth callback — exchanges request token for access token.")
             .response_with::<302, (), _>(|mut res| {

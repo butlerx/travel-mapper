@@ -1,3 +1,6 @@
+//! Encryption and password-hashing helpers — AES-256-GCM token encryption and
+//! Argon2 password verification.
+
 use aes_gcm::{
     Aes256Gcm, Key, Nonce,
     aead::{Aead, AeadCore, KeyInit, OsRng},

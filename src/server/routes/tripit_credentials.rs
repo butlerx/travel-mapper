@@ -26,7 +26,7 @@ pub struct TripItCredentialsRequest {
 }
 
 /// Store `TripIt` OAuth access tokens (encrypted at rest).
-pub async fn store_tripit_credentials_handler(
+pub async fn handler(
     State(state): State<AppState>,
     auth: AuthUser,
     headers: HeaderMap,
@@ -70,7 +70,7 @@ pub async fn store_tripit_credentials_handler(
     }
 }
 
-pub fn store_tripit_credentials_handler_docs(op: TransformOperation) -> TransformOperation {
+pub fn handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
         op.description("Store TripIt OAuth access tokens (encrypted at rest)."),
         200 => StatusResponse,

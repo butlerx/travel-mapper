@@ -1,19 +1,8 @@
+//! Application state and Axum router construction.
+
 use crate::{
     integrations::tripit::TripItApi,
-    server::pages::{
-        add_flight_page, dashboard_page, hop_detail_page, landing_page, login_page, not_found_page,
-        register_page, settings_page, stats_page,
-    },
-    server::routes::{
-        create_api_key_handler, create_api_key_handler_docs, create_hop_handler,
-        create_hop_handler_docs, health_handler, health_handler_docs, hops_handler,
-        hops_handler_docs, import_flighty_handler, login_handler, login_handler_docs,
-        logout_handler, logout_handler_docs, register_handler, register_handler_docs, serve_css,
-        serve_js, serve_logo, serve_stats_js, store_tripit_credentials_handler,
-        store_tripit_credentials_handler_docs, sync_handler, sync_handler_docs,
-        tripit_callback_handler, tripit_callback_handler_docs, tripit_connect_handler,
-        tripit_connect_handler_docs,
-    },
+    server::{pages, routes},
 };
 use aide::{
     axum::{ApiRouter, IntoApiResponse, routing::get_with},
@@ -32,6 +21,7 @@ use sqlx::SqlitePool;
 use std::{sync::Arc, time::Duration};
 use tower_http::trace::TraceLayer;
 
+/// Shared application state passed to every Axum handler.
 #[derive(Clone)]
 pub struct AppState {
     pub leptos_options: LeptosOptions,
@@ -101,67 +91,102 @@ fn api_docs(api: TransformOpenApi) -> TransformOpenApi {
         )
 }
 
-pub fn create_router(state: AppState) -> Router {
-    let mut api = OpenApi::default();
+/// Register page and static-asset routes that do not need `OpenAPI` metadata.
+fn page_routes(router: ApiRouter<AppState>) -> ApiRouter<AppState> {
+    router
+        .route("/", get(pages::landing::page))
+        .route("/register", get(pages::register::page))
+        .route("/login", get(pages::login::page))
+        .route("/dashboard", get(pages::dashboard::page))
+        .route("/settings", get(pages::settings::page))
+        .route("/stats", get(pages::stats::page))
+        .route("/flights/new", get(pages::add_flight::page))
+        .route("/hop/{id}", get(pages::hop_detail::page))
+        .route("/static/style.css", get(routes::static_assets::serve_css))
+        .route("/static/map.js", get(routes::static_assets::serve_js))
+        .route(
+            "/static/stats-map.js",
+            get(routes::static_assets::serve_stats_js),
+        )
+        .route("/static/logo.svg", get(routes::static_assets::serve_logo))
+}
 
-    ApiRouter::new()
-        .route("/", get(landing_page))
-        .route("/register", get(register_page))
-        .route("/login", get(login_page))
-        .route("/dashboard", get(dashboard_page))
-        .route("/settings", get(settings_page))
-        .route("/stats", get(stats_page))
-        .route("/flights/new", get(add_flight_page))
-        .route("/hop/{id}", get(hop_detail_page))
-        .route("/static/style.css", get(serve_css))
-        .route("/static/map.js", get(serve_js))
-        .route("/static/stats-map.js", get(serve_stats_js))
-        .route("/static/logo.svg", get(serve_logo))
-        .api_route("/health", get_with(health_handler, health_handler_docs))
+/// Register API routes that carry `OpenAPI` documentation.
+fn api_routes(router: ApiRouter<AppState>) -> ApiRouter<AppState> {
+    router
+        .api_route(
+            "/health",
+            get_with(routes::health::handler, routes::health::handler_docs),
+        )
         .api_route(
             "/sync",
-            aide::axum::routing::post_with(sync_handler, sync_handler_docs),
+            aide::axum::routing::post_with(routes::sync::handler, routes::sync::handler_docs),
         )
         .api_route(
             "/hops",
-            get_with(hops_handler, hops_handler_docs)
-                .post_with(create_hop_handler, create_hop_handler_docs),
+            get_with(routes::hops::handler, routes::hops::handler_docs).post_with(
+                routes::hops::create_handler,
+                routes::hops::create_handler_docs,
+            ),
         )
         .route(
             "/import/flighty",
-            axum::routing::post(import_flighty_handler),
+            axum::routing::post(routes::flighty::handler),
         )
         .api_route(
             "/auth/register",
-            aide::axum::routing::post_with(register_handler, register_handler_docs),
+            aide::axum::routing::post_with(
+                routes::register::handler,
+                routes::register::handler_docs,
+            ),
         )
         .api_route(
             "/auth/login",
-            aide::axum::routing::post_with(login_handler, login_handler_docs),
+            aide::axum::routing::post_with(routes::login::handler, routes::login::handler_docs),
         )
         .api_route(
             "/auth/logout",
-            aide::axum::routing::post_with(logout_handler, logout_handler_docs),
+            aide::axum::routing::post_with(routes::logout::handler, routes::logout::handler_docs),
         )
         .api_route(
             "/auth/api-keys",
-            aide::axum::routing::post_with(create_api_key_handler, create_api_key_handler_docs),
+            aide::axum::routing::post_with(
+                routes::api_keys::handler,
+                routes::api_keys::handler_docs,
+            ),
         )
         .api_route(
             "/auth/tripit",
             aide::axum::routing::put_with(
-                store_tripit_credentials_handler,
-                store_tripit_credentials_handler_docs,
+                routes::tripit_credentials::handler,
+                routes::tripit_credentials::handler_docs,
             ),
         )
         .api_route(
             "/auth/tripit/connect",
-            get_with(tripit_connect_handler, tripit_connect_handler_docs),
+            get_with(
+                routes::tripit_connect::handler,
+                routes::tripit_connect::handler_docs,
+            ),
         )
         .api_route(
             "/auth/tripit/callback",
-            get_with(tripit_callback_handler, tripit_callback_handler_docs),
+            get_with(
+                routes::tripit_callback::handler,
+                routes::tripit_callback::handler_docs,
+            ),
         )
+}
+
+/// Build the full Axum router with API routes, pages, `OpenAPI` docs, and middleware.
+pub fn create_router(state: AppState) -> Router {
+    let mut api = OpenApi::default();
+
+    let router = ApiRouter::new();
+    let router = page_routes(router);
+    let router = api_routes(router);
+
+    router
         .route(
             "/docs",
             get(Swagger::new("/openapi.json")
@@ -171,7 +196,7 @@ pub fn create_router(state: AppState) -> Router {
         .route("/openapi.json", get(serve_api))
         .finish_api_with(&mut api, api_docs)
         .layer(Extension(Arc::new(api)))
-        .fallback(not_found_page)
+        .fallback(pages::not_found::page)
         .layer(
             TraceLayer::new_for_http()
                 .make_span_with(|request: &axum::http::Request<_>| {

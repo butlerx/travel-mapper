@@ -1,6 +1,6 @@
 use crate::{
     db,
-    server::{AppState, pages::unauthorized_page},
+    server::{AppState, pages},
 };
 use aide::{OperationInput, generate::GenContext, openapi::Operation};
 use axum::{
@@ -55,7 +55,7 @@ fn unauthorized_response(parts: &Parts) -> Response {
         .is_some_and(|v| v.contains("text/html"));
 
     if wants_html {
-        unauthorized_page()
+        pages::unauthorized::page()
     } else {
         (
             StatusCode::UNAUTHORIZED,

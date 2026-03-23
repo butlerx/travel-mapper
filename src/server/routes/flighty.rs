@@ -41,7 +41,7 @@ fn redirect_settings_error(msg: &str) -> Response {
     Redirect::to(&format!("/settings?error={encoded}")).into_response()
 }
 
-pub async fn import_flighty_handler(
+pub async fn handler(
     State(state): State<AppState>,
     auth: AuthUser,
     request: axum::http::Request<Body>,
@@ -120,7 +120,7 @@ async fn handle_multipart(
 
 #[cfg(test)]
 mod tests {
-    use crate::server::{create_router, test_helpers::helpers::*};
+    use crate::server::{create_router, test_helpers::*};
     use axum::{
         body::Body,
         http::{Request, StatusCode, header},

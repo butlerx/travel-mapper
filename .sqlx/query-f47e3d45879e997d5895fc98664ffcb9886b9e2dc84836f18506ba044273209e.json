@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM hops WHERE user_id = ? AND trip_id LIKE ? AND trip_id NOT IN (SELECT value FROM json_each(?))",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "f47e3d45879e997d5895fc98664ffcb9886b9e2dc84836f18506ba044273209e"
+}

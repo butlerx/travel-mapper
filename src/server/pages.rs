@@ -1,26 +1,18 @@
 //! Page handlers for HTML views.
+// Leptos `#[component]` macro generates `#[must_use]` automatically,
+// and component props must own their data (String, not &str).
+#![allow(clippy::must_use_candidate, clippy::needless_pass_by_value)]
 
-mod add_flight;
+pub(super) mod add_flight;
 pub(crate) mod dashboard;
-mod hop_detail;
-mod landing;
-mod login;
-mod not_found;
-mod register;
-mod settings;
+pub(super) mod hop_detail;
+pub(super) mod landing;
+pub(super) mod login;
+pub(super) mod not_found;
+pub(super) mod register;
+pub(super) mod settings;
 pub(crate) mod stats;
-mod unauthorized;
-
-pub(super) use add_flight::add_flight_page;
-pub(super) use dashboard::dashboard_page;
-pub(super) use hop_detail::hop_detail_page;
-pub(super) use landing::landing_page;
-pub(super) use login::login_page;
-pub(super) use not_found::not_found_page;
-pub(super) use register::register_page;
-pub(super) use settings::settings_page;
-pub(super) use stats::stats_page;
-pub(super) use unauthorized::unauthorized_page;
+pub(super) mod unauthorized;
 
 use super::{AppState, components::ErrorPage};
 use crate::db;

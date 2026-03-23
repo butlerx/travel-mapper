@@ -47,7 +47,7 @@ pub async fn serve_logo() -> impl IntoResponse {
 #[cfg(test)]
 mod tests {
     use crate::server::create_router;
-    use crate::server::test_helpers::helpers::*;
+    use crate::server::test_helpers::*;
     use axum::{
         body::Body,
         http::{Request, StatusCode, header},

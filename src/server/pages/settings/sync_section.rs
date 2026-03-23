@@ -1,7 +1,7 @@
 use leptos::prelude::*;
 
 #[component]
-pub fn SyncSection(
+pub(super) fn SyncSection(
     has_tripit: bool,
     sync_status: Option<String>,
     last_sync_at: Option<String>,

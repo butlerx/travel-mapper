@@ -1,4 +1,4 @@
-use super::types::{
+use super::{
     ErrorResponse, MultiFormatResponse, add_multi_format_docs, multi_format_docs, negotiate_format,
 };
 use crate::{
@@ -180,7 +180,7 @@ pub struct HopQuery {
     travel_type: Option<HopTravelType>,
 }
 
-pub async fn hops_handler(
+pub async fn handler(
     State(state): State<AppState>,
     auth: AuthUser,
     Query(query): Query<HopQuery>,
@@ -204,7 +204,7 @@ pub async fn hops_handler(
     HopResponse::into_format_response(&responses, format, StatusCode::OK)
 }
 
-pub fn hops_handler_docs(op: TransformOperation) -> TransformOperation {
+pub fn handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
         op.description("List travel hops for the authenticated user.")
             .response_with::<200, Json<Vec<HopResponse>>, _>(|mut res| {
@@ -266,7 +266,7 @@ pub struct CreateHopResponse {
 ///
 /// Accepts JSON or form-encoded body. Form submissions redirect to the add
 /// flight page with a success or error query parameter.
-pub async fn create_hop_handler(
+pub async fn create_handler(
     State(state): State<AppState>,
     auth: AuthUser,
     headers: HeaderMap,
@@ -353,7 +353,7 @@ pub async fn create_hop_handler(
     }
 }
 
-pub fn create_hop_handler_docs(op: TransformOperation) -> TransformOperation {
+pub fn create_handler_docs(op: TransformOperation) -> TransformOperation {
     op.description("Create a flight hop manually. Accepts JSON or form-encoded body.")
         .input::<Json<CreateHopRequest>>()
         .with(|mut op| {
@@ -378,7 +378,7 @@ mod tests {
     use crate::{
         db::{self, hops::TravelType},
         server::create_router,
-        server::test_helpers::helpers::*,
+        server::test_helpers::*,
     };
     use axum::{
         body::{Body, to_bytes},

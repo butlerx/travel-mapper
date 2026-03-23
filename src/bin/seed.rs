@@ -49,8 +49,6 @@ impl From<argon2::password_hash::Error> for SeedError {
     }
 }
 
-const SEED_USERS: &[(&str, &str)] = &[("test", "test")];
-
 fn parse_encryption_key(hex: &str) -> Result<[u8; 32], SeedError> {
     if hex.len() != 64 {
         return Err(SeedError::InvalidEncryptionKey);
@@ -107,44 +105,42 @@ async fn run() -> Result<(), SeedError> {
             _ => return Err(SeedError::IncompleteCredentials),
         };
 
-    for &(username, password) in SEED_USERS {
-        let hash = travel_mapper::auth::hash_password(password)?;
+    let username = "test";
+    let hash = travel_mapper::auth::hash_password("test")?;
 
-        let user_id = match (travel_mapper::db::users::Create {
-            username,
-            password_hash: &hash,
-        })
-        .execute(&pool)
-        .await
-        {
-            Ok(id) => {
-                tracing::info!(username, id, "created user");
-                id
-            }
-            Err(sqlx::Error::Database(err)) if err.is_unique_violation() => {
-                tracing::info!(username, "user already exists, skipping creation");
-                let user = (travel_mapper::db::users::GetByUsername { username })
-                    .execute(&pool)
-                    .await?
-                    .ok_or_else(|| SeedError::UserNotFound(username.to_owned()))?;
-                user.id
-            }
-            Err(err) => return Err(SeedError::Database(err)),
-        };
-
-        if let (Some((access_token, access_token_secret)), Some(key)) =
-            (tripit_creds, &encryption_key)
-        {
-            seed_tripit_credentials(
-                &pool,
-                user_id,
-                username,
-                access_token,
-                access_token_secret,
-                key,
-            )
-            .await?;
+    let user_id = match (travel_mapper::db::users::Create {
+        username,
+        password_hash: &hash,
+    })
+    .execute(&pool)
+    .await
+    {
+        Ok(id) => {
+            tracing::info!(username, id, "created user");
+            id
         }
+        Err(sqlx::Error::Database(err)) if err.is_unique_violation() => {
+            tracing::info!(username, "user already exists, skipping creation");
+            let user = (travel_mapper::db::users::GetByUsername { username })
+                .execute(&pool)
+                .await?
+                .ok_or_else(|| SeedError::UserNotFound(username.to_owned()))?;
+            user.id
+        }
+        Err(err) => return Err(SeedError::Database(err)),
+    };
+
+    if let (Some((access_token, access_token_secret)), Some(key)) = (tripit_creds, &encryption_key)
+    {
+        seed_tripit_credentials(
+            &pool,
+            user_id,
+            username,
+            access_token,
+            access_token_secret,
+            key,
+        )
+        .await?;
     }
 
     Ok(())

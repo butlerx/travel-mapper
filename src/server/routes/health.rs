@@ -1,4 +1,4 @@
-use super::types::{MultiFormatResponse, multi_format_docs, negotiate_format};
+use super::{MultiFormatResponse, multi_format_docs, negotiate_format};
 use crate::server::AppState;
 use aide::{axum::IntoApiResponse, transform::TransformOperation};
 use axum::{
@@ -27,10 +27,7 @@ impl MultiFormatResponse for HealthResponse {
     }
 }
 
-pub async fn health_handler(
-    State(state): State<AppState>,
-    headers: HeaderMap,
-) -> impl IntoApiResponse {
+pub async fn handler(State(state): State<AppState>, headers: HeaderMap) -> impl IntoApiResponse {
     let last_sync =
         sqlx::query_scalar::<_, Option<String>>("SELECT MAX(last_sync_at) FROM sync_state")
             .fetch_one(&state.db)
@@ -47,7 +44,7 @@ pub async fn health_handler(
     HealthResponse::single_format_response(&response, format, StatusCode::OK).into_response()
 }
 
-pub fn health_handler_docs(op: TransformOperation) -> TransformOperation {
+pub fn handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
         op.description("Check server health and last sync timestamp."),
         200 => HealthResponse,
@@ -58,7 +55,7 @@ pub fn health_handler_docs(op: TransformOperation) -> TransformOperation {
 #[cfg(test)]
 mod tests {
     use crate::server::create_router;
-    use crate::server::test_helpers::helpers::*;
+    use crate::server::test_helpers::*;
     use axum::{
         body::{Body, to_bytes},
         http::{Request, StatusCode, header},

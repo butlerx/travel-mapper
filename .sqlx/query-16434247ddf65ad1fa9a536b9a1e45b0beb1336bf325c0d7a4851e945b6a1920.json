@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT OR REPLACE INTO boat_details (\n           hop_id,\n           ship_name,\n           cabin_type,\n           cabin_number,\n           confirmation_num,\n           booking_site,\n           notes\n       ) VALUES (?, ?, ?, ?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 7
+    },
+    "nullable": []
+  },
+  "hash": "16434247ddf65ad1fa9a536b9a1e45b0beb1336bf325c0d7a4851e945b6a1920"
+}

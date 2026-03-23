@@ -1,3 +1,6 @@
+//! Travel Mapper — sync `TripIt` travel history to `SQLite` and serve it via a web
+//! dashboard, REST API, or CSV export.
+
 #![warn(clippy::pedantic)]
 
 pub mod auth;

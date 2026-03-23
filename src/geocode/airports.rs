@@ -1,3 +1,6 @@
+//! Embedded IATA airport database — coordinate and metadata lookups by
+//! three-letter airport code.
+
 use airport_data::AirportData;
 use std::sync::LazyLock;
 
@@ -34,6 +37,8 @@ pub fn lookup_enriched(iata: &str) -> Option<Airport> {
 
 /// Look up coordinates by IATA code.
 ///
+/// TODO: rework this to return a custom error type instead of silently returning `None` for
+/// invalid codes, and to avoid redundant lookups when both coordinates and metadata are needed.
 /// Backward-compatible wrapper around [`lookup_enriched`] that returns only
 /// the latitude/longitude pair.
 #[must_use]

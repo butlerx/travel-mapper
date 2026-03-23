@@ -1,3 +1,5 @@
+//! Unified error type for route handlers — maps domain errors to HTTP responses.
+
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
@@ -5,6 +7,7 @@ use axum::{
 
 use super::routes::{ErrorResponse, ResponseFormat};
 
+/// Application-wide error type — each variant maps to an HTTP status code.
 #[derive(Debug, thiserror::Error)]
 pub enum AppError {
     #[error("invalid JSON: {0}")]
@@ -51,6 +54,7 @@ pub enum AppError {
 }
 
 impl AppError {
+    /// Return the HTTP status code for this error variant.
     #[must_use]
     pub const fn status(&self) -> StatusCode {
         match self {
@@ -70,6 +74,7 @@ impl AppError {
         }
     }
 
+    /// Convert this error into an HTTP response in the given format.
     #[must_use]
     pub fn into_format_response(self, format: ResponseFormat) -> Response {
         let status = self.status();

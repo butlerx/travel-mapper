@@ -3,7 +3,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 
-pub async fn not_found_page() -> Response {
+pub async fn page() -> Response {
     (
         StatusCode::NOT_FOUND,
         axum::response::Html(super::render_error_page(
@@ -19,7 +19,7 @@ pub async fn not_found_page() -> Response {
 
 #[cfg(test)]
 mod tests {
-    use crate::server::{create_router, test_helpers::helpers::*};
+    use crate::server::{create_router, test_helpers::*};
     use axum::{
         body::Body,
         http::{Request, StatusCode},

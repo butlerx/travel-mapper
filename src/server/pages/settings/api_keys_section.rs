@@ -1,7 +1,7 @@
 use leptos::prelude::*;
 
 #[component]
-pub fn ApiKeysSection() -> impl IntoView {
+pub(super) fn ApiKeysSection() -> impl IntoView {
     view! {
         <section class="card">
             <h2>"API Keys"</h2>

@@ -1,3 +1,5 @@
+//! Database layer — connection pool setup, migrations, and per-table query objects.
+
 /// CRUD operations on the `api_keys` table — programmatic access tokens.
 pub mod api_keys;
 /// Query objects for the `user_tripit_credentials` table — encrypted OAuth tokens.

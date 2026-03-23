@@ -1,3 +1,5 @@
+//! Background sync worker — polls for pending sync jobs and runs `TripIt` imports.
+
 use crate::{
     auth::decrypt_token,
     db,
@@ -8,6 +10,7 @@ use sqlx::SqlitePool;
 use std::time::Instant;
 use tokio::sync::watch;
 
+/// Result of a successful `TripIt` sync — counts and duration.
 #[derive(Debug)]
 pub struct SyncOutcome {
     pub trips_fetched: u64,
@@ -15,6 +18,7 @@ pub struct SyncOutcome {
     pub duration_ms: u64,
 }
 
+/// Errors that can occur during a `TripIt` sync.
 #[derive(Debug, thiserror::Error)]
 pub enum SyncError {
     #[error("TripIt API error: {0}")]
@@ -141,6 +145,7 @@ pub async fn sync_all(
     sync_result
 }
 
+/// Configuration for the long-running sync worker process.
 pub struct SyncWorkerConfig {
     pub pool: SqlitePool,
     pub encryption_key: [u8; 32],
@@ -149,6 +154,8 @@ pub struct SyncWorkerConfig {
     pub poll_interval: std::time::Duration,
 }
 
+/// Run the sync worker loop, polling for pending jobs until shutdown.
+///
 /// # Errors
 ///
 /// Returns an error if resetting stale jobs fails on startup.

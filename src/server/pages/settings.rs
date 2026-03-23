@@ -1,14 +1,31 @@
+/// API keys management section.
+mod api_keys_section;
+/// Flighty CSV import section.
+mod flighty_section;
+/// Sync status and trigger section.
+mod sync_section;
+/// `TripIt` connection section.
+mod tripit_section;
+
 use crate::{
     db,
-    server::{AppState, components::SettingsPage, middleware::AuthUser},
+    server::{
+        AppState,
+        components::{NavBar, Shell},
+        middleware::AuthUser,
+    },
 };
+use api_keys_section::ApiKeysSection;
 use axum::{
     extract::{Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
 };
+use flighty_section::FlightySection;
 use leptos::prelude::*;
 use serde::Deserialize;
+use sync_section::SyncSection;
+use tripit_section::TripitSection;
 
 #[derive(Deserialize, Default)]
 pub struct SettingsFeedback {
@@ -17,7 +34,7 @@ pub struct SettingsFeedback {
     pub flighty: Option<String>,
 }
 
-pub async fn settings_page(
+pub async fn page(
     State(state): State<AppState>,
     auth: AuthUser,
     Query(feedback): Query<SettingsFeedback>,
@@ -36,7 +53,7 @@ pub async fn settings_page(
     .ok();
 
     let html = view! {
-        <SettingsPage
+        <Settings
             has_tripit=has_tripit
             sync_status=sync_state.as_ref().map(|s| s.sync_status.clone())
             last_sync_at=sync_state.as_ref().and_then(|s| s.last_sync_at.clone())
@@ -50,12 +67,57 @@ pub async fn settings_page(
     (StatusCode::OK, axum::response::Html(html.to_html())).into_response()
 }
 
+#[component]
+fn Settings(
+    has_tripit: bool,
+    sync_status: Option<String>,
+    last_sync_at: Option<String>,
+    trips_fetched: Option<i64>,
+    hops_fetched: Option<i64>,
+    #[prop(optional_no_strip)] error: Option<String>,
+    #[prop(optional_no_strip)] tripit_connected: Option<String>,
+    #[prop(optional_no_strip)] flighty_imported: Option<String>,
+) -> impl IntoView {
+    view! {
+        <Shell title="Settings".to_owned()>
+            <NavBar current="settings" />
+            <main class="container">
+                {error.map(|e| view! {
+                    <div class="alert alert-error" role="alert">{e}</div>
+                })}
+                {tripit_connected.filter(|v| v == "connected").map(|_| view! {
+                    <div class="alert alert-success" role="status">"TripIt account connected successfully!"</div>
+                })}
+                {flighty_imported.map(|count| view! {
+                    <div class="alert alert-success" role="status">
+                        {format!("Successfully imported {count} flights from Flighty!")}
+                    </div>
+                })}
+
+                <TripitSection has_tripit=has_tripit />
+
+                <SyncSection
+                    has_tripit=has_tripit
+                    sync_status=sync_status
+                    last_sync_at=last_sync_at
+                    trips_fetched=trips_fetched
+                    hops_fetched=hops_fetched
+                />
+
+                <FlightySection />
+
+                <ApiKeysSection />
+            </main>
+        </Shell>
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{
         auth::encrypt_token,
         db,
-        server::{create_router, test_helpers::helpers::*},
+        server::{create_router, test_helpers::*},
     };
     use axum::{
         body::Body,

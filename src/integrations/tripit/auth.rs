@@ -60,6 +60,7 @@ pub struct TripItConsumer {
 }
 
 impl TripItConsumer {
+    /// Create a new consumer credential pair.
     #[must_use]
     pub fn new(consumer_key: String, consumer_secret: String) -> Self {
         Self {
@@ -122,6 +123,7 @@ impl TripItConsumer {
         parse_oauth_response(&body)
     }
 
+    /// Build the `TripIt` authorization URL for a given request token and callback.
     #[must_use]
     pub fn authorize_url(request_token: &str, callback_url: &str) -> String {
         format!(
@@ -161,6 +163,7 @@ impl TripItConsumer {
     }
 }
 
+/// Full OAuth 1.0 credentials — consumer key/secret plus access token/secret.
 // Full credentials including access tokens (for API calls).
 #[derive(Debug, Clone)]
 pub struct TripItAuth {
@@ -171,6 +174,7 @@ pub struct TripItAuth {
 }
 
 impl TripItAuth {
+    /// Create a new full credential set from consumer and access token pairs.
     #[must_use]
     pub fn new(
         consumer_key: String,

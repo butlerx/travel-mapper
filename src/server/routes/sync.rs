@@ -73,7 +73,7 @@ fn is_form_request(headers: &HeaderMap) -> bool {
         .is_some_and(|ct| ct.starts_with("application/x-www-form-urlencoded"))
 }
 
-pub async fn sync_handler(
+pub async fn handler(
     State(state): State<AppState>,
     auth: AuthUser,
     headers: HeaderMap,
@@ -135,7 +135,7 @@ pub async fn sync_handler(
     }
 }
 
-pub fn sync_handler_docs(op: TransformOperation) -> TransformOperation {
+pub fn handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
         op.description("Trigger a TripIt sync for the authenticated user."),
         200 => SyncResponse,
@@ -147,7 +147,7 @@ pub fn sync_handler_docs(op: TransformOperation) -> TransformOperation {
 
 #[cfg(test)]
 mod tests {
-    use crate::{db, server::create_router, server::test_helpers::helpers::*};
+    use crate::{db, server::create_router, server::test_helpers::*};
     use axum::{
         body::Body,
         http::{Request, StatusCode, header},

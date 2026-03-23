@@ -1,6 +1,6 @@
 //! Shared session and authentication utilities.
 
-use crate::{db, server::error::AppError};
+use crate::{auth::verify_password, db, server::error::AppError};
 use axum::http::{HeaderMap, header};
 use axum_extra::extract::cookie::{Cookie, SameSite};
 use sha2::{Digest, Sha256};
@@ -84,8 +84,6 @@ pub(crate) async fn verify_credentials(
     username: &str,
     password: &str,
 ) -> Result<db::users::Row, AppError> {
-    use crate::auth::verify_password;
-
     let user = db::users::GetByUsername { username }
         .execute(db)
         .await?

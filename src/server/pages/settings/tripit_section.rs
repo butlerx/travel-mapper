@@ -1,7 +1,7 @@
 use leptos::prelude::*;
 
 #[component]
-pub fn TripitSection(has_tripit: bool) -> impl IntoView {
+pub(super) fn TripitSection(has_tripit: bool) -> impl IntoView {
     view! {
         <section class="card">
             <h2>"TripIt Connection"</h2>

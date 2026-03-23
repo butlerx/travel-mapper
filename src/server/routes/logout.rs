@@ -15,7 +15,7 @@ use axum::{
 use axum_extra::extract::CookieJar;
 
 /// Log out and invalidate the current session.
-pub async fn logout_handler(
+pub async fn handler(
     State(state): State<AppState>,
     jar: CookieJar,
     headers: HeaderMap,
@@ -45,7 +45,7 @@ pub async fn logout_handler(
     )
 }
 
-pub fn logout_handler_docs(op: TransformOperation) -> TransformOperation {
+pub fn handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
         op.description("Log out and invalidate the current session."),
         200 => StatusResponse,

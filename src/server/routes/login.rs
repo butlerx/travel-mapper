@@ -45,7 +45,7 @@ impl MultiFormatResponse for AuthResponse {
 /// Log in with username and password.
 ///
 /// Accepts JSON or form-encoded body. On success, sets a session cookie.
-pub async fn login_handler(
+pub async fn handler(
     State(state): State<AppState>,
     jar: CookieJar,
     headers: HeaderMap,
@@ -112,7 +112,7 @@ pub async fn login_handler(
     )
 }
 
-pub fn login_handler_docs(op: TransformOperation) -> TransformOperation {
+pub fn handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
         op.description("Log in with username and password. Accepts JSON or form-encoded body.")
             .input::<Json<LoginRequest>>()
@@ -135,7 +135,7 @@ pub fn login_handler_docs(op: TransformOperation) -> TransformOperation {
 #[cfg(test)]
 mod tests {
     use crate::server::create_router;
-    use crate::server::test_helpers::helpers::*;
+    use crate::server::test_helpers::*;
     use axum::{
         body::Body,
         http::{Request, StatusCode, header},

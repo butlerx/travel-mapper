@@ -4,7 +4,7 @@ use axum::{
 };
 
 #[must_use]
-pub fn unauthorized_page() -> Response {
+pub fn page() -> Response {
     (
         StatusCode::UNAUTHORIZED,
         axum::response::Html(super::render_error_page(

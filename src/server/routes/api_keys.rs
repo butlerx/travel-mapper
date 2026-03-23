@@ -1,4 +1,4 @@
-use super::types::{ErrorResponse, MultiFormatResponse, multi_format_docs, negotiate_format};
+use super::{ErrorResponse, MultiFormatResponse, multi_format_docs, negotiate_format};
 use crate::{
     db,
     server::{AppState, error::AppError, middleware::AuthUser, session::sha256_hex},
@@ -36,7 +36,7 @@ impl MultiFormatResponse for ApiKeyResponse {
     }
 }
 
-pub async fn create_api_key_handler(
+pub async fn handler(
     State(state): State<AppState>,
     auth: AuthUser,
     headers: HeaderMap,
@@ -68,7 +68,7 @@ pub async fn create_api_key_handler(
     }
 }
 
-pub fn create_api_key_handler_docs(op: TransformOperation) -> TransformOperation {
+pub fn handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
         op.description("Create a new API key for programmatic access."),
         200 => ApiKeyResponse,
@@ -80,7 +80,7 @@ pub fn create_api_key_handler_docs(op: TransformOperation) -> TransformOperation
 #[cfg(test)]
 mod tests {
     use crate::server::create_router;
-    use crate::server::test_helpers::helpers::*;
+    use crate::server::test_helpers::*;
     use axum::{
         body::{Body, to_bytes},
         http::{Request, StatusCode, header},

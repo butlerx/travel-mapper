@@ -1,7 +1,7 @@
 use leptos::prelude::*;
 
 #[component]
-pub fn FlightySection() -> impl IntoView {
+pub(super) fn FlightySection() -> impl IntoView {
     view! {
         <section class="card">
             <h2>"Flighty Import"</h2>

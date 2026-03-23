@@ -9,7 +9,7 @@ use leptos::prelude::*;
 
 use super::FormFeedback;
 
-pub async fn register_page(
+pub async fn page(
     State(state): State<AppState>,
     jar: CookieJar,
     Query(feedback): Query<FormFeedback>,
@@ -35,7 +35,7 @@ pub async fn register_page(
 
 #[cfg(test)]
 mod tests {
-    use crate::server::{create_router, test_helpers::helpers::*};
+    use crate::server::{create_router, test_helpers::*};
     use axum::{
         body::Body,
         http::{Request, StatusCode},

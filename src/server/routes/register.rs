@@ -33,7 +33,7 @@ pub struct RegisterRequest {
 /// Register a new user account.
 ///
 /// Accepts JSON or form-encoded body. On success, sets a session cookie.
-pub async fn register_handler(
+pub async fn handler(
     State(state): State<AppState>,
     jar: CookieJar,
     headers: HeaderMap,
@@ -140,7 +140,7 @@ async fn create_and_authenticate(
     }
 }
 
-pub fn register_handler_docs(op: TransformOperation) -> TransformOperation {
+pub fn handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
         op.description("Register a new user account. Accepts JSON or form-encoded body.")
             .input::<Json<RegisterRequest>>()
@@ -163,7 +163,7 @@ pub fn register_handler_docs(op: TransformOperation) -> TransformOperation {
 #[cfg(test)]
 mod tests {
     use crate::server::create_router;
-    use crate::server::test_helpers::helpers::*;
+    use crate::server::test_helpers::*;
     use axum::{
         body::Body,
         http::{Request, StatusCode, header},

@@ -1,7 +1,10 @@
+//! Flighty CSV import — parses exported flight history into [`FlightRow`] records.
+
 use serde::Deserialize;
 use std::io::Read;
 use thiserror::Error;
 
+/// Errors that can occur when parsing a Flighty CSV export.
 #[derive(Debug, Error)]
 pub enum ImportError {
     #[error("failed to parse CSV: {0}")]
@@ -12,6 +15,7 @@ fn parse_canceled(s: &str) -> bool {
     s.eq_ignore_ascii_case("true")
 }
 
+/// A single flight parsed from a Flighty CSV export.
 #[derive(Debug, Clone)]
 pub struct FlightRow {
     pub date: String,
