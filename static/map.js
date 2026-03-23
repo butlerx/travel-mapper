@@ -108,50 +108,114 @@
     return points;
   }
 
+  function journeyCardHtml(hop) {
+    var emoji = emojis[hop.travel_type] || '';
+    var typeLabel = hop.travel_type.charAt(0).toUpperCase() + hop.travel_type.slice(1);
+    var dist = '';
+    if (
+      hop.origin_lat != null &&
+      hop.origin_lng != null &&
+      hop.dest_lat != null &&
+      hop.dest_lng != null
+    ) {
+      var km = haversineKm(hop.origin_lat, hop.origin_lng, hop.dest_lat, hop.dest_lng);
+      dist = km < 1 ? '<1 km' : Math.round(km).toLocaleString() + ' km';
+    }
+
+    return (
+      '<div class="journey-card">' +
+      '<div class="journey-route">' +
+      '<span class="journey-origin">' + hop.origin_name + '</span>' +
+      '<span class="journey-arrow">\u2192</span>' +
+      '<span class="journey-dest">' + hop.dest_name + '</span>' +
+      '</div>' +
+      '<div class="journey-meta">' +
+      '<span class="journey-badge badge-' + hop.travel_type + '">' + emoji + ' ' + typeLabel + '</span>' +
+      '<span class="journey-date">' + hop.start_date + '</span>' +
+      (dist ? '<span class="journey-distance">' + dist + '</span>' : '') +
+      '</div>' +
+      '</div>'
+    );
+  }
+
+  function countdownText(dateStr) {
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+    var target = new Date(dateStr + 'T00:00:00');
+    var diffMs = target - today;
+    var days = Math.ceil(diffMs / 86400000);
+    if (days === 0) return 'Today';
+    if (days === 1) return 'Tomorrow';
+    return 'In ' + days + ' days';
+  }
+
   function renderJourneyCards(hops) {
     var sidebar = document.getElementById('journey-sidebar');
     if (!sidebar) return;
 
-    var sorted = hops.slice().sort(function (a, b) {
-      return b.start_date.localeCompare(a.start_date);
-    });
-
-    var html = '<h3 class="journey-sidebar-heading">Recent Journeys (' + sorted.length + ')</h3>';
-
-    if (sorted.length === 0) {
-      html += '<div class="journey-empty">No journeys match the current filters.</div>';
-      sidebar.innerHTML = html;
+    if (hops.length === 0) {
+      sidebar.innerHTML =
+        '<h3 class="journey-sidebar-heading">Journeys</h3>' +
+        '<div class="journey-empty">No journeys match the current filters.</div>';
       return;
     }
 
-    sorted.forEach(function (hop) {
-      var emoji = emojis[hop.travel_type] || '';
-      var typeLabel = hop.travel_type.charAt(0).toUpperCase() + hop.travel_type.slice(1);
-      var dist = '';
-      if (
-        hop.origin_lat != null &&
-        hop.origin_lng != null &&
-        hop.dest_lat != null &&
-        hop.dest_lng != null
-      ) {
-        var km = haversineKm(hop.origin_lat, hop.origin_lng, hop.dest_lat, hop.dest_lng);
-        dist = km < 1 ? '<1 km' : Math.round(km).toLocaleString() + ' km';
-      }
+    var today = new Date().toISOString().slice(0, 10);
+    var upcoming = [];
+    var past = [];
 
-      html +=
-        '<div class="journey-card">' +
-        '<div class="journey-route">' +
-        '<span class="journey-origin">' + hop.origin_name + '</span>' +
-        '<span class="journey-arrow">\u2192</span>' +
-        '<span class="journey-dest">' + hop.dest_name + '</span>' +
-        '</div>' +
-        '<div class="journey-meta">' +
-        '<span class="journey-badge badge-' + hop.travel_type + '">' + emoji + ' ' + typeLabel + '</span>' +
-        '<span class="journey-date">' + hop.start_date + '</span>' +
-        (dist ? '<span class="journey-distance">' + dist + '</span>' : '') +
-        '</div>' +
-        '</div>';
+    hops.forEach(function (hop) {
+      if (hop.start_date >= today) {
+        upcoming.push(hop);
+      } else {
+        past.push(hop);
+      }
     });
+
+    // Upcoming: soonest first
+    upcoming.sort(function (a, b) {
+      return a.start_date.localeCompare(b.start_date);
+    });
+    // Past: most recent first
+    past.sort(function (a, b) {
+      return b.start_date.localeCompare(a.start_date);
+    });
+
+    var html = '';
+
+    if (upcoming.length > 0) {
+      html += '<h3 class="journey-sidebar-heading journey-sidebar-heading--upcoming">' +
+        'Upcoming (' + upcoming.length + ')</h3>';
+      upcoming.forEach(function (hop) {
+        html +=
+          '<div class="journey-card journey-card--upcoming">' +
+          '<div class="journey-route">' +
+          '<span class="journey-origin">' + hop.origin_name + '</span>' +
+          '<span class="journey-arrow">\u2192</span>' +
+          '<span class="journey-dest">' + hop.dest_name + '</span>' +
+          '</div>' +
+          '<div class="journey-meta">' +
+          '<span class="journey-badge badge-' + hop.travel_type + '">' +
+          (emojis[hop.travel_type] || '') + ' ' +
+          hop.travel_type.charAt(0).toUpperCase() + hop.travel_type.slice(1) +
+          '</span>' +
+          '<span class="journey-countdown">' + countdownText(hop.start_date) + '</span>' +
+          '<span class="journey-date">' + hop.start_date + '</span>' +
+          '</div>' +
+          '</div>';
+      });
+    }
+
+    if (past.length > 0) {
+      html += '<h3 class="journey-sidebar-heading">Past Journeys (' + past.length + ')</h3>';
+      past.forEach(function (hop) {
+        html += journeyCardHtml(hop);
+      });
+    }
+
+    if (upcoming.length === 0 && past.length === 0) {
+      html += '<div class="journey-empty">No journeys match the current filters.</div>';
+    }
 
     sidebar.innerHTML = html;
   }

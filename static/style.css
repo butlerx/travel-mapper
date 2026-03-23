@@ -685,6 +685,26 @@ input[type='password']:invalid:not(:placeholder-shown):not(:focus) {
   white-space: nowrap;
 }
 
+.journey-card--upcoming {
+  border-color: rgba(56, 189, 248, 0.3);
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.08), var(--color-surface-raised));
+}
+
+.journey-card--upcoming:hover {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 1px var(--color-primary), var(--shadow-glow);
+}
+
+.journey-sidebar-heading--upcoming {
+  color: var(--color-primary);
+}
+
+.journey-countdown {
+  color: var(--color-primary);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .journey-empty {
   text-align: center;
   padding: var(--space-xl) var(--space-md);

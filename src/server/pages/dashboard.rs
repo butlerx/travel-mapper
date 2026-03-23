@@ -262,4 +262,75 @@ mod tests {
         assert!(body.contains("Unauthorized"));
         assert!(body.contains("href=\"/login\""));
     }
+
+    #[tokio::test]
+    async fn dashboard_hops_json_includes_both_past_and_future_dated_hops() {
+        let pool = test_pool().await;
+        let cookie = auth_cookie_for_user(&pool, "alice").await;
+        let user = db::users::GetByUsername { username: "alice" }
+            .execute(&pool)
+            .await
+            .expect("lookup failed")
+            .expect("missing user");
+
+        db::hops::Create {
+            trip_id: "trip-past",
+            user_id: user.id,
+            hops: &[sample_hop(
+                TravelType::Air,
+                "LHR",
+                "JFK",
+                "2024-01-15",
+                "2024-01-15",
+            )],
+        }
+        .execute(&pool)
+        .await
+        .expect("insert past hop failed");
+
+        db::hops::Create {
+            trip_id: "trip-future",
+            user_id: user.id,
+            hops: &[sample_hop(
+                TravelType::Air,
+                "SFO",
+                "NRT",
+                "2099-06-01",
+                "2099-06-02",
+            )],
+        }
+        .execute(&pool)
+        .await
+        .expect("insert future hop failed");
+
+        let app = create_router(test_app_state(pool));
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/dashboard")
+                    .header(header::COOKIE, cookie)
+                    .body(Body::empty())
+                    .expect("failed to build request"),
+            )
+            .await
+            .expect("router request failed");
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = body_text(response).await;
+        assert!(body.contains("window.allHops="));
+        assert!(
+            body.contains("LHR"),
+            "past hop origin should be in hops JSON"
+        );
+        assert!(
+            body.contains("SFO"),
+            "future hop origin should be in hops JSON"
+        );
+        assert!(body.contains("JFK"), "past hop dest should be in hops JSON");
+        assert!(
+            body.contains("NRT"),
+            "future hop dest should be in hops JSON"
+        );
+    }
 }
