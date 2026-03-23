@@ -1369,8 +1369,6 @@ input[type='password']:invalid:not(:placeholder-shown):not(:focus) {
 .stats-page {
   flex: 1;
   padding: var(--space-lg) var(--space-xl);
-  max-width: 1100px;
-  margin: 0 auto;
   width: 100%;
 }
 
@@ -1382,152 +1380,9 @@ input[type='password']:invalid:not(:placeholder-shown):not(:focus) {
   flex-wrap: wrap;
 }
 
-.stats-year-filter {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  margin-bottom: var(--space-lg);
-  font-size: var(--text-sm);
-}
-
-.stats-year-filter label {
-  margin-bottom: 0;
-  white-space: nowrap;
-  color: var(--color-text-secondary);
-}
-
-.stats-year-filter select {
-  padding: var(--space-xs) var(--space-sm);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  font-family: var(--font-sans);
-  font-size: var(--text-sm);
-  color: var(--color-text);
-  background: #0f172a;
-  cursor: pointer;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0.5rem center;
-  padding-right: 1.5rem;
-  transition: border-color 0.15s;
-}
-
-.stats-year-filter select:hover {
-  border-color: var(--color-text-muted);
-}
-
-.stats-year-filter select:focus {
-  outline: none;
-  border-color: var(--color-focus);
-  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-lg);
-}
-
-.stats-section {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-lg);
-}
-
-.stats-section-title {
-  font-size: var(--text-base);
-  font-weight: 600;
-  color: var(--color-text);
-  margin: 0 0 var(--space-md) 0;
-}
-
-.stats-top-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-}
-
-.stats-top-item {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-sm) var(--space-md);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  min-height: 2.25rem;
-}
-
-.stats-top-bar {
-  position: absolute;
-  inset: 0;
-  background: rgba(56, 189, 248, 0.1);
-  border-radius: var(--radius-sm);
-  z-index: 0;
-  transition: width 0.3s ease;
-}
-
-.stats-top-name {
-  position: relative;
-  z-index: 1;
-  font-size: var(--text-sm);
-  font-weight: 500;
-  color: var(--color-text);
-}
-
-.stats-top-count {
-  position: relative;
-  z-index: 1;
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--color-primary);
-  font-family: var(--font-mono);
-}
-
-.stats-empty {
-  color: var(--color-text-muted);
-  font-size: var(--text-sm);
-  text-align: center;
-  padding: var(--space-md);
-  margin: 0;
-}
-
-@media (max-width: 768px) {
-  .stats-page {
-    padding: var(--space-md) var(--space-sm);
-  }
-
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* ===== Stats Page ===== */
-.stats-layout {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-}
-
-.stats-page {
-  flex: 1;
-  padding: var(--space-lg) var(--space-xl);
-  max-width: 1100px;
-  margin: 0 auto;
-  width: 100%;
-}
-
-.stats-overview {
-  margin-bottom: var(--space-xl);
-}
-
-.stats-overview .stat-row {
-  flex-wrap: wrap;
+.stats-overview .stat-value {
+  white-space: normal;
+  overflow: visible;
 }
 
 .stats-year-filter {
@@ -1657,7 +1512,7 @@ input[type='password']:invalid:not(:placeholder-shown):not(:focus) {
 
 /* ── Stats Choropleth Map ── */
 .stats-map-section {
-  grid-column: 1 / -1;
+  margin-top: var(--space-lg);
 }
 
 #stats-map {

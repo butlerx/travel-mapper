@@ -57,12 +57,82 @@
     '070':'BA','688':'RS','499':'ME','900':'XK'
   };
 
+  // Viridis palette — perceptually uniform, colorblind-safe
   function getColor(count) {
-    if (count >= 10) return '#fbbf24';
-    if (count >= 5) return '#2dd4bf';
-    if (count >= 2) return '#0d9488';
-    if (count >= 1) return '#115e59';
+    if (count >= 50) return '#fde724';
+    if (count >= 25) return '#6ece58';
+    if (count >= 15) return '#1f9e89';
+    if (count >= 10) return '#26828e';
+    if (count >= 5) return '#31688e';
+    if (count >= 3) return '#3e4989';
+    if (count >= 2) return '#482878';
+    if (count >= 1) return '#473677';
     return 'transparent';
+  }
+
+  // Fix antimeridian rendering — polygons crossing 180° longitude
+  // (e.g. Russia, Fiji) get a horizontal line artifact in Leaflet.
+  // Shift negative longitudes to >180 so the polygon doesn't wrap.
+  function fixAntimeridian(coords) {
+    var dominated = 0;
+    var i, j;
+    // Check if the majority of points are in the eastern hemisphere
+    for (i = 0; i < coords.length; i++) {
+      for (j = 0; j < coords[i].length; j++) {
+        if (Array.isArray(coords[i][j][0])) {
+          // MultiPolygon ring
+          for (var k = 0; k < coords[i][j].length; k++) {
+            if (coords[i][j][k][0] > 0) dominated++;
+            else dominated--;
+          }
+        } else {
+          if (coords[i][j][0] > 0) dominated++;
+          else dominated--;
+        }
+      }
+    }
+    if (dominated <= 0) return;
+    // Shift negative longitudes for eastern-dominated polygons
+    for (i = 0; i < coords.length; i++) {
+      for (j = 0; j < coords[i].length; j++) {
+        if (Array.isArray(coords[i][j][0])) {
+          for (var m = 0; m < coords[i][j].length; m++) {
+            if (coords[i][j][m][0] < 0) coords[i][j][m][0] += 360;
+          }
+        } else {
+          if (coords[i][j][0] < 0) coords[i][j][0] += 360;
+        }
+      }
+    }
+  }
+
+  function needsAntimeridianFix(feature) {
+    var coords = feature.geometry.coordinates;
+    if (!coords) return false;
+    // Check if any ring spans > 180° longitude
+    function checkRing(ring) {
+      var minLng = Infinity, maxLng = -Infinity;
+      for (var i = 0; i < ring.length; i++) {
+        var lng = ring[i][0];
+        if (lng < minLng) minLng = lng;
+        if (lng > maxLng) maxLng = lng;
+      }
+      return (maxLng - minLng) > 180;
+    }
+    function checkPolygon(poly) {
+      for (var i = 0; i < poly.length; i++) {
+        if (checkRing(poly[i])) return true;
+      }
+      return false;
+    }
+    var type = feature.geometry.type;
+    if (type === 'Polygon') return checkPolygon(coords);
+    if (type === 'MultiPolygon') {
+      for (var p = 0; p < coords.length; p++) {
+        if (checkPolygon(coords[p])) return true;
+      }
+    }
+    return false;
   }
 
   function style(feature) {
@@ -72,7 +142,7 @@
     return {
       fillColor: getColor(count),
       fillOpacity: count > 0 ? 0.75 : 0,
-      color: count > 0 ? '#99f6e4' : 'transparent',
+      color: count > 0 ? 'rgba(255,255,255,0.4)' : 'transparent',
       weight: count > 0 ? 0.8 : 0,
     };
   }
@@ -96,8 +166,8 @@
   var legend = L.control({ position: 'bottomright' });
   legend.onAdd = function () {
     var div = L.DomUtil.create('div', 'stats-map-legend');
-    var grades = [1, 2, 5, 10];
-    var labels = ['1', '2\u20134', '5\u20139', '10+'];
+    var grades = [1, 2, 3, 5, 10, 15, 25, 50];
+    var labels = ['1', '2', '3\u20134', '5\u20139', '10\u201314', '15\u201324', '25\u201349', '50+'];
     div.innerHTML = '<strong>Visits</strong>';
     for (var i = 0; i < grades.length; i++) {
       div.innerHTML +=
@@ -113,6 +183,9 @@
     .then(function (r) { return r.json(); })
     .then(function (topo) {
       var geo = topojson.feature(topo, topo.objects.countries);
+      geo.features.forEach(function (f) {
+        if (needsAntimeridianFix(f)) fixAntimeridian(f.geometry.coordinates);
+      });
       L.geoJSON(geo, {
         style: style,
         onEachFeature: function (feature, layer) {
@@ -124,7 +197,7 @@
             mouseover: function (e) {
               var l = e.target;
               if (count > 0) {
-                l.setStyle({ weight: 2, color: '#f0fdfa', fillOpacity: 0.9 });
+                l.setStyle({ weight: 2, color: 'rgba(255,255,255,0.7)', fillOpacity: 0.9 });
                 if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
                   l.bringToFront();
                 }

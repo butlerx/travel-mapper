@@ -61,22 +61,71 @@ This updates `.sqlx/*.json`. **Commit these files** alongside your query changes
 
 ```
 src/
-  lib.rs                          # top-level modules, #![warn(clippy::pedantic)]
-  bin/{server,sync_worker,seed}.rs
-  auth.rs                         # encryption, session helpers
-  db.rs + db/                     # sqlx query objects (one file per table)
-  geocode.rs + geocode/           # Nominatim geocoding + airports.rs (IATA lookup)
-  integrations.rs + integrations/ # flighty.rs, tripit.rs + tripit/{auth,fetch}
-  server.rs + server/             # Axum router, routes, pages, components, middleware
-  worker.rs                       # background sync orchestration
-  telemetry.rs
-migrations/                       # SQLite migrations (sqlx migrate)
-static/                           # JS, CSS served at runtime
+  lib.rs                            # top-level modules, #![warn(clippy::pedantic)]
+  bin/
+    server.rs                       # HTTP server entry point
+    sync_worker.rs                  # background sync worker entry point
+    seed.rs                         # DB seeding for development
+  auth.rs                           # encryption, session helpers
+  db.rs + db/                       # sqlx query objects (one file per table/command)
+    api_keys.rs
+    credentials.rs
+    hops.rs + hops/                 # one file per query command
+      create.rs, create_manual.rs, create_from_flighty.rs
+      get_all.rs, get_all_for_stats.rs, get_by_id.rs
+      delete_for_trip.rs, delete_stale.rs, replace_for_trip.rs
+    oauth_tokens.rs
+    sessions.rs
+    sync_jobs.rs
+    sync_state.rs
+    users.rs
+  geocode.rs + geocode/             # Nominatim geocoding + IATA airport lookup
+    airports.rs                     # IATA code → coordinates
+    nominatim.rs                    # OpenStreetMap geocoding client
+    resolve.rs                      # coordinate resolution orchestration
+    sanitize.rs                     # address string cleanup
+  integrations.rs + integrations/   # third-party travel data sources
+    flighty.rs                      # Flighty import
+    tripit.rs + tripit/             # TripIt integration
+      auth.rs                       # OAuth 1.0a signing
+      fetch.rs + fetch/             # TripIt API data fetching
+        client.rs                   # HTTP client + response handling
+        parsers.rs                  # JSON → domain type parsing
+        trips.rs                    # trip list + detail fetching
+  server.rs + server/               # Axum web server
+    components.rs + components/     # shared Leptos UI components
+      auth_page.rs, error_page.rs, navbar.rs, shell.rs
+    error.rs                        # error response types
+    middleware.rs + middleware/
+      auth.rs                       # AuthUser extractor
+    pages.rs + pages/               # Leptos SSR page components
+      add_flight.rs, landing.rs, login.rs, register.rs
+      not_found.rs, unauthorized.rs, stats.rs
+      dashboard.rs + dashboard/
+        travel_stats.rs             # travel statistics sub-component
+      hop_detail.rs + hop_detail/   # per-travel-type detail sections
+        boat_section.rs, flight_section.rs
+        rail_section.rs, transport_section.rs
+      settings.rs + settings/       # settings page sections
+        api_keys_section.rs, flighty_section.rs
+        sync_section.rs, tripit_section.rs
+    routes.rs + routes/             # one file per route handler
+      api_keys.rs, flighty.rs, health.rs, hops.rs
+      login.rs, logout.rs, register.rs
+      static_assets.rs, sync.rs
+      tripit_callback.rs, tripit_connect.rs, tripit_credentials.rs
+    session.rs                      # session management
+    state.rs                        # AppState definition
+  worker.rs                         # background sync orchestration
+  telemetry.rs                      # tracing/logging setup
+migrations/                         # SQLite migrations (sqlx migrate)
+static/                             # JS, CSS served at runtime
 ```
 
 ## Module Conventions
 
 - **No `mod.rs` files.** Use `foo.rs` + `foo/` directory pattern (Rust 2018+ style).
+- **No `helpers.rs` or `types.rs` files.** These are anti-patterns — place types alongside the code that uses them and co-locate helper functions with their callers.
 - Parent module file declares `pub mod child;` for each submodule.
 - Doc comments on every `pub mod` declaration:
   ```rust
@@ -120,6 +169,17 @@ use axum::{
 
 - **Query objects**: small structs like `Create<'a>`, `GetAll`, `DeleteForTrip` with `pub async fn execute(&self, pool: &SqlitePool) -> Result<T, sqlx::Error>`.
 - **Compile-time checked SQL**: `sqlx::query!()` and `sqlx::query_as!()` macros only.
+- **Dynamic IN clauses**: use SQLite's `json_each()` table-valued function instead of `QueryBuilder`. Serialize IDs to a JSON array string and bind it as a single parameter:
+  ```rust
+  let ids_json = serde_json::to_string(&ids)
+      .map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
+  sqlx::query!(
+      "DELETE FROM hops WHERE user_id = ? AND trip_id NOT IN (SELECT value FROM json_each(?))",
+      user_id,
+      ids_json,
+  )
+  ```
+- **PRAGMA exception**: SQLite PRAGMAs return untyped columns that `sqlx::query!()` cannot handle. These are the only queries allowed to use runtime `sqlx::query()`.
 - **Row mapping**: internal `HopRow` struct matching query output, then `impl TryFrom<HopRow> for Row`.
 - **Transactions**: `let mut tx = pool.begin().await?;` → queries on `&mut *tx` → `tx.commit().await?;`
 - **Migrations**: sequential SQL files in `migrations/`. Never modify committed migrations.
