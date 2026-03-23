@@ -1,6 +1,7 @@
 use super::{navbar::NavBar, shell::Shell};
 use crate::server::pages::stats::{CountedItem, DetailedStats};
 use leptos::prelude::*;
+use std::fmt::Write;
 
 fn format_distance(km: u64) -> String {
     if km >= 1_000_000 {
@@ -114,6 +115,19 @@ fn YearFilter(available_years: Vec<String>, selected_year: Option<String>) -> im
     .into_any()
 }
 
+/// Serialize country counts as a JSON object: `{"US":5,"GB":3,...}`.
+fn countries_json(countries: &[CountedItem]) -> String {
+    let mut buf = String::from('{');
+    for (i, item) in countries.iter().enumerate() {
+        if i > 0 {
+            buf.push(',');
+        }
+        let _ = write!(buf, "\"{}\":{}", item.name, item.count);
+    }
+    buf.push('}');
+    buf
+}
+
 #[component]
 pub fn StatsPage(stats: DetailedStats) -> impl IntoView {
     let has_data = stats.total_hops > 0;
@@ -128,6 +142,8 @@ pub fn StatsPage(stats: DetailedStats) -> impl IntoView {
     let cabin_class = stats.cabin_class_breakdown.clone();
     let seat_type = stats.seat_type_breakdown.clone();
     let flight_reason = stats.flight_reason_breakdown.clone();
+    let countries = stats.countries.clone();
+    let countries_script = format!("window.countryCounts={};", countries_json(&countries));
 
     view! {
         <Shell title="Stats".to_owned() body_class="stats-layout">
@@ -145,7 +161,21 @@ pub fn StatsPage(stats: DetailedStats) -> impl IntoView {
                             <TopList title="Cabin Class" items=cabin_class />
                             <TopList title="Seat Type" items=seat_type />
                             <TopList title="Flight Reason" items=flight_reason />
+                            <TopList title="Countries Visited" items=countries />
                         </div>
+                        <section class="stats-section stats-map-section">
+                            <h3 class="stats-section-title">"Country Map"</h3>
+                            <div id="stats-map"></div>
+                        </section>
+                        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+                            integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+                            crossorigin="" />
+                        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+                            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+                            crossorigin=""></script>
+                        <script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
+                        <script inner_html=countries_script></script>
+                        <script src="/static/stats-map.js"></script>
                     </main>
                 }.into_any()
             } else {

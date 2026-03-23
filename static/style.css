@@ -1637,3 +1637,64 @@ input[type='password']:invalid:not(:placeholder-shown):not(:focus) {
     grid-template-columns: 1fr;
   }
 }
+
+/* ── Stats Choropleth Map ── */
+.stats-map-section {
+  grid-column: 1 / -1;
+}
+
+#stats-map {
+  height: 420px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+}
+
+.stats-map-tooltip {
+  display: none;
+  background: var(--color-bg-card);
+  color: var(--color-text);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  font-size: var(--text-sm);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+}
+
+.stats-map-legend {
+  background: var(--color-bg-card);
+  color: var(--color-text);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  font-size: var(--text-xs);
+  line-height: 1.6;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.stats-map-legend strong {
+  display: block;
+  margin-bottom: var(--space-xs);
+  font-size: var(--text-sm);
+}
+
+.stats-map-legend-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.stats-map-legend-swatch {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  #stats-map {
+    height: 300px;
+  }
+}
