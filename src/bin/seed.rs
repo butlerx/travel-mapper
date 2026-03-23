@@ -22,18 +22,43 @@ struct Cli {
     tripit_access_token_secret: Option<String>,
 }
 
+#[derive(Debug, thiserror::Error)]
+enum SeedError {
+    #[error("invalid ENCRYPTION_KEY: expected exactly 64 hex characters (32 bytes)")]
+    InvalidEncryptionKey,
+
+    #[error("{0}")]
+    Database(#[from] sqlx::Error),
+
+    #[error("failed to encrypt token: {0}")]
+    Encrypt(#[from] travel_mapper::auth::CryptoError),
+
+    #[error("failed to hash password: {0}")]
+    HashPassword(argon2::password_hash::Error),
+
+    #[error("TRIPIT_ACCESS_TOKEN and TRIPIT_ACCESS_TOKEN_SECRET must both be set or both be unset")]
+    IncompleteCredentials,
+
+    #[error("user {0:?} not found after unique violation")]
+    UserNotFound(String),
+}
+
+impl From<argon2::password_hash::Error> for SeedError {
+    fn from(err: argon2::password_hash::Error) -> Self {
+        Self::HashPassword(err)
+    }
+}
+
 const SEED_USERS: &[(&str, &str)] = &[("test", "test")];
 
-fn parse_encryption_key(hex: &str) -> Result<[u8; 32], String> {
+fn parse_encryption_key(hex: &str) -> Result<[u8; 32], SeedError> {
     if hex.len() != 64 {
-        return Err("ENCRYPTION_KEY must be exactly 64 hex characters (32 bytes)".into());
+        return Err(SeedError::InvalidEncryptionKey);
     }
     let mut out = [0_u8; 32];
     for (idx, chunk) in hex.as_bytes().chunks(2).enumerate() {
-        let pair =
-            std::str::from_utf8(chunk).map_err(|_| "ENCRYPTION_KEY contains invalid UTF-8")?;
-        out[idx] = u8::from_str_radix(pair, 16)
-            .map_err(|_| "ENCRYPTION_KEY contains non-hex characters")?;
+        let pair = std::str::from_utf8(chunk).map_err(|_| SeedError::InvalidEncryptionKey)?;
+        out[idx] = u8::from_str_radix(pair, 16).map_err(|_| SeedError::InvalidEncryptionKey)?;
     }
     Ok(out)
 }
@@ -45,12 +70,11 @@ async fn seed_tripit_credentials(
     access_token: &str,
     access_token_secret: &str,
     encryption_key: &[u8; 32],
-) -> Result<(), Box<dyn std::error::Error>> {
-    let (token_enc, nonce_token) = travel_mapper::auth::encrypt_token(access_token, encryption_key)
-        .map_err(|e| format!("failed to encrypt access token: {e}"))?;
+) -> Result<(), SeedError> {
+    let (token_enc, nonce_token) =
+        travel_mapper::auth::encrypt_token(access_token, encryption_key)?;
     let (secret_enc, nonce_secret) =
-        travel_mapper::auth::encrypt_token(access_token_secret, encryption_key)
-            .map_err(|e| format!("failed to encrypt access token secret: {e}"))?;
+        travel_mapper::auth::encrypt_token(access_token_secret, encryption_key)?;
 
     (travel_mapper::db::credentials::Upsert {
         user_id,
@@ -62,11 +86,11 @@ async fn seed_tripit_credentials(
     .execute(pool)
     .await?;
 
-    println!("Stored TripIt credentials for user {username:?}");
+    tracing::info!(username, "stored TripIt credentials");
     Ok(())
 }
 
-async fn run() -> Result<(), Box<dyn std::error::Error>> {
+async fn run() -> Result<(), SeedError> {
     let cli = Cli::parse();
     let pool = travel_mapper::db::create_pool(&cli.database_url).await?;
 
@@ -76,22 +100,15 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         .map(parse_encryption_key)
         .transpose()?;
 
-    let tripit_creds: Option<(&str, &str)> = match (
-        &cli.tripit_access_token,
-        &cli.tripit_access_token_secret,
-    ) {
-        (Some(token), Some(secret)) => Some((token.as_str(), secret.as_str())),
-        (None, None) => None,
-        _ => {
-            return Err(
-                    "TRIPIT_ACCESS_TOKEN and TRIPIT_ACCESS_TOKEN_SECRET must both be set or both be unset".into(),
-                );
-        }
-    };
+    let tripit_creds: Option<(&str, &str)> =
+        match (&cli.tripit_access_token, &cli.tripit_access_token_secret) {
+            (Some(token), Some(secret)) => Some((token.as_str(), secret.as_str())),
+            (None, None) => None,
+            _ => return Err(SeedError::IncompleteCredentials),
+        };
 
     for &(username, password) in SEED_USERS {
-        let hash = travel_mapper::auth::hash_password(password)
-            .map_err(|e| format!("failed to hash password: {e}"))?;
+        let hash = travel_mapper::auth::hash_password(password)?;
 
         let user_id = match (travel_mapper::db::users::Create {
             username,
@@ -101,18 +118,18 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         .await
         {
             Ok(id) => {
-                println!("Created user {username:?} (id={id}, password={password:?})");
+                tracing::info!(username, id, "created user");
                 id
             }
             Err(sqlx::Error::Database(err)) if err.is_unique_violation() => {
-                println!("User {username:?} already exists, skipping creation");
+                tracing::info!(username, "user already exists, skipping creation");
                 let user = (travel_mapper::db::users::GetByUsername { username })
                     .execute(&pool)
                     .await?
-                    .ok_or_else(|| format!("user {username:?} not found after unique violation"))?;
+                    .ok_or_else(|| SeedError::UserNotFound(username.to_owned()))?;
                 user.id
             }
-            Err(err) => return Err(err.into()),
+            Err(err) => return Err(SeedError::Database(err)),
         };
 
         if let (Some((access_token, access_token_secret)), Some(key)) =
@@ -138,7 +155,7 @@ async fn main() {
     travel_mapper::telemetry::init();
 
     if let Err(error) = run().await {
-        eprintln!("Error: {error}");
+        tracing::error!(%error, "seed failed");
         std::process::exit(1);
     }
 }

@@ -1,6 +1,7 @@
 use super::{ErrorResponse, MultiFormatResponse, multi_format_docs, negotiate_format};
 use crate::server::{
     AppState,
+    error::AppError,
     session::{create_user_session, is_form_request, session_cookie, verify_credentials},
 };
 use aide::transform::TransformOperation;
@@ -50,10 +51,10 @@ pub async fn login_handler(
     headers: HeaderMap,
     body: axum::body::Bytes,
 ) -> (CookieJar, Response) {
-    let parsed: Result<LoginRequest, String> = if is_form_request(&headers) {
-        serde_urlencoded::from_bytes(&body).map_err(|e| e.to_string())
+    let parsed: Result<LoginRequest, AppError> = if is_form_request(&headers) {
+        serde_urlencoded::from_bytes(&body).map_err(AppError::from)
     } else {
-        serde_json::from_slice(&body).map_err(|e| e.to_string())
+        serde_json::from_slice(&body).map_err(AppError::from)
     };
 
     let body = match parsed {
@@ -66,14 +67,7 @@ pub async fn login_handler(
                 )
             } else {
                 let format = negotiate_format(&headers);
-                (
-                    jar,
-                    ErrorResponse::into_format_response(
-                        format!("invalid request body: {err}"),
-                        format,
-                        StatusCode::BAD_REQUEST,
-                    ),
-                )
+                (jar, err.into_format_response(format))
             };
         }
     };
@@ -81,14 +75,14 @@ pub async fn login_handler(
     let is_form = is_form_request(&headers);
     let user = match verify_credentials(&state.db, &body.username, &body.password).await {
         Ok(user) => user,
-        Err((status, msg)) => {
+        Err(err) => {
             return (
                 jar,
-                if is_form && status == StatusCode::UNAUTHORIZED {
+                if is_form && matches!(err, AppError::InvalidCredentials) {
                     Redirect::to("/login?error=Invalid+credentials").into_response()
                 } else {
                     let format = negotiate_format(&headers);
-                    ErrorResponse::into_format_response(msg, format, status)
+                    err.into_format_response(format)
                 },
             );
         }
@@ -96,12 +90,9 @@ pub async fn login_handler(
 
     let token = match create_user_session(&state.db, user.id).await {
         Ok((t, _)) => t,
-        Err((status, msg)) => {
+        Err(err) => {
             let format = negotiate_format(&headers);
-            return (
-                jar,
-                ErrorResponse::into_format_response(msg, format, status),
-            );
+            return (jar, err.into_format_response(format));
         }
     };
 

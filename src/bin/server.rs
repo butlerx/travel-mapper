@@ -89,7 +89,7 @@ async fn main() {
     travel_mapper::telemetry::init();
 
     if let Err(error) = run().await {
-        eprintln!("Error: {error}");
+        tracing::error!(%error, "server failed");
         std::process::exit(1);
     }
 }

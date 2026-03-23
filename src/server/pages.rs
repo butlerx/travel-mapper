@@ -2,6 +2,7 @@
 
 mod add_flight;
 pub(crate) mod dashboard;
+mod hop_detail;
 mod landing;
 mod login;
 mod not_found;
@@ -12,6 +13,7 @@ mod unauthorized;
 
 pub(super) use add_flight::add_flight_page;
 pub(super) use dashboard::dashboard_page;
+pub(super) use hop_detail::hop_detail_page;
 pub(super) use landing::landing_page;
 pub(super) use login::login_page;
 pub(super) use not_found::not_found_page;

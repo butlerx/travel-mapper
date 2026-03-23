@@ -462,6 +462,7 @@ mod tests {
         dest_lng: f64,
     ) -> Row {
         Row {
+            id: 0,
             travel_type: TravelType::Rail,
             origin_name: origin_name.to_string(),
             origin_lat,

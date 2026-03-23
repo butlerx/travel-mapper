@@ -1,8 +1,8 @@
 use crate::{
     integrations::tripit::TripItApi,
     server::pages::{
-        add_flight_page, dashboard_page, landing_page, login_page, not_found_page, register_page,
-        settings_page, stats_page,
+        add_flight_page, dashboard_page, hop_detail_page, landing_page, login_page, not_found_page,
+        register_page, settings_page, stats_page,
     },
     server::routes::{
         create_api_key_handler, create_api_key_handler_docs, create_hop_handler,
@@ -112,6 +112,7 @@ pub fn create_router(state: AppState) -> Router {
         .route("/settings", get(settings_page))
         .route("/stats", get(stats_page))
         .route("/flights/new", get(add_flight_page))
+        .route("/hop/{id}", get(hop_detail_page))
         .route("/static/style.css", get(serve_css))
         .route("/static/map.js", get(serve_js))
         .route("/static/stats-map.js", get(serve_stats_js))

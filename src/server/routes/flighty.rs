@@ -1,8 +1,7 @@
-use super::ErrorResponse;
 use crate::{
     db,
     integrations::flighty::{FlightRow, parse_csv},
-    server::{AppState, middleware::AuthUser},
+    server::{AppState, error::AppError, middleware::AuthUser},
 };
 use axum::{
     Json,
@@ -27,11 +26,10 @@ pub struct ImportResponse {
     pub imported: u64,
 }
 
-async fn do_import(pool: &SqlitePool, user_id: i64, rows: &[FlightRow]) -> Result<u64, String> {
-    (db::hops::CreateFromFlighty { user_id, rows })
+async fn do_import(pool: &SqlitePool, user_id: i64, rows: &[FlightRow]) -> Result<u64, AppError> {
+    Ok((db::hops::CreateFromFlighty { user_id, rows })
         .execute(pool)
-        .await
-        .map_err(|err| format!("failed to import: {err}"))
+        .await?)
 }
 
 fn encode_query_value(s: &str) -> String {
@@ -66,40 +64,21 @@ async fn handle_raw_csv(
     auth: AuthUser,
     request: axum::http::Request<Body>,
 ) -> Response {
-    let bytes = match axum::body::to_bytes(request.into_body(), 50 * 1024 * 1024).await {
-        Ok(b) => b,
-        Err(err) => {
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(ErrorResponse {
-                    error: format!("failed to read body: {err}"),
-                }),
-            )
-                .into_response();
-        }
-    };
-
-    let rows = match parse_csv(bytes.as_ref()) {
-        Ok(rows) => rows,
-        Err(err) => {
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(ErrorResponse {
-                    error: format!("invalid CSV: {err}"),
-                }),
-            )
-                .into_response();
-        }
-    };
-
-    match do_import(&state.db, auth.user_id, &rows).await {
-        Ok(imported) => (StatusCode::OK, Json(ImportResponse { imported })).into_response(),
-        Err(err) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ErrorResponse { error: err }),
-        )
-            .into_response(),
+    match handle_raw_csv_inner(state, auth, request).await {
+        Ok(resp) => resp,
+        Err(err) => err.into_response(),
     }
+}
+
+async fn handle_raw_csv_inner(
+    state: AppState,
+    auth: AuthUser,
+    request: axum::http::Request<Body>,
+) -> Result<Response, AppError> {
+    let bytes = axum::body::to_bytes(request.into_body(), 50 * 1024 * 1024).await?;
+    let rows = parse_csv(bytes.as_ref())?;
+    let imported = do_import(&state.db, auth.user_id, &rows).await?;
+    Ok((StatusCode::OK, Json(ImportResponse { imported })).into_response())
 }
 
 async fn handle_multipart(
@@ -135,7 +114,7 @@ async fn handle_multipart(
 
     match do_import(&state.db, auth.user_id, &rows).await {
         Ok(imported) => Redirect::to(&format!("/settings?flighty={imported}")).into_response(),
-        Err(err) => redirect_settings_error(&err),
+        Err(err) => redirect_settings_error(&err.to_string()),
     }
 }
 

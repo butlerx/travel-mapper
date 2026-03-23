@@ -138,6 +138,7 @@ pub(crate) mod helpers {
         end: &str,
     ) -> Hop {
         Hop {
+            id: 0,
             travel_type,
             origin_name: origin.to_string(),
             origin_lat: 1.0,

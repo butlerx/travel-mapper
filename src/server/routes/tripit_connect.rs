@@ -3,12 +3,12 @@ use crate::{
     auth::encrypt_token,
     db,
     integrations::tripit::TripItConsumer,
-    server::{AppState, middleware::AuthUser},
+    server::{AppState, error::AppError, middleware::AuthUser},
 };
 use aide::transform::TransformOperation;
 use axum::{
     extract::State,
-    http::{HeaderMap, StatusCode},
+    http::HeaderMap,
     response::{IntoResponse, Redirect, Response},
 };
 use axum_extra::extract::Host;
@@ -30,13 +30,8 @@ pub async fn tripit_connect_handler(
     let request_token = match consumer.request_token(&client).await {
         Ok(pair) => pair,
         Err(err) => {
-            tracing::error!(error = %err, "TripIt request_token failed");
             let format = negotiate_format(&headers);
-            return ErrorResponse::into_format_response(
-                format!("failed to obtain request token: {err}"),
-                format,
-                StatusCode::INTERNAL_SERVER_ERROR,
-            );
+            return AppError::from(err).into_format_response(format);
         }
     };
 
@@ -44,13 +39,8 @@ pub async fn tripit_connect_handler(
         match encrypt_token(&request_token.token_secret, &state.encryption_key) {
             Ok(pair) => pair,
             Err(err) => {
-                tracing::error!(error = %err, "encrypt request token secret");
                 let format = negotiate_format(&headers);
-                return ErrorResponse::into_format_response(
-                    "encryption failed",
-                    format,
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                );
+                return AppError::from(err).into_format_response(format);
             }
         };
 
@@ -63,13 +53,8 @@ pub async fn tripit_connect_handler(
     .execute(&state.db)
     .await
     {
-        tracing::error!(error = %err, "store oauth request token");
         let format = negotiate_format(&headers);
-        return ErrorResponse::into_format_response(
-            format!("failed to store request token: {err}"),
-            format,
-            StatusCode::INTERNAL_SERVER_ERROR,
-        );
+        return AppError::from(err).into_format_response(format);
     }
 
     let scheme = if host.contains("localhost") || host.contains("127.0.0.1") {

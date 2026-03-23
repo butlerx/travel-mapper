@@ -1,7 +1,7 @@
 //! Shared session and authentication utilities.
 
-use crate::db;
-use axum::http::{HeaderMap, StatusCode, header};
+use crate::{db, server::error::AppError};
+use axum::http::{HeaderMap, header};
 use axum_extra::extract::cookie::{Cookie, SameSite};
 use sha2::{Digest, Sha256};
 use uuid::Uuid;
@@ -47,31 +47,19 @@ pub(crate) fn is_form_request(headers: &HeaderMap) -> bool {
 ///
 /// # Errors
 ///
-/// Returns a status code and message if the session cannot be created.
+/// Returns [`AppError::Db`] if the session cannot be created.
 pub(crate) async fn create_user_session(
     db: &sqlx::SqlitePool,
     user_id: i64,
-) -> Result<(String, String), (StatusCode, String)> {
+) -> Result<(String, String), AppError> {
     let token = Uuid::new_v4().to_string();
-    let expires_at =
-        match sqlx::query_scalar::<_, Option<String>>("SELECT datetime('now', '+7 days')")
-            .fetch_one(db)
-            .await
-        {
-            Ok(Some(value)) => value,
-            Ok(None) => {
-                return Err((
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "failed to generate session expiry".to_string(),
-                ));
-            }
-            Err(err) => {
-                return Err((
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    format!("failed to generate session expiry: {err}"),
-                ));
-            }
-        };
+    let expires_at = sqlx::query_scalar::<_, Option<String>>("SELECT datetime('now', '+7 days')")
+        .fetch_one(db)
+        .await?
+        .ok_or_else(|| sqlx::Error::ColumnDecode {
+            index: "datetime".to_string(),
+            source: Box::new(std::fmt::Error),
+        })?;
 
     db::sessions::Create {
         token: &token,
@@ -79,13 +67,7 @@ pub(crate) async fn create_user_session(
         expires_at: &expires_at,
     }
     .execute(db)
-    .await
-    .map_err(|err| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("failed to create session: {err}"),
-        )
-    })?;
+    .await?;
 
     Ok((token, expires_at))
 }
@@ -94,35 +76,26 @@ pub(crate) async fn create_user_session(
 ///
 /// # Errors
 ///
-/// Returns a status code and message if credentials are invalid or a database error occurs.
+/// Returns [`AppError::InvalidCredentials`] if the user is not found or the
+/// password does not match, or [`AppError::Db`] / [`AppError::PasswordHash`]
+/// on infrastructure failures.
 pub(crate) async fn verify_credentials(
     db: &sqlx::SqlitePool,
     username: &str,
     password: &str,
-) -> Result<db::users::Row, (StatusCode, String)> {
+) -> Result<db::users::Row, AppError> {
     use crate::auth::verify_password;
 
     let user = db::users::GetByUsername { username }
         .execute(db)
-        .await
-        .map_err(|err| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("failed to lookup user: {err}"),
-            )
-        })?
-        .ok_or((StatusCode::UNAUTHORIZED, "invalid credentials".to_string()))?;
+        .await?
+        .ok_or(AppError::InvalidCredentials)?;
 
-    let verified = verify_password(password, &user.password_hash).map_err(|err| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("failed to verify password: {err}"),
-        )
-    })?;
+    let verified = verify_password(password, &user.password_hash)?;
 
     if verified {
         Ok(user)
     } else {
-        Err((StatusCode::UNAUTHORIZED, "invalid credentials".to_string()))
+        Err(AppError::InvalidCredentials)
     }
 }

@@ -2,9 +2,9 @@ use super::{
     ErrorResponse, MultiFormatResponse, StatusResponse, multi_format_docs, negotiate_format,
 };
 use crate::{
-    auth::{CryptoError, encrypt_token},
+    auth::encrypt_token,
     db,
-    server::{AppState, middleware::AuthUser},
+    server::{AppState, error::AppError, middleware::AuthUser},
 };
 use aide::transform::TransformOperation;
 use axum::{
@@ -41,16 +41,8 @@ pub async fn store_tripit_credentials_handler(
                 (token_ct, token_nonce, secret_ct, secret_nonce)
             }
             (Err(err), _) | (_, Err(err)) => {
-                let message = match err {
-                    CryptoError::Encrypt => "encryption failed".to_string(),
-                    other => format!("failed to encrypt credentials: {other}"),
-                };
                 let format = negotiate_format(&headers);
-                return ErrorResponse::into_format_response(
-                    message,
-                    format,
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                );
+                return AppError::from(err).into_format_response(format);
             }
         };
 
@@ -73,11 +65,7 @@ pub async fn store_tripit_credentials_handler(
         }
         Err(err) => {
             let format = negotiate_format(&headers);
-            ErrorResponse::into_format_response(
-                format!("failed to store credentials: {err}"),
-                format,
-                StatusCode::INTERNAL_SERVER_ERROR,
-            )
+            AppError::from(err).into_format_response(format)
         }
     }
 }

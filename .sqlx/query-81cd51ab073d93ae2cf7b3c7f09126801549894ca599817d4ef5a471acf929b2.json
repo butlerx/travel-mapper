@@ -1,61 +1,66 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT\n                           travel_type,\n                           origin_name,\n                           origin_lat,\n                           origin_lng,\n                           origin_country,\n                           dest_name,\n                           dest_lat,\n                           dest_lng,\n                           dest_country,\n                           start_date,\n                           end_date\n                       FROM hops\n                       WHERE user_id = ? AND travel_type = ?\n                       ORDER BY start_date ASC",
+  "query": "SELECT\n                           id as \"id!: i64\",\n                           travel_type,\n                           origin_name,\n                           origin_lat,\n                           origin_lng,\n                           origin_country,\n                           dest_name,\n                           dest_lat,\n                           dest_lng,\n                           dest_country,\n                           start_date,\n                           end_date\n                       FROM hops\n                       WHERE user_id = ? AND travel_type = ?\n                       ORDER BY start_date ASC",
   "describe": {
     "columns": [
       {
-        "name": "travel_type",
+        "name": "id!: i64",
         "ordinal": 0,
-        "type_info": "Text"
+        "type_info": "Integer"
       },
       {
-        "name": "origin_name",
+        "name": "travel_type",
         "ordinal": 1,
         "type_info": "Text"
       },
       {
-        "name": "origin_lat",
+        "name": "origin_name",
         "ordinal": 2,
-        "type_info": "Float"
+        "type_info": "Text"
       },
       {
-        "name": "origin_lng",
+        "name": "origin_lat",
         "ordinal": 3,
         "type_info": "Float"
       },
       {
-        "name": "origin_country",
+        "name": "origin_lng",
         "ordinal": 4,
-        "type_info": "Text"
+        "type_info": "Float"
       },
       {
-        "name": "dest_name",
+        "name": "origin_country",
         "ordinal": 5,
         "type_info": "Text"
       },
       {
-        "name": "dest_lat",
+        "name": "dest_name",
         "ordinal": 6,
-        "type_info": "Float"
+        "type_info": "Text"
       },
       {
-        "name": "dest_lng",
+        "name": "dest_lat",
         "ordinal": 7,
         "type_info": "Float"
       },
       {
-        "name": "dest_country",
+        "name": "dest_lng",
         "ordinal": 8,
-        "type_info": "Text"
+        "type_info": "Float"
       },
       {
-        "name": "start_date",
+        "name": "dest_country",
         "ordinal": 9,
         "type_info": "Text"
       },
       {
-        "name": "end_date",
+        "name": "start_date",
         "ordinal": 10,
+        "type_info": "Text"
+      },
+      {
+        "name": "end_date",
+        "ordinal": 11,
         "type_info": "Text"
       }
     ],
@@ -63,6 +68,7 @@
       "Right": 2
     },
     "nullable": [
+      true,
       false,
       false,
       false,
@@ -76,5 +82,5 @@
       false
     ]
   },
-  "hash": "d3d2997ef3141f04a7444f272bf22ece5d0576c634c97c51f4c813f354478015"
+  "hash": "81cd51ab073d93ae2cf7b3c7f09126801549894ca599817d4ef5a471acf929b2"
 }

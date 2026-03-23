@@ -1,0 +1,338 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT\n                   h.id AS \"id!: i64\",\n                   h.travel_type,\n                   h.origin_name,\n                   h.origin_lat,\n                   h.origin_lng,\n                   h.origin_country,\n                   h.dest_name,\n                   h.dest_lat,\n                   h.dest_lng,\n                   h.dest_country,\n                   h.start_date,\n                   h.end_date,\n                   fd.airline,\n                   fd.flight_number,\n                   fd.dep_terminal,\n                   fd.dep_gate,\n                   fd.arr_terminal,\n                   fd.arr_gate,\n                   fd.canceled,\n                   fd.diverted_to,\n                   fd.gate_dep_scheduled,\n                   fd.gate_dep_actual,\n                   fd.takeoff_scheduled,\n                   fd.takeoff_actual,\n                   fd.landing_scheduled,\n                   fd.landing_actual,\n                   fd.gate_arr_scheduled,\n                   fd.gate_arr_actual,\n                   fd.aircraft_type,\n                   fd.tail_number,\n                   fd.pnr,\n                   fd.seat,\n                   fd.seat_type,\n                   fd.cabin_class,\n                   fd.flight_reason,\n                   fd.notes AS flight_notes,\n                   rd.carrier AS rail_carrier,\n                   rd.train_number,\n                   rd.service_class,\n                   rd.coach_number,\n                   rd.seats AS rail_seats,\n                   rd.confirmation_num AS rail_confirmation,\n                   rd.booking_site AS rail_booking_site,\n                   rd.notes AS rail_notes,\n                   bd.ship_name,\n                   bd.cabin_type,\n                   bd.cabin_number,\n                   bd.confirmation_num AS boat_confirmation,\n                   bd.booking_site AS boat_booking_site,\n                   bd.notes AS boat_notes,\n                   td.carrier_name AS transport_carrier,\n                   td.vehicle_description,\n                   td.confirmation_num AS transport_confirmation,\n                   td.notes AS transport_notes\n               FROM hops h\n               LEFT JOIN flight_details fd ON fd.hop_id = h.id\n               LEFT JOIN rail_details rd ON rd.hop_id = h.id\n               LEFT JOIN boat_details bd ON bd.hop_id = h.id\n               LEFT JOIN transport_details td ON td.hop_id = h.id\n               WHERE h.id = ? AND h.user_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!: i64",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "travel_type",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "origin_name",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "origin_lat",
+        "ordinal": 3,
+        "type_info": "Float"
+      },
+      {
+        "name": "origin_lng",
+        "ordinal": 4,
+        "type_info": "Float"
+      },
+      {
+        "name": "origin_country",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "dest_name",
+        "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "dest_lat",
+        "ordinal": 7,
+        "type_info": "Float"
+      },
+      {
+        "name": "dest_lng",
+        "ordinal": 8,
+        "type_info": "Float"
+      },
+      {
+        "name": "dest_country",
+        "ordinal": 9,
+        "type_info": "Text"
+      },
+      {
+        "name": "start_date",
+        "ordinal": 10,
+        "type_info": "Text"
+      },
+      {
+        "name": "end_date",
+        "ordinal": 11,
+        "type_info": "Text"
+      },
+      {
+        "name": "airline",
+        "ordinal": 12,
+        "type_info": "Text"
+      },
+      {
+        "name": "flight_number",
+        "ordinal": 13,
+        "type_info": "Text"
+      },
+      {
+        "name": "dep_terminal",
+        "ordinal": 14,
+        "type_info": "Text"
+      },
+      {
+        "name": "dep_gate",
+        "ordinal": 15,
+        "type_info": "Text"
+      },
+      {
+        "name": "arr_terminal",
+        "ordinal": 16,
+        "type_info": "Text"
+      },
+      {
+        "name": "arr_gate",
+        "ordinal": 17,
+        "type_info": "Text"
+      },
+      {
+        "name": "canceled",
+        "ordinal": 18,
+        "type_info": "Integer"
+      },
+      {
+        "name": "diverted_to",
+        "ordinal": 19,
+        "type_info": "Text"
+      },
+      {
+        "name": "gate_dep_scheduled",
+        "ordinal": 20,
+        "type_info": "Text"
+      },
+      {
+        "name": "gate_dep_actual",
+        "ordinal": 21,
+        "type_info": "Text"
+      },
+      {
+        "name": "takeoff_scheduled",
+        "ordinal": 22,
+        "type_info": "Text"
+      },
+      {
+        "name": "takeoff_actual",
+        "ordinal": 23,
+        "type_info": "Text"
+      },
+      {
+        "name": "landing_scheduled",
+        "ordinal": 24,
+        "type_info": "Text"
+      },
+      {
+        "name": "landing_actual",
+        "ordinal": 25,
+        "type_info": "Text"
+      },
+      {
+        "name": "gate_arr_scheduled",
+        "ordinal": 26,
+        "type_info": "Text"
+      },
+      {
+        "name": "gate_arr_actual",
+        "ordinal": 27,
+        "type_info": "Text"
+      },
+      {
+        "name": "aircraft_type",
+        "ordinal": 28,
+        "type_info": "Text"
+      },
+      {
+        "name": "tail_number",
+        "ordinal": 29,
+        "type_info": "Text"
+      },
+      {
+        "name": "pnr",
+        "ordinal": 30,
+        "type_info": "Text"
+      },
+      {
+        "name": "seat",
+        "ordinal": 31,
+        "type_info": "Text"
+      },
+      {
+        "name": "seat_type",
+        "ordinal": 32,
+        "type_info": "Text"
+      },
+      {
+        "name": "cabin_class",
+        "ordinal": 33,
+        "type_info": "Text"
+      },
+      {
+        "name": "flight_reason",
+        "ordinal": 34,
+        "type_info": "Text"
+      },
+      {
+        "name": "flight_notes",
+        "ordinal": 35,
+        "type_info": "Text"
+      },
+      {
+        "name": "rail_carrier",
+        "ordinal": 36,
+        "type_info": "Text"
+      },
+      {
+        "name": "train_number",
+        "ordinal": 37,
+        "type_info": "Text"
+      },
+      {
+        "name": "service_class",
+        "ordinal": 38,
+        "type_info": "Text"
+      },
+      {
+        "name": "coach_number",
+        "ordinal": 39,
+        "type_info": "Text"
+      },
+      {
+        "name": "rail_seats",
+        "ordinal": 40,
+        "type_info": "Text"
+      },
+      {
+        "name": "rail_confirmation",
+        "ordinal": 41,
+        "type_info": "Text"
+      },
+      {
+        "name": "rail_booking_site",
+        "ordinal": 42,
+        "type_info": "Text"
+      },
+      {
+        "name": "rail_notes",
+        "ordinal": 43,
+        "type_info": "Text"
+      },
+      {
+        "name": "ship_name",
+        "ordinal": 44,
+        "type_info": "Text"
+      },
+      {
+        "name": "cabin_type",
+        "ordinal": 45,
+        "type_info": "Text"
+      },
+      {
+        "name": "cabin_number",
+        "ordinal": 46,
+        "type_info": "Text"
+      },
+      {
+        "name": "boat_confirmation",
+        "ordinal": 47,
+        "type_info": "Text"
+      },
+      {
+        "name": "boat_booking_site",
+        "ordinal": 48,
+        "type_info": "Text"
+      },
+      {
+        "name": "boat_notes",
+        "ordinal": 49,
+        "type_info": "Text"
+      },
+      {
+        "name": "transport_carrier",
+        "ordinal": 50,
+        "type_info": "Text"
+      },
+      {
+        "name": "vehicle_description",
+        "ordinal": 51,
+        "type_info": "Text"
+      },
+      {
+        "name": "transport_confirmation",
+        "ordinal": 52,
+        "type_info": "Text"
+      },
+      {
+        "name": "transport_notes",
+        "ordinal": 53,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "b983d452b1937b10ba50cd4de1e7a82f2d33ef989b379402bcaf3f47a257e9be"
+}

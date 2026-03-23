@@ -1,8 +1,7 @@
-use super::ErrorResponse;
-use super::types::{MultiFormatResponse, multi_format_docs, negotiate_format};
+use super::types::{ErrorResponse, MultiFormatResponse, multi_format_docs, negotiate_format};
 use crate::{
     db,
-    server::{AppState, middleware::AuthUser, session::sha256_hex},
+    server::{AppState, error::AppError, middleware::AuthUser, session::sha256_hex},
 };
 use aide::transform::TransformOperation;
 use axum::{
@@ -64,11 +63,7 @@ pub async fn create_api_key_handler(
         }
         Err(err) => {
             let format = negotiate_format(&headers);
-            ErrorResponse::into_format_response(
-                format!("failed to create api key: {err}"),
-                format,
-                StatusCode::INTERNAL_SERVER_ERROR,
-            )
+            AppError::from(err).into_format_response(format)
         }
     }
 }

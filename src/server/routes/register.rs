@@ -6,6 +6,7 @@ use crate::{
     db,
     server::{
         AppState,
+        error::AppError,
         session::{create_user_session, is_form_request, session_cookie},
     },
 };
@@ -38,10 +39,10 @@ pub async fn register_handler(
     headers: HeaderMap,
     body: axum::body::Bytes,
 ) -> (CookieJar, Response) {
-    let parsed: Result<RegisterRequest, String> = if is_form_request(&headers) {
-        serde_urlencoded::from_bytes(&body).map_err(|e| e.to_string())
+    let parsed: Result<RegisterRequest, AppError> = if is_form_request(&headers) {
+        serde_urlencoded::from_bytes(&body).map_err(AppError::from)
     } else {
-        serde_json::from_slice(&body).map_err(|e| e.to_string())
+        serde_json::from_slice(&body).map_err(AppError::from)
     };
 
     let body = match parsed {
@@ -54,14 +55,7 @@ pub async fn register_handler(
                 )
             } else {
                 let format = negotiate_format(&headers);
-                (
-                    jar,
-                    ErrorResponse::into_format_response(
-                        format!("invalid request body: {err}"),
-                        format,
-                        StatusCode::BAD_REQUEST,
-                    ),
-                )
+                (jar, err.into_format_response(format))
             };
         }
     };
@@ -71,15 +65,16 @@ pub async fn register_handler(
     let hash = match hash_password(&body.password) {
         Ok(hash) => hash,
         Err(err) => {
-            let format = negotiate_format(&headers);
-            return (
-                jar,
-                ErrorResponse::into_format_response(
-                    format!("failed to hash password: {err}"),
-                    format,
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                ),
-            );
+            let err = AppError::from(err);
+            return if is_form_request(&headers) {
+                (
+                    jar,
+                    Redirect::to("/register?error=Registration+failed").into_response(),
+                )
+            } else {
+                let format = negotiate_format(&headers);
+                (jar, err.into_format_response(format))
+            };
         }
     };
 
@@ -104,12 +99,9 @@ async fn create_and_authenticate(
         Ok(id) => {
             let token = match create_user_session(&state.db, id).await {
                 Ok((t, _)) => t,
-                Err((status, msg)) => {
+                Err(err) => {
                     let format = negotiate_format(headers);
-                    return (
-                        jar,
-                        ErrorResponse::into_format_response(msg, format, status),
-                    );
+                    return (jar, err.into_format_response(format));
                 }
             };
 
@@ -128,29 +120,22 @@ async fn create_and_authenticate(
                 },
             )
         }
-        Err(sqlx::Error::Database(db_err)) if db_err.is_unique_violation() => (
-            jar,
-            if is_form {
-                Redirect::to("/register?error=Username+already+exists").into_response()
-            } else {
-                let format = negotiate_format(headers);
-                ErrorResponse::into_format_response(
-                    "username already exists",
-                    format,
-                    StatusCode::CONFLICT,
-                )
-            },
-        ),
-        Err(err) => {
-            let format = negotiate_format(headers);
+        Err(sqlx::Error::Database(db_err)) if db_err.is_unique_violation() => {
+            let err = AppError::UsernameExists;
             (
                 jar,
-                ErrorResponse::into_format_response(
-                    format!("failed to create user: {err}"),
-                    format,
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                ),
+                if is_form {
+                    Redirect::to("/register?error=Username+already+exists").into_response()
+                } else {
+                    let format = negotiate_format(headers);
+                    err.into_format_response(format)
+                },
             )
+        }
+        Err(err) => {
+            let err = AppError::from(err);
+            let format = negotiate_format(headers);
+            (jar, err.into_format_response(format))
         }
     }
 }

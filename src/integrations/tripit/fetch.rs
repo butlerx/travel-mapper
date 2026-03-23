@@ -262,6 +262,7 @@ fn parse_air(obj: &Value) -> Vec<Hop> {
             };
 
             Some(Hop {
+                id: 0,
                 travel_type: TravelType::Air,
                 origin_name,
                 origin_lat: coerce_float(&seg["start_airport_latitude"])
@@ -327,6 +328,7 @@ fn parse_rail(obj: &Value) -> Vec<Hop> {
             }
 
             Some(Hop {
+                id: 0,
                 travel_type: TravelType::Rail,
                 origin_name,
                 origin_lat: slat,
@@ -385,6 +387,7 @@ fn parse_cruise(obj: &Value) -> Vec<Hop> {
     };
 
     vec![Hop {
+        id: 0,
         travel_type: TravelType::Boat,
         origin_name,
         origin_lat: slat,
@@ -415,6 +418,15 @@ fn parse_cruise(obj: &Value) -> Vec<Hop> {
     }]
 }
 
+fn resolve_transport_addr<'a>(seg: &'a Value, location_key: &str, fallback_key: &str) -> &'a Value {
+    let addr = &seg[location_key];
+    if addr.is_null() {
+        &seg[fallback_key]
+    } else {
+        addr
+    }
+}
+
 fn parse_transport(obj: &Value) -> Vec<Hop> {
     let nested = &obj["Segment"];
     let items = if nested.is_null() {
@@ -426,26 +438,8 @@ fn parse_transport(obj: &Value) -> Vec<Hop> {
     items
         .into_iter()
         .map(|seg| {
-            // TripIt uses `StartLocationAddress`/`EndLocationAddress` on
-            // segmented transport objects but some payloads (or the top-level
-            // non-segmented shape) use `StartAddress`/`EndAddress` instead.
-            // Try the longer key first and fall back to the shorter one.
-            let start_addr = {
-                let addr = &seg["StartLocationAddress"];
-                if addr.is_null() {
-                    &seg["StartAddress"]
-                } else {
-                    addr
-                }
-            };
-            let end_addr = {
-                let addr = &seg["EndLocationAddress"];
-                if addr.is_null() {
-                    &seg["EndAddress"]
-                } else {
-                    addr
-                }
-            };
+            let start_addr = resolve_transport_addr(seg, "StartLocationAddress", "StartAddress");
+            let end_addr = resolve_transport_addr(seg, "EndLocationAddress", "EndAddress");
             let (slat, slng) = extract_coords(start_addr);
             let (dlat, dlng) = extract_coords(end_addr);
 
@@ -502,6 +496,7 @@ fn parse_transport(obj: &Value) -> Vec<Hop> {
             };
 
             Hop {
+                id: 0,
                 travel_type,
                 origin_name,
                 origin_lat: slat,

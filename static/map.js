@@ -123,18 +123,34 @@
     }
 
     return (
+      '<a href="/hop/' +
+      hop.id +
+      '" class="hop-card-link">' +
       '<div class="journey-card">' +
       '<div class="journey-route">' +
-      '<span class="journey-origin">' + hop.origin_name + '</span>' +
+      '<span class="journey-origin">' +
+      hop.origin_name +
+      '</span>' +
       '<span class="journey-arrow">\u2192</span>' +
-      '<span class="journey-dest">' + hop.dest_name + '</span>' +
+      '<span class="journey-dest">' +
+      hop.dest_name +
+      '</span>' +
       '</div>' +
       '<div class="journey-meta">' +
-      '<span class="journey-badge badge-' + hop.travel_type + '">' + emoji + ' ' + typeLabel + '</span>' +
-      '<span class="journey-date">' + hop.start_date + '</span>' +
+      '<span class="journey-badge badge-' +
+      hop.travel_type +
+      '">' +
+      emoji +
+      ' ' +
+      typeLabel +
+      '</span>' +
+      '<span class="journey-date">' +
+      hop.start_date +
+      '</span>' +
       (dist ? '<span class="journey-distance">' + dist + '</span>' : '') +
       '</div>' +
-      '</div>'
+      '</div>' +
+      '</a>'
     );
   }
 
@@ -184,25 +200,44 @@
     var html = '';
 
     if (upcoming.length > 0) {
-      html += '<h3 class="journey-sidebar-heading journey-sidebar-heading--upcoming">' +
-        'Upcoming (' + upcoming.length + ')</h3>';
+      html +=
+        '<h3 class="journey-sidebar-heading journey-sidebar-heading--upcoming">' +
+        'Upcoming (' +
+        upcoming.length +
+        ')</h3>';
       upcoming.forEach(function (hop) {
         html +=
+          '<a href="/hop/' +
+          hop.id +
+          '" class="hop-card-link">' +
           '<div class="journey-card journey-card--upcoming">' +
           '<div class="journey-route">' +
-          '<span class="journey-origin">' + hop.origin_name + '</span>' +
+          '<span class="journey-origin">' +
+          hop.origin_name +
+          '</span>' +
           '<span class="journey-arrow">\u2192</span>' +
-          '<span class="journey-dest">' + hop.dest_name + '</span>' +
+          '<span class="journey-dest">' +
+          hop.dest_name +
+          '</span>' +
           '</div>' +
           '<div class="journey-meta">' +
-          '<span class="journey-badge badge-' + hop.travel_type + '">' +
-          (emojis[hop.travel_type] || '') + ' ' +
-          hop.travel_type.charAt(0).toUpperCase() + hop.travel_type.slice(1) +
+          '<span class="journey-badge badge-' +
+          hop.travel_type +
+          '">' +
+          (emojis[hop.travel_type] || '') +
+          ' ' +
+          hop.travel_type.charAt(0).toUpperCase() +
+          hop.travel_type.slice(1) +
           '</span>' +
-          '<span class="journey-countdown">' + countdownText(hop.start_date) + '</span>' +
-          '<span class="journey-date">' + hop.start_date + '</span>' +
+          '<span class="journey-countdown">' +
+          countdownText(hop.start_date) +
+          '</span>' +
+          '<span class="journey-date">' +
+          hop.start_date +
+          '</span>' +
           '</div>' +
-          '</div>';
+          '</div>' +
+          '</a>';
       });
     }
 
@@ -235,11 +270,7 @@
     });
 
     hops.forEach(function (hop) {
-      if (
-        (!hop.origin_lat && !hop.origin_lng) ||
-        (!hop.dest_lat && !hop.dest_lng)
-      )
-        return;
+      if ((!hop.origin_lat && !hop.origin_lng) || (!hop.dest_lat && !hop.dest_lng)) return;
 
       var from = [hop.origin_lat, hop.origin_lng];
       var to = [hop.dest_lat, hop.dest_lng];

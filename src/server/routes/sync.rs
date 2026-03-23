@@ -2,7 +2,7 @@ use super::{ErrorResponse, MultiFormatResponse, multi_format_docs, negotiate_for
 use crate::{
     db,
     geocode::Geocoder,
-    server::{AppState, middleware::AuthUser},
+    server::{AppState, error::AppError, middleware::AuthUser},
     worker::{SyncOutcome, sync_all},
 };
 use aide::transform::TransformOperation;
@@ -90,11 +90,7 @@ pub async fn sync_handler(
                 let response = SyncResponse::from(r);
                 SyncResponse::single_format_response(&response, format, StatusCode::OK)
             }
-            Err(err) => ErrorResponse::into_format_response(
-                format!("sync failed: {err}"),
-                format,
-                StatusCode::INTERNAL_SERVER_ERROR,
-            ),
+            Err(err) => AppError::from(err).into_format_response(format),
         };
     }
 
@@ -108,20 +104,12 @@ pub async fn sync_handler(
             return if is_form {
                 Redirect::to("/dashboard?error=Sync+already+queued").into_response()
             } else {
-                ErrorResponse::into_format_response(
-                    "sync already queued or running",
-                    format,
-                    StatusCode::CONFLICT,
-                )
+                AppError::Conflict("sync already queued or running").into_format_response(format)
             };
         }
         Ok(false) => {}
         Err(err) => {
-            return ErrorResponse::into_format_response(
-                format!("database error: {err}"),
-                format,
-                StatusCode::INTERNAL_SERVER_ERROR,
-            );
+            return AppError::from(err).into_format_response(format);
         }
     }
 
@@ -143,11 +131,7 @@ pub async fn sync_handler(
                 SyncQueuedResponse::single_format_response(&response, format, StatusCode::ACCEPTED)
             }
         }
-        Err(err) => ErrorResponse::into_format_response(
-            format!("failed to enqueue sync: {err}"),
-            format,
-            StatusCode::INTERNAL_SERVER_ERROR,
-        ),
+        Err(err) => AppError::from(err).into_format_response(format),
     }
 }
 

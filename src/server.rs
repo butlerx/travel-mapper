@@ -1,6 +1,7 @@
 //! Application state, router setup, and request handling.
 
 pub(crate) mod components;
+pub(crate) mod error;
 pub(crate) mod middleware;
 pub(crate) mod pages;
 pub(crate) mod routes;

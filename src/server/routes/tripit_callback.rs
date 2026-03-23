@@ -3,12 +3,12 @@ use crate::{
     auth::{decrypt_token, encrypt_token},
     db,
     integrations::tripit::TripItConsumer,
-    server::{AppState, middleware::AuthUser},
+    server::{AppState, error::AppError, middleware::AuthUser},
 };
 use aide::transform::TransformOperation;
 use axum::{
     extract::{Query, State},
-    http::{HeaderMap, StatusCode},
+    http::HeaderMap,
     response::{IntoResponse, Redirect, Response},
 };
 use indexmap::IndexMap;
@@ -38,29 +38,19 @@ pub async fn tripit_callback_handler(
         Ok(Some(row)) => row,
         Ok(None) => {
             let format = negotiate_format(&headers);
-            return ErrorResponse::into_format_response(
-                "unknown or expired oauth_token",
-                format,
-                StatusCode::BAD_REQUEST,
-            );
+            return AppError::MissingField("unknown or expired oauth_token")
+                .into_format_response(format);
         }
         Err(err) => {
             let format = negotiate_format(&headers);
-            return ErrorResponse::into_format_response(
-                format!("failed to lookup request token: {err}"),
-                format,
-                StatusCode::INTERNAL_SERVER_ERROR,
-            );
+            return AppError::from(err).into_format_response(format);
         }
     };
 
     if stored.user_id != auth.user_id {
         let format = negotiate_format(&headers);
-        return ErrorResponse::into_format_response(
-            "request token belongs to another user",
-            format,
-            StatusCode::FORBIDDEN,
-        );
+        return AppError::Forbidden("request token belongs to another user")
+            .into_format_response(format);
     }
 
     let token_secret = match decrypt_token(
@@ -70,13 +60,8 @@ pub async fn tripit_callback_handler(
     ) {
         Ok(secret) => secret,
         Err(err) => {
-            tracing::error!(error = %err, "decrypt request token secret");
             let format = negotiate_format(&headers);
-            return ErrorResponse::into_format_response(
-                "failed to decrypt request token secret",
-                format,
-                StatusCode::INTERNAL_SERVER_ERROR,
-            );
+            return AppError::from(err).into_format_response(format);
         }
     };
 

@@ -1,10 +1,9 @@
-use super::ErrorResponse;
 use super::types::{
-    MultiFormatResponse, add_multi_format_docs, multi_format_docs, negotiate_format,
+    ErrorResponse, MultiFormatResponse, add_multi_format_docs, multi_format_docs, negotiate_format,
 };
 use crate::{
     db,
-    server::{AppState, middleware::AuthUser, session::is_form_request},
+    server::{AppState, error::AppError, middleware::AuthUser, session::is_form_request},
 };
 use aide::transform::TransformOperation;
 use axum::{
@@ -20,6 +19,8 @@ use serde::{Deserialize, Serialize};
 /// API response type for a single travel hop.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
 pub struct HopResponse {
+    /// Database identifier for this hop.
+    pub id: i64,
     /// Mode of transport for this hop.
     pub travel_type: HopTravelType,
     /// Name of the origin location (airport code, city, or station).
@@ -102,6 +103,7 @@ impl From<db::hops::TravelType> for HopTravelType {
 impl From<db::hops::Row> for HopResponse {
     fn from(hop: db::hops::Row) -> Self {
         Self {
+            id: hop.id,
             travel_type: hop.travel_type.into(),
             origin_name: hop.origin_name,
             origin_lat: hop.origin_lat,
@@ -119,6 +121,7 @@ impl MultiFormatResponse for HopResponse {
     const HTML_TITLE: &'static str = "Travel Hops";
 
     const CSV_HEADERS: &'static [&'static str] = &[
+        "id",
         "travel_type",
         "origin_name",
         "origin_lat",
@@ -132,6 +135,7 @@ impl MultiFormatResponse for HopResponse {
 
     fn csv_row(&self) -> Vec<String> {
         vec![
+            self.id.to_string(),
             self.travel_type.to_string(),
             self.origin_name.clone(),
             self.origin_lat.to_string(),
@@ -145,6 +149,7 @@ impl MultiFormatResponse for HopResponse {
     }
 
     fn html_card(&self) -> String {
+        let id = self.id;
         let emoji = self.travel_type.emoji();
         let travel_type = self.travel_type.as_str();
         let origin = &self.origin_name;
@@ -152,7 +157,8 @@ impl MultiFormatResponse for HopResponse {
         let date = &self.start_date;
 
         format!(
-            "<div class=\"data-card hop-card\">\
+            "<a href=\"/hop/{id}\" class=\"hop-card-link\">\
+             <div class=\"data-card hop-card\">\
              <div class=\"hop-card-route\">\
              <span class=\"hop-card-place\">{origin}</span>\
              <span class=\"hop-card-arrow\">→</span>\
@@ -162,7 +168,8 @@ impl MultiFormatResponse for HopResponse {
              <span class=\"hop-card-badge\">{emoji} {travel_type}</span>\
              <span class=\"hop-card-date\">{date}</span>\
              </div>\
-             </div>"
+             </div>\
+             </a>"
         )
     }
 }
@@ -189,11 +196,7 @@ pub async fn hops_handler(
     {
         Ok(hops) => hops,
         Err(err) => {
-            return ErrorResponse::into_format_response(
-                format!("failed to fetch hops: {err}"),
-                format,
-                StatusCode::INTERNAL_SERVER_ERROR,
-            );
+            return AppError::from(err).into_format_response(format);
         }
     };
 
@@ -271,10 +274,10 @@ pub async fn create_hop_handler(
 ) -> Response {
     let is_form = is_form_request(&headers);
 
-    let parsed: Result<CreateHopRequest, String> = if is_form {
-        serde_urlencoded::from_bytes(&body).map_err(|e| e.to_string())
+    let parsed: Result<CreateHopRequest, AppError> = if is_form {
+        serde_urlencoded::from_bytes(&body).map_err(AppError::from)
     } else {
-        serde_json::from_slice(&body).map_err(|e| e.to_string())
+        serde_json::from_slice(&body).map_err(AppError::from)
     };
 
     let req = match parsed {
@@ -288,22 +291,22 @@ pub async fn create_hop_handler(
                 .into_response()
             } else {
                 let format = negotiate_format(&headers);
-                ErrorResponse::into_format_response(
-                    format!("invalid request body: {err}"),
-                    format,
-                    StatusCode::BAD_REQUEST,
-                )
+                err.into_format_response(format)
             };
         }
     };
 
     if req.origin.is_empty() || req.destination.is_empty() || req.date.is_empty() {
-        let msg = "origin, destination, and date are required";
+        let err = AppError::MissingField("origin, destination, and date are required");
         return if is_form {
-            Redirect::to(&format!("/flights/new?error={}", encode_query_value(msg))).into_response()
+            Redirect::to(&format!(
+                "/flights/new?error={}",
+                encode_query_value(&err.to_string())
+            ))
+            .into_response()
         } else {
             let format = negotiate_format(&headers);
-            ErrorResponse::into_format_response(msg.to_string(), format, StatusCode::BAD_REQUEST)
+            err.into_format_response(format)
         };
     }
 
@@ -335,13 +338,16 @@ pub async fn create_hop_handler(
             }
         }
         Err(err) => {
-            let msg = format!("failed to create hop: {err}");
+            let err = AppError::from(err);
             if is_form {
-                Redirect::to(&format!("/flights/new?error={}", encode_query_value(&msg)))
-                    .into_response()
+                Redirect::to(&format!(
+                    "/flights/new?error={}",
+                    encode_query_value(&err.to_string())
+                ))
+                .into_response()
             } else {
                 let format = negotiate_format(&headers);
-                ErrorResponse::into_format_response(msg, format, StatusCode::INTERNAL_SERVER_ERROR)
+                err.into_format_response(format)
             }
         }
     }
