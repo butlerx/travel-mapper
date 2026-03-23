@@ -39,6 +39,7 @@ pub struct DetailedStats {
     pub cabin_class_breakdown: Vec<CountedItem>,
     pub seat_type_breakdown: Vec<CountedItem>,
     pub flight_reason_breakdown: Vec<CountedItem>,
+    pub countries: Vec<CountedItem>,
     pub available_years: Vec<String>,
     pub selected_year: Option<String>,
     pub first_year: Option<String>,
@@ -87,6 +88,23 @@ fn extract_year(date: &str) -> Option<&str> {
     }
 }
 
+fn count_hop_countries(row: &StatsRow, countries: &mut HashMap<String, usize>) {
+    let mut hop_countries: HashSet<String> = HashSet::new();
+    if let Some(c) = &row.origin_country
+        && !c.is_empty()
+    {
+        hop_countries.insert(c.to_uppercase());
+    }
+    if let Some(c) = &row.dest_country
+        && !c.is_empty()
+    {
+        hop_countries.insert(c.to_uppercase());
+    }
+    for code in &hop_countries {
+        *countries.entry(code.clone()).or_insert(0) += 1;
+    }
+}
+
 pub fn compute_detailed_stats(all_rows: &[StatsRow], year_filter: Option<&str>) -> DetailedStats {
     let mut year_set: HashSet<String> = HashSet::new();
     for row in all_rows {
@@ -114,7 +132,7 @@ pub fn compute_detailed_stats(all_rows: &[StatsRow], year_filter: Option<&str>) 
     };
 
     let mut airports: HashSet<String> = HashSet::new();
-    let mut countries: HashSet<String> = HashSet::new();
+    let mut countries: HashMap<String, usize> = HashMap::new();
     let mut airlines: HashMap<String, usize> = HashMap::new();
     let mut aircraft: HashMap<String, usize> = HashMap::new();
     let mut routes: HashMap<String, usize> = HashMap::new();
@@ -147,16 +165,7 @@ pub fn compute_detailed_stats(all_rows: &[StatsRow], year_filter: Option<&str>) 
             airports.insert(row.dest_name.clone());
         }
 
-        if let Some(c) = &row.origin_country
-            && !c.is_empty()
-        {
-            countries.insert(c.to_uppercase());
-        }
-        if let Some(c) = &row.dest_country
-            && !c.is_empty()
-        {
-            countries.insert(c.to_uppercase());
-        }
+        count_hop_countries(row, &mut countries);
 
         if let Some(a) = &row.airline {
             increment(&mut airlines, a);
@@ -184,6 +193,7 @@ pub fn compute_detailed_stats(all_rows: &[StatsRow], year_filter: Option<&str>) 
 
     stats.unique_airports = airports.len();
     stats.unique_countries = countries.len();
+    stats.countries = top_n(&countries, 100);
     stats.top_airlines = top_n(&airlines, 10);
     stats.top_aircraft = top_n(&aircraft, 10);
     stats.top_routes = top_n(&routes, 10);
@@ -443,7 +453,39 @@ mod tests {
         assert_eq!(stats.total_rail, 1);
         assert_eq!(stats.unique_airports, 2);
         assert_eq!(stats.unique_countries, 3);
+        assert_eq!(stats.countries.len(), 3);
+        // GB appears in both hops (DUB→LHR and Paris→London), IE in 1, FR in 1
+        assert_eq!(stats.countries[0].name, "GB");
+        assert_eq!(stats.countries[0].count, 2);
         assert_eq!(stats.top_airlines.len(), 1);
         assert_eq!(stats.top_airlines[0].name, "Aer Lingus");
+    }
+
+    #[test]
+    fn compute_detailed_stats_deduplicates_same_country_hop() {
+        let rows = vec![StatsRow {
+            travel_type: TravelType::Air,
+            origin_name: "SFO".to_string(),
+            origin_lat: 37.6,
+            origin_lng: -122.4,
+            origin_country: Some("us".to_string()),
+            dest_name: "LAX".to_string(),
+            dest_lat: 33.9,
+            dest_lng: -118.4,
+            dest_country: Some("us".to_string()),
+            start_date: "2024-06-01".to_string(),
+            end_date: "2024-06-01".to_string(),
+            airline: None,
+            aircraft_type: None,
+            cabin_class: None,
+            seat_type: None,
+            flight_reason: None,
+        }];
+
+        let stats = compute_detailed_stats(&rows, None);
+        assert_eq!(stats.unique_countries, 1);
+        assert_eq!(stats.countries.len(), 1);
+        assert_eq!(stats.countries[0].name, "US");
+        assert_eq!(stats.countries[0].count, 1);
     }
 }
