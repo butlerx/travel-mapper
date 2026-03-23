@@ -28,7 +28,7 @@ pub struct DetailedStats {
     pub total_hops: usize,
     pub total_flights: usize,
     pub total_rail: usize,
-    pub total_cruise: usize,
+    pub total_boat: usize,
     pub total_transport: usize,
     pub total_distance_km: u64,
     pub unique_airports: usize,
@@ -127,7 +127,7 @@ pub fn compute_detailed_stats(all_rows: &[StatsRow], year_filter: Option<&str>) 
         match row.travel_type {
             TravelType::Air => stats.total_flights += 1,
             TravelType::Rail => stats.total_rail += 1,
-            TravelType::Cruise => stats.total_cruise += 1,
+            TravelType::Boat => stats.total_boat += 1,
             TravelType::Transport => stats.total_transport += 1,
         }
 

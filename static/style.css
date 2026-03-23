@@ -549,7 +549,7 @@ input[type='password']:invalid:not(:placeholder-shown):not(:focus) {
 /* Travel type text colors */
 .hop-item[data-type="air"] .hop-value, .type-air { color: #38bdf8; }
 .hop-item[data-type="rail"] .hop-value, .type-rail { color: #f59e0b; }
-.hop-item[data-type="cruise"] .hop-value, .type-cruise { color: #ef4444; }
+.hop-item[data-type="boat"] .hop-value, .type-boat { color: #ef4444; }
 .hop-item[data-type="transport"] .hop-value, .type-transport { color: #2dd4bf; }
 
 @media (max-width: 640px) {
@@ -670,7 +670,7 @@ input[type='password']:invalid:not(:placeholder-shown):not(:focus) {
 
 .badge-air { color: #38bdf8; border-color: rgba(56, 189, 248, 0.3); }
 .badge-rail { color: #f59e0b; border-color: rgba(245, 158, 11, 0.3); }
-.badge-cruise { color: #f43f5e; border-color: rgba(244, 63, 94, 0.3); }
+.badge-boat { color: #f43f5e; border-color: rgba(244, 63, 94, 0.3); }
 .badge-transport { color: #10b981; border-color: rgba(16, 185, 129, 0.3); }
 
 .journey-date {
@@ -989,7 +989,7 @@ input[type='password']:invalid:not(:placeholder-shown):not(:focus) {
   background: #f59e0b;
 }
 
-.legend-cruise {
+.legend-boat {
   background: #f43f5e;
 }
 

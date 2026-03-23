@@ -10,7 +10,7 @@ pub fn LandingPage() -> impl IntoView {
                     <div class="hero">
                         <div class="hero-badge">{"\u{1F30D}"}" Every journey. Every route. One map."</div>
                         <h1>"Your Travel Story,\u{2003}Visualised"</h1>
-                        <p>"Import your trips from TripIt and see every journey mapped, measured, and beautifully presented \u{2014} air, rail, cruises, and more."</p>
+                        <p>"Import your trips from TripIt and see every journey mapped, measured, and beautifully presented \u{2014} air, rail, boat trips, and more."</p>
                         <div class="hero-actions">
                             <a class="btn btn-primary" href="/register">"Get Started"</a>
                             <a class="btn btn-secondary" href="/login">"Log In"</a>

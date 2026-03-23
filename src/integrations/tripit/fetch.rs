@@ -2,7 +2,7 @@
 
 use super::auth::{AuthError, TripItAuth};
 use crate::{
-    db::hops::{CruiseDetail, FlightDetail, RailDetail, Row as Hop, TransportDetail, TravelType},
+    db::hops::{BoatDetail, FlightDetail, RailDetail, Row as Hop, TransportDetail, TravelType},
     geocode::airports,
 };
 use serde_json::Value;
@@ -289,7 +289,7 @@ fn parse_air(obj: &Value) -> Vec<Hop> {
                     pnr: get_str(obj, "confirmation_num"),
                 }),
                 rail_detail: None,
-                cruise_detail: None,
+                boat_detail: None,
                 transport_detail: None,
             })
         })
@@ -354,7 +354,7 @@ fn parse_rail(obj: &Value) -> Vec<Hop> {
                     booking_site: get_str(seg, "booking_site_name"),
                     notes: get_str(seg, "notes"),
                 }),
-                cruise_detail: None,
+                boat_detail: None,
                 transport_detail: None,
             })
         })
@@ -385,7 +385,7 @@ fn parse_cruise(obj: &Value) -> Vec<Hop> {
     };
 
     vec![Hop {
-        travel_type: TravelType::Cruise,
+        travel_type: TravelType::Boat,
         origin_name,
         origin_lat: slat,
         origin_lng: slng,
@@ -403,7 +403,7 @@ fn parse_cruise(obj: &Value) -> Vec<Hop> {
         dest_tz: get_tz(obj, "EndDateTime"),
         flight_detail: None,
         rail_detail: None,
-        cruise_detail: Some(CruiseDetail {
+        boat_detail: Some(BoatDetail {
             ship_name: get_str(obj, "ship_name"),
             cabin_type: get_str(obj, "cabin_type"),
             cabin_number: get_str(obj, "cabin_number"),
@@ -466,8 +466,43 @@ fn parse_transport(obj: &Value) -> Vec<Hop> {
                 }
             };
 
+            let carrier_name = get_str(seg, "carrier_name");
+            let vehicle_description = get_str(seg, "vehicle_description");
+            let is_ferry = {
+                let c = carrier_name.to_ascii_lowercase();
+                let v = vehicle_description.to_ascii_lowercase();
+                c.contains("ferry")
+                    || c.contains("ferries")
+                    || v.contains("ferry")
+                    || v.contains("ferries")
+            };
+
+            let (travel_type, boat_detail, transport_detail) = if is_ferry {
+                (
+                    TravelType::Boat,
+                    Some(BoatDetail {
+                        ship_name: carrier_name,
+                        confirmation_num: get_str(obj, "confirmation_num"),
+                        notes: get_str(seg, "notes"),
+                        ..BoatDetail::default()
+                    }),
+                    None,
+                )
+            } else {
+                (
+                    TravelType::Transport,
+                    None,
+                    Some(TransportDetail {
+                        carrier_name,
+                        vehicle_description,
+                        confirmation_num: get_str(obj, "confirmation_num"),
+                        notes: get_str(seg, "notes"),
+                    }),
+                )
+            };
+
             Hop {
-                travel_type: TravelType::Transport,
+                travel_type,
                 origin_name,
                 origin_lat: slat,
                 origin_lng: slng,
@@ -485,13 +520,8 @@ fn parse_transport(obj: &Value) -> Vec<Hop> {
                 dest_tz: get_tz(seg, "EndDateTime"),
                 flight_detail: None,
                 rail_detail: None,
-                cruise_detail: None,
-                transport_detail: Some(TransportDetail {
-                    carrier_name: get_str(seg, "carrier_name"),
-                    vehicle_description: get_str(seg, "vehicle_description"),
-                    confirmation_num: get_str(obj, "confirmation_num"),
-                    notes: get_str(seg, "notes"),
-                }),
+                boat_detail,
+                transport_detail,
             }
         })
         .collect()
@@ -880,7 +910,7 @@ mod tests {
         let hops = parse_cruise(&obj);
         assert_eq!(hops.len(), 1);
         let hop = &hops[0];
-        assert!(matches!(hop.travel_type, TravelType::Cruise));
+        assert!(matches!(hop.travel_type, TravelType::Boat));
         assert_eq!(hop.origin_name, "Port of Miami");
         assert_eq!(hop.dest_name, "Nassau Port");
         assert!((hop.origin_lat - 25.7781_f64).abs() < f64::EPSILON);
@@ -889,7 +919,7 @@ mod tests {
         assert!((hop.dest_lng - -77.3431_f64).abs() < f64::EPSILON);
         assert_eq!(hop.start_date, "2024-07-01");
         assert_eq!(hop.end_date, "2024-07-05");
-        let detail = hop.cruise_detail.as_ref().expect("cruise detail missing");
+        let detail = hop.boat_detail.as_ref().expect("boat detail missing");
         assert_eq!(detail.ship_name, "Ocean Dream");
         assert_eq!(detail.cabin_number, "B123");
         assert_eq!(detail.confirmation_num, "CRUISE-55");
@@ -909,7 +939,7 @@ mod tests {
         let hops = parse_cruise(&obj);
         assert_eq!(hops.len(), 1);
         let hop = &hops[0];
-        assert!(matches!(hop.travel_type, TravelType::Cruise));
+        assert!(matches!(hop.travel_type, TravelType::Boat));
         assert_eq!(hop.origin_name, "Venice");
         assert_eq!(hop.dest_name, "Dubrovnik");
         assert!((hop.origin_lat).abs() < f64::EPSILON);
@@ -952,6 +982,53 @@ mod tests {
         assert_eq!(detail.carrier_name, "City Taxi");
         assert_eq!(detail.vehicle_description, "Sedan");
         assert_eq!(detail.confirmation_num, "TX-7788");
+    }
+
+    #[test]
+    fn parse_transport_detects_ferry_as_boat() {
+        let obj = json!({
+            "confirmation_num": "FRY-001",
+            "start_location_name": "Dover",
+            "end_location_name": "Calais",
+            "carrier_name": "P&O Ferries",
+            "vehicle_description": "Car deck",
+            "notes": "Deck 3",
+            "StartAddress": {"city": "Dover", "latitude": "51.1279", "longitude": "1.3134"},
+            "EndAddress": {"city": "Calais", "latitude": "50.9513", "longitude": "1.8587"},
+            "StartDateTime": {"date": "2024-08-15"},
+            "EndDateTime": {"date": "2024-08-15"}
+        });
+
+        let hops = parse_transport(&obj);
+        assert_eq!(hops.len(), 1);
+        let hop = &hops[0];
+        assert!(matches!(hop.travel_type, TravelType::Boat));
+        let detail = hop.boat_detail.as_ref().expect("boat detail missing");
+        assert_eq!(detail.ship_name, "P&O Ferries");
+        assert_eq!(detail.confirmation_num, "FRY-001");
+        assert_eq!(detail.notes, "Deck 3");
+        assert!(hop.transport_detail.is_none());
+    }
+
+    #[test]
+    fn parse_transport_detects_ferry_in_vehicle_description() {
+        let obj = json!({
+            "start_location_name": "Piraeus",
+            "end_location_name": "Santorini",
+            "carrier_name": "Blue Star Lines",
+            "vehicle_description": "High-speed ferry",
+            "StartAddress": {"city": "Piraeus", "latitude": "37.9475", "longitude": "23.6370"},
+            "EndAddress": {"city": "Santorini", "latitude": "36.3932", "longitude": "25.4615"},
+            "StartDateTime": {"date": "2024-07-20"},
+            "EndDateTime": {"date": "2024-07-20"}
+        });
+
+        let hops = parse_transport(&obj);
+        assert_eq!(hops.len(), 1);
+        let hop = &hops[0];
+        assert!(matches!(hop.travel_type, TravelType::Boat));
+        assert!(hop.boat_detail.is_some());
+        assert!(hop.transport_detail.is_none());
     }
 
     #[test]

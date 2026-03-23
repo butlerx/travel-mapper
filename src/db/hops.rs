@@ -7,7 +7,7 @@ use uuid::Uuid;
 pub enum TravelType {
     Air,
     Rail,
-    Cruise,
+    Boat,
     Transport,
 }
 
@@ -16,7 +16,7 @@ impl std::fmt::Display for TravelType {
         match self {
             Self::Air => write!(f, "air"),
             Self::Rail => write!(f, "rail"),
-            Self::Cruise => write!(f, "cruise"),
+            Self::Boat => write!(f, "boat"),
             Self::Transport => write!(f, "transport"),
         }
     }
@@ -28,7 +28,7 @@ impl TravelType {
         match self {
             Self::Air => "✈️",
             Self::Rail => "🚆",
-            Self::Cruise => "🚢",
+            Self::Boat => "🚢",
             Self::Transport => "🚗",
         }
     }
@@ -57,7 +57,7 @@ pub struct RailDetail {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct CruiseDetail {
+pub struct BoatDetail {
     pub ship_name: String,
     pub cabin_type: String,
     pub cabin_number: String,
@@ -99,7 +99,7 @@ pub struct Row {
     pub dest_tz: Option<String>,
     pub flight_detail: Option<FlightDetail>,
     pub rail_detail: Option<RailDetail>,
-    pub cruise_detail: Option<CruiseDetail>,
+    pub boat_detail: Option<BoatDetail>,
     pub transport_detail: Option<TransportDetail>,
 }
 
@@ -141,14 +141,14 @@ impl TryFrom<HopRow> for Row {
             dest_tz: None,
             flight_detail: None,
             rail_detail: None,
-            cruise_detail: None,
+            boat_detail: None,
             transport_detail: None,
         })
     }
 }
 
 #[derive(Debug, thiserror::Error)]
-#[error("unknown travel_type '{value}': expected air|rail|cruise|transport")]
+#[error("unknown travel_type '{value}': expected air|rail|boat|transport")]
 struct ParseTravelTypeError {
     value: String,
 }
@@ -157,7 +157,7 @@ fn parse_travel_type(value: &str) -> Result<TravelType, sqlx::Error> {
     match value {
         "air" => Ok(TravelType::Air),
         "rail" => Ok(TravelType::Rail),
-        "cruise" => Ok(TravelType::Cruise),
+        "boat" | "cruise" => Ok(TravelType::Boat),
         "transport" => Ok(TravelType::Transport),
         other => Err(sqlx::Error::Decode(Box::new(ParseTravelTypeError {
             value: other.to_string(),
@@ -240,8 +240,8 @@ impl Create<'_> {
             if let Some(detail) = &hop.rail_detail {
                 insert_rail_detail(&mut tx, hop_id, detail).await?;
             }
-            if let Some(detail) = &hop.cruise_detail {
-                insert_cruise_detail(&mut tx, hop_id, detail).await?;
+            if let Some(detail) = &hop.boat_detail {
+                insert_boat_detail(&mut tx, hop_id, detail).await?;
             }
             if let Some(detail) = &hop.transport_detail {
                 insert_transport_detail(&mut tx, hop_id, detail).await?;
@@ -315,13 +315,13 @@ async fn insert_rail_detail(
     Ok(())
 }
 
-async fn insert_cruise_detail(
+async fn insert_boat_detail(
     tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
     hop_id: i64,
-    detail: &CruiseDetail,
+    detail: &BoatDetail,
 ) -> Result<(), sqlx::Error> {
     sqlx::query(
-        r"INSERT OR REPLACE INTO cruise_details (
+        r"INSERT OR REPLACE INTO boat_details (
            hop_id,
            ship_name,
            cabin_type,
@@ -894,8 +894,8 @@ impl ReplaceForTrip<'_> {
             if let Some(detail) = &hop.rail_detail {
                 insert_rail_detail(&mut tx, hop_id, detail).await?;
             }
-            if let Some(detail) = &hop.cruise_detail {
-                insert_cruise_detail(&mut tx, hop_id, detail).await?;
+            if let Some(detail) = &hop.boat_detail {
+                insert_boat_detail(&mut tx, hop_id, detail).await?;
             }
             if let Some(detail) = &hop.transport_detail {
                 insert_transport_detail(&mut tx, hop_id, detail).await?;
@@ -987,7 +987,7 @@ mod tests {
             dest_tz: None,
             flight_detail: None,
             rail_detail: None,
-            cruise_detail: None,
+            boat_detail: None,
             transport_detail: None,
         }
     }

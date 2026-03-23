@@ -26,13 +26,13 @@
   var colors = {
     air: '#38bdf8',
     rail: '#f59e0b',
-    cruise: '#f43f5e',
+    boat: '#f43f5e',
     transport: '#10b981',
   };
   var emojis = {
     air: '\u2708\uFE0F',
     rail: '\uD83D\uDE86',
-    cruise: '\uD83D\uDEA2',
+    boat: '\uD83D\uDEA2',
     transport: '\uD83D\uDE97',
   };
 

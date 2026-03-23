@@ -243,7 +243,7 @@ GET /hops
 GET /hops?type=air
 ```
 
-Returns your travel hops. Optionally filter by type (`air`, `rail`, `cruise`,
+Returns your travel hops. Optionally filter by type (`air`, `rail`, `boat`,
 `transport`).
 
 Response format is determined by the `Accept` header:

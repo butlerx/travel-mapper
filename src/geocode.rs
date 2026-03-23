@@ -480,7 +480,7 @@ mod tests {
             dest_tz: None,
             flight_detail: None,
             rail_detail: None,
-            cruise_detail: None,
+            boat_detail: None,
             transport_detail: None,
         }
     }

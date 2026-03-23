@@ -10,7 +10,7 @@ pub fn MapControls(hop_count: usize) -> impl IntoView {
                     <option value="all">"All Types"</option>
                     <option value="air">{"\u{2708}\u{FE0F} Air"}</option>
                     <option value="rail">{"\u{1F686} Rail"}</option>
-                    <option value="cruise">{"\u{1F6A2} Cruise"}</option>
+                    <option value="boat">{"\u{1F6A2} Boat"}</option>
                     <option value="transport">{"\u{1F697} Transport"}</option>
                 </select>
                 <label for="filter-year">{"\u{1F4C5} Year"}</label>
@@ -29,8 +29,8 @@ pub fn MapControls(hop_count: usize) -> impl IntoView {
                     <span>{"\u{1F686} Rail"}</span>
                 </div>
                 <div class="legend-item">
-                    <div class="legend-swatch legend-cruise"></div>
-                    <span>{"\u{1F6A2} Cruise"}</span>
+                    <div class="legend-swatch legend-boat"></div>
+                    <span>{"\u{1F6A2} Boat"}</span>
                 </div>
                 <div class="legend-item">
                     <div class="legend-swatch legend-transport"></div>

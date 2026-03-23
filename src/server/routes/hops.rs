@@ -49,8 +49,8 @@ pub enum HopTravelType {
     Air,
     /// Train or rail segment.
     Rail,
-    /// Cruise or ferry segment.
-    Cruise,
+    /// Boat (cruise or ferry) segment.
+    Boat,
     /// Ground transport (car, bus, taxi, etc.).
     Transport,
 }
@@ -61,7 +61,7 @@ impl HopTravelType {
         match self {
             Self::Air => "air",
             Self::Rail => "rail",
-            Self::Cruise => "cruise",
+            Self::Boat => "boat",
             Self::Transport => "transport",
         }
     }
@@ -71,7 +71,7 @@ impl HopTravelType {
         match self {
             Self::Air => "✈️",
             Self::Rail => "🚆",
-            Self::Cruise => "🚢",
+            Self::Boat => "🚢",
             Self::Transport => "🚗",
         }
     }
@@ -82,7 +82,7 @@ impl std::fmt::Display for HopTravelType {
         match self {
             Self::Air => write!(f, "air"),
             Self::Rail => write!(f, "rail"),
-            Self::Cruise => write!(f, "cruise"),
+            Self::Boat => write!(f, "boat"),
             Self::Transport => write!(f, "transport"),
         }
     }
@@ -93,7 +93,7 @@ impl From<db::hops::TravelType> for HopTravelType {
         match t {
             db::hops::TravelType::Air => Self::Air,
             db::hops::TravelType::Rail => Self::Rail,
-            db::hops::TravelType::Cruise => Self::Cruise,
+            db::hops::TravelType::Boat => Self::Boat,
             db::hops::TravelType::Transport => Self::Transport,
         }
     }
