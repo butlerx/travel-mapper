@@ -160,11 +160,21 @@ code {
 }
 
 .nav-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
   font-weight: 700;
   font-size: var(--text-lg);
   color: var(--color-text);
   text-decoration: none;
   letter-spacing: -0.02em;
+}
+
+.nav-logo {
+  height: 1.5rem;
+  width: 1.5rem;
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
 }
 
 .nav-brand:hover {
@@ -824,6 +834,13 @@ input[type='password']:invalid:not(:placeholder-shown):not(:focus) {
   display: flex;
   gap: var(--space-sm);
   justify-content: center;
+}
+
+.hero-logo {
+  width: 4rem;
+  height: 4rem;
+  color: var(--color-primary);
+  margin-bottom: var(--space-md);
 }
 
 .hero-badge {

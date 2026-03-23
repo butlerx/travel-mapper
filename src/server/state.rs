@@ -9,7 +9,7 @@ use crate::{
         create_hop_handler_docs, health_handler, health_handler_docs, hops_handler,
         hops_handler_docs, import_flighty_handler, login_handler, login_handler_docs,
         logout_handler, logout_handler_docs, register_handler, register_handler_docs, serve_css,
-        serve_js, serve_stats_js, store_tripit_credentials_handler,
+        serve_js, serve_logo, serve_stats_js, store_tripit_credentials_handler,
         store_tripit_credentials_handler_docs, sync_handler, sync_handler_docs,
         tripit_callback_handler, tripit_callback_handler_docs, tripit_connect_handler,
         tripit_connect_handler_docs,
@@ -115,6 +115,7 @@ pub fn create_router(state: AppState) -> Router {
         .route("/static/style.css", get(serve_css))
         .route("/static/map.js", get(serve_js))
         .route("/static/stats-map.js", get(serve_stats_js))
+        .route("/static/logo.svg", get(serve_logo))
         .api_route("/health", get_with(health_handler, health_handler_docs))
         .api_route(
             "/sync",

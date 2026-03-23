@@ -8,6 +8,7 @@ pub fn LandingPage() -> impl IntoView {
             <main class="auth-page">
                 <div class="card auth-card">
                     <div class="hero">
+                        <img class="hero-logo" src="/static/logo.svg" alt="" width="32" height="32" />
                         <div class="hero-badge">{"\u{1F30D}"}" Every journey. Every route. One map."</div>
                         <h1>"Your Travel Story,\u{2003}Visualised"</h1>
                         <p>"Import your trips from TripIt and see every journey mapped, measured, and beautifully presented \u{2014} air, rail, boat trips, and more."</p>

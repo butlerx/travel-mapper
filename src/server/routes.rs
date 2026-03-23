@@ -23,7 +23,7 @@ pub(super) use hops::{
 pub(super) use login::{AuthResponse, login_handler, login_handler_docs};
 pub(super) use logout::{logout_handler, logout_handler_docs};
 pub(super) use register::{register_handler, register_handler_docs};
-pub(super) use static_assets::{serve_css, serve_js, serve_stats_js};
+pub(super) use static_assets::{serve_css, serve_js, serve_logo, serve_stats_js};
 pub(super) use sync::{sync_handler, sync_handler_docs};
 pub(super) use tripit_callback::{tripit_callback_handler, tripit_callback_handler_docs};
 pub(super) use tripit_connect::{tripit_connect_handler, tripit_connect_handler_docs};

@@ -3,7 +3,7 @@ use axum::response::IntoResponse;
 const CSS: &str = include_str!("../../../static/style.css");
 const MAP_JS: &str = include_str!("../../../static/map.js");
 const STATS_MAP_JS: &str = include_str!("../../../static/stats-map.js");
-
+const LOGO: &str = include_str!("../../../static/logo.svg");
 pub async fn serve_css() -> impl IntoResponse {
     (
         [
@@ -31,6 +31,16 @@ pub async fn serve_stats_js() -> impl IntoResponse {
             ("cache-control", "public, max-age=86400"),
         ],
         STATS_MAP_JS,
+    )
+}
+
+pub async fn serve_logo() -> impl IntoResponse {
+    (
+        [
+            ("content-type", "image/svg+xml"),
+            ("cache-control", "public, max-age=86400"),
+        ],
+        LOGO,
     )
 }
 

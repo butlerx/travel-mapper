@@ -6,7 +6,10 @@ pub fn NavBar(#[prop(into)] current: String) -> impl IntoView {
 
     view! {
         <nav class="nav" aria-label="Main">
-            <a class="nav-brand" href="/dashboard">"Travel Export"</a>
+            <a class="nav-brand" href="/dashboard">
+                <img class="nav-logo" src="/static/logo.svg" alt="" width="32" height="32" />
+                "Travel Export"
+            </a>
             <div class="spacer"></div>
             <a class="nav-link" href="/dashboard" aria-current=aria("dashboard")>"Dashboard"</a>
             <a class="nav-link" href="/hops" aria-current=aria("hops")>"Hops"</a>
