@@ -10,6 +10,7 @@ mod landing_page;
 mod navbar;
 mod settings_page;
 mod shell;
+mod stats_page;
 
 pub(crate) use add_flight_page::AddFlightPage;
 pub(crate) use auth_page::AuthFormPage;
@@ -19,3 +20,4 @@ pub(crate) use landing_page::LandingPage;
 pub(crate) use navbar::NavBar;
 pub(crate) use settings_page::SettingsPage;
 pub(crate) use shell::Shell;
+pub(crate) use stats_page::StatsPage;

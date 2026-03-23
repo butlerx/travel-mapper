@@ -7,6 +7,7 @@ mod login;
 mod not_found;
 mod register;
 mod settings;
+pub(crate) mod stats;
 mod unauthorized;
 
 pub(super) use add_flight::add_flight_page;
@@ -16,6 +17,7 @@ pub(super) use login::login_page;
 pub(super) use not_found::not_found_page;
 pub(super) use register::register_page;
 pub(super) use settings::settings_page;
+pub(super) use stats::stats_page;
 pub(super) use unauthorized::unauthorized_page;
 
 use super::{AppState, components::ErrorPage};
