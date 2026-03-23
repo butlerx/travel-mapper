@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT OR REPLACE INTO hops (\n               trip_id,\n               user_id,\n               travel_type,\n               origin_name,\n               origin_lat,\n               origin_lng,\n               origin_country,\n               dest_name,\n               dest_lat,\n               dest_lng,\n               dest_country,\n               start_date,\n               end_date,\n               raw_json,\n               updated_at\n           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, datetime('now'))",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 13
+    },
+    "nullable": []
+  },
+  "hash": "1e450ccac19ba4871e91f1f1963369ae29cc718dea6a7383bfb40ca94da726d0"
+}

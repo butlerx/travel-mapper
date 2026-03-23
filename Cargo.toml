@@ -19,6 +19,7 @@ path = "src/bin/seed.rs"
 
 [dependencies]
 aes-gcm = "0.10"
+airport-data = "1.0"
 aide = { version = "0.15", features = [
   "axum",
   "axum-json",

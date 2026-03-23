@@ -239,18 +239,26 @@ fn parse_air(obj: &Value) -> Vec<Hop> {
                 return None;
             }
 
-            let (origin_name, origin_fallback) = if origin_code.is_empty() {
-                (get_str(seg, "start_city_name"), (0.0, 0.0))
+            let (origin_name, origin_fallback, origin_country) = if origin_code.is_empty() {
+                (get_str(seg, "start_city_name"), (0.0, 0.0), None)
             } else {
-                let coords = airports::lookup(&origin_code).unwrap_or((0.0, 0.0));
-                (origin_code, coords)
+                let enriched = airports::lookup_enriched(&origin_code);
+                let coords = enriched
+                    .as_ref()
+                    .map_or((0.0, 0.0), |a| (a.latitude, a.longitude));
+                let country = enriched.map(|a| a.country_code);
+                (origin_code, coords, country)
             };
 
-            let (dest_name, dest_fallback) = if dest_code.is_empty() {
-                (get_str(seg, "end_city_name"), (0.0, 0.0))
+            let (dest_name, dest_fallback, dest_country) = if dest_code.is_empty() {
+                (get_str(seg, "end_city_name"), (0.0, 0.0), None)
             } else {
-                let coords = airports::lookup(&dest_code).unwrap_or((0.0, 0.0));
-                (dest_code, coords)
+                let enriched = airports::lookup_enriched(&dest_code);
+                let coords = enriched
+                    .as_ref()
+                    .map_or((0.0, 0.0), |a| (a.latitude, a.longitude));
+                let country = enriched.map(|a| a.country_code);
+                (dest_code, coords, country)
             };
 
             Some(Hop {
@@ -260,11 +268,11 @@ fn parse_air(obj: &Value) -> Vec<Hop> {
                     .unwrap_or(origin_fallback.0),
                 origin_lng: coerce_float(&seg["start_airport_longitude"])
                     .unwrap_or(origin_fallback.1),
-                origin_country: None,
+                origin_country,
                 dest_name,
                 dest_lat: coerce_float(&seg["end_airport_latitude"]).unwrap_or(dest_fallback.0),
                 dest_lng: coerce_float(&seg["end_airport_longitude"]).unwrap_or(dest_fallback.1),
-                dest_country: None,
+                dest_country,
                 start_date: get_date(seg, "StartDateTime"),
                 end_date: get_date(seg, "EndDateTime"),
                 raw_json: serde_json::to_string(seg).ok(),
@@ -1255,7 +1263,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_air_does_not_set_country() {
+    fn parse_air_sets_country_from_airport_data() {
         let obj = json!({
             "Segment": [{
                 "start_airport_code": "DUB",
@@ -1266,8 +1274,8 @@ mod tests {
         });
 
         let hops = parse_air(&obj);
-        assert!(hops[0].origin_country.is_none());
-        assert!(hops[0].dest_country.is_none());
+        assert_eq!(hops[0].origin_country.as_deref(), Some("ie"));
+        assert_eq!(hops[0].dest_country.as_deref(), Some("us"));
     }
 
     #[test]

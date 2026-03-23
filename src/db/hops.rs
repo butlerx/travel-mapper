@@ -412,8 +412,14 @@ impl CreateFromFlighty<'_> {
             &row.date
         };
 
-        let (origin_lat, origin_lng) = airports::lookup(&row.from).unwrap_or((0.0, 0.0));
-        let (dest_lat, dest_lng) = airports::lookup(&row.to).unwrap_or((0.0, 0.0));
+        let origin = airports::lookup_enriched(&row.from);
+        let dest = airports::lookup_enriched(&row.to);
+        let origin_lat = origin.as_ref().map_or(0.0, |a| a.latitude);
+        let origin_lng = origin.as_ref().map_or(0.0, |a| a.longitude);
+        let origin_country = origin.as_ref().map(|a| a.country_code.clone());
+        let dest_lat = dest.as_ref().map_or(0.0, |a| a.latitude);
+        let dest_lng = dest.as_ref().map_or(0.0, |a| a.longitude);
+        let dest_country = dest.as_ref().map(|a| a.country_code.clone());
 
         let result = sqlx::query!(
             r"INSERT OR REPLACE INTO hops (
@@ -423,23 +429,27 @@ impl CreateFromFlighty<'_> {
                origin_name,
                origin_lat,
                origin_lng,
+               origin_country,
                dest_name,
                dest_lat,
                dest_lng,
+               dest_country,
                start_date,
                end_date,
                raw_json,
                updated_at
-           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, datetime('now'))",
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, datetime('now'))",
             db_trip_id,
             self.user_id,
             travel_type,
             row.from,
             origin_lat,
             origin_lng,
+            origin_country,
             row.to,
             dest_lat,
             dest_lng,
+            dest_country,
             row.date,
             end_date,
         )
@@ -549,8 +559,14 @@ impl CreateManual {
     pub async fn execute(&self, pool: &SqlitePool) -> Result<u64, sqlx::Error> {
         let trip_id = scoped_trip_id(self.user_id, &format!("manual:{}", Uuid::new_v4()));
         let travel_type = "air";
-        let (origin_lat, origin_lng) = airports::lookup(&self.origin).unwrap_or((0.0, 0.0));
-        let (dest_lat, dest_lng) = airports::lookup(&self.destination).unwrap_or((0.0, 0.0));
+        let origin_airport = airports::lookup_enriched(&self.origin);
+        let dest_airport = airports::lookup_enriched(&self.destination);
+        let origin_lat = origin_airport.as_ref().map_or(0.0, |a| a.latitude);
+        let origin_lng = origin_airport.as_ref().map_or(0.0, |a| a.longitude);
+        let origin_country = origin_airport.as_ref().map(|a| a.country_code.clone());
+        let dest_lat = dest_airport.as_ref().map_or(0.0, |a| a.latitude);
+        let dest_lng = dest_airport.as_ref().map_or(0.0, |a| a.longitude);
+        let dest_country = dest_airport.as_ref().map(|a| a.country_code.clone());
         let origin = self.origin.as_str();
         let destination = self.destination.as_str();
         let date = self.date.as_str();
@@ -565,23 +581,27 @@ impl CreateManual {
                origin_name,
                origin_lat,
                origin_lng,
+               origin_country,
                dest_name,
                dest_lat,
                dest_lng,
+               dest_country,
                start_date,
                end_date,
                raw_json,
                updated_at
-           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, datetime('now'))",
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, datetime('now'))",
             trip_id,
             self.user_id,
             travel_type,
             origin,
             origin_lat,
             origin_lng,
+            origin_country,
             destination,
             dest_lat,
             dest_lng,
+            dest_country,
             date,
             date,
         )
