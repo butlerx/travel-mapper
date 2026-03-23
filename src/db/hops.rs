@@ -1,5 +1,6 @@
 use crate::{geocode::airports, integrations::flighty::FlightRow};
 use sqlx::SqlitePool;
+use uuid::Uuid;
 
 /// The type of travel for a hop.
 #[derive(Debug, Clone, PartialEq)]
@@ -529,6 +530,69 @@ impl CreateFromFlighty<'_> {
         .await?;
 
         Ok(())
+    }
+}
+
+/// Create a single manually-entered flight hop with flight details.
+pub struct CreateManual {
+    pub user_id: i64,
+    pub origin: String,
+    pub destination: String,
+    pub date: String,
+    pub flight_detail: FlightDetail,
+}
+
+impl CreateManual {
+    /// # Errors
+    ///
+    /// Returns an error if inserting the hop or flight details fails.
+    pub async fn execute(&self, pool: &SqlitePool) -> Result<u64, sqlx::Error> {
+        let trip_id = scoped_trip_id(self.user_id, &format!("manual:{}", Uuid::new_v4()));
+        let travel_type = "air";
+        let (origin_lat, origin_lng) = airports::lookup(&self.origin).unwrap_or((0.0, 0.0));
+        let (dest_lat, dest_lng) = airports::lookup(&self.destination).unwrap_or((0.0, 0.0));
+        let origin = self.origin.as_str();
+        let destination = self.destination.as_str();
+        let date = self.date.as_str();
+
+        let mut tx = pool.begin().await?;
+
+        let result = sqlx::query!(
+            r"INSERT OR REPLACE INTO hops (
+               trip_id,
+               user_id,
+               travel_type,
+               origin_name,
+               origin_lat,
+               origin_lng,
+               dest_name,
+               dest_lat,
+               dest_lng,
+               start_date,
+               end_date,
+               raw_json,
+               updated_at
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, datetime('now'))",
+            trip_id,
+            self.user_id,
+            travel_type,
+            origin,
+            origin_lat,
+            origin_lng,
+            destination,
+            dest_lat,
+            dest_lng,
+            date,
+            date,
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        let hop_id = result.last_insert_rowid();
+        insert_flight_detail(&mut tx, hop_id, &self.flight_detail).await?;
+
+        tx.commit().await?;
+        Ok(1)
     }
 }
 
@@ -1285,5 +1349,67 @@ mod tests {
         .expect("fetch failed");
         assert_eq!(fetched.len(), 1);
         assert!((fetched[0].origin_lat - 99.9_f64).abs() < f64::EPSILON);
+    }
+
+    #[tokio::test]
+    async fn create_manual_inserts_hop_and_flight_detail() {
+        let pool = test_pool().await;
+        let user_id = test_user(&pool, "alice").await;
+
+        let created = CreateManual {
+            user_id,
+            origin: "DUB".to_string(),
+            destination: "LHR".to_string(),
+            date: "2025-06-15".to_string(),
+            flight_detail: FlightDetail {
+                airline: "Aer Lingus".to_string(),
+                flight_number: "EI154".to_string(),
+                aircraft_type: "Airbus A320".to_string(),
+                cabin_class: "Economy".to_string(),
+                seat: "12A".to_string(),
+                pnr: "ABC123".to_string(),
+            },
+        }
+        .execute(&pool)
+        .await
+        .expect("create manual failed");
+        assert_eq!(created, 1);
+
+        let hops = GetAll {
+            user_id,
+            travel_type_filter: Some("air"),
+        }
+        .execute(&pool)
+        .await
+        .expect("fetch failed");
+        assert_eq!(hops.len(), 1);
+        assert_eq!(hops[0].origin_name, "DUB");
+        assert_eq!(hops[0].dest_name, "LHR");
+        assert_eq!(hops[0].start_date, "2025-06-15");
+        assert!(
+            hops[0].origin_lat.abs() > 0.1,
+            "origin_lat should be resolved from airport lookup"
+        );
+        assert!(
+            hops[0].dest_lat.abs() > 0.1,
+            "dest_lat should be resolved from airport lookup"
+        );
+
+        let detail = sqlx::query!(
+            "SELECT airline, flight_number, aircraft_type, cabin_class, seat, pnr
+             FROM flight_details fd
+             JOIN hops h ON fd.hop_id = h.id
+             WHERE h.user_id = ?",
+            user_id,
+        )
+        .fetch_one(&pool)
+        .await
+        .expect("flight detail not found");
+        assert_eq!(detail.airline, "Aer Lingus");
+        assert_eq!(detail.flight_number, "EI154");
+        assert_eq!(detail.aircraft_type, "Airbus A320");
+        assert_eq!(detail.cabin_class, "Economy");
+        assert_eq!(detail.seat, "12A");
+        assert_eq!(detail.pnr, "ABC123");
     }
 }

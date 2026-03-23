@@ -1,5 +1,6 @@
 //! Page handlers for HTML views.
 
+mod add_flight;
 pub(crate) mod dashboard;
 mod landing;
 mod login;
@@ -8,6 +9,7 @@ mod register;
 mod settings;
 mod unauthorized;
 
+pub(super) use add_flight::add_flight_page;
 pub(super) use dashboard::dashboard_page;
 pub(super) use landing::landing_page;
 pub(super) use login::login_page;

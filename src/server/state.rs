@@ -1,11 +1,13 @@
 use crate::{
     integrations::tripit::TripItApi,
     server::pages::{
-        dashboard_page, landing_page, login_page, not_found_page, register_page, settings_page,
+        add_flight_page, dashboard_page, landing_page, login_page, not_found_page, register_page,
+        settings_page,
     },
     server::routes::{
-        create_api_key_handler, create_api_key_handler_docs, health_handler, health_handler_docs,
-        hops_handler, hops_handler_docs, import_flighty_handler, login_handler, login_handler_docs,
+        create_api_key_handler, create_api_key_handler_docs, create_hop_handler,
+        create_hop_handler_docs, health_handler, health_handler_docs, hops_handler,
+        hops_handler_docs, import_flighty_handler, login_handler, login_handler_docs,
         logout_handler, logout_handler_docs, register_handler, register_handler_docs, serve_css,
         serve_js, store_tripit_credentials_handler, store_tripit_credentials_handler_docs,
         sync_handler, sync_handler_docs, tripit_callback_handler, tripit_callback_handler_docs,
@@ -107,6 +109,7 @@ pub fn create_router(state: AppState) -> Router {
         .route("/login", get(login_page))
         .route("/dashboard", get(dashboard_page))
         .route("/settings", get(settings_page))
+        .route("/flights/new", get(add_flight_page))
         .route("/static/style.css", get(serve_css))
         .route("/static/map.js", get(serve_js))
         .api_route("/health", get_with(health_handler, health_handler_docs))
@@ -114,7 +117,11 @@ pub fn create_router(state: AppState) -> Router {
             "/sync",
             aide::axum::routing::post_with(sync_handler, sync_handler_docs),
         )
-        .api_route("/hops", get_with(hops_handler, hops_handler_docs))
+        .api_route(
+            "/hops",
+            get_with(hops_handler, hops_handler_docs)
+                .post_with(create_hop_handler, create_hop_handler_docs),
+        )
         .route(
             "/import/flighty",
             axum::routing::post(import_flighty_handler),

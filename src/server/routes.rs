@@ -17,7 +17,9 @@ mod types;
 pub(super) use api_keys::{create_api_key_handler, create_api_key_handler_docs};
 pub(super) use flighty::import_flighty_handler;
 pub(super) use health::{health_handler, health_handler_docs};
-pub(super) use hops::{HopResponse, hops_handler, hops_handler_docs};
+pub(super) use hops::{
+    HopResponse, create_hop_handler, create_hop_handler_docs, hops_handler, hops_handler_docs,
+};
 pub(super) use login::{AuthResponse, login_handler, login_handler_docs};
 pub(super) use logout::{logout_handler, logout_handler_docs};
 pub(super) use register::{register_handler, register_handler_docs};

@@ -4,15 +4,16 @@ use super::types::{
 };
 use crate::{
     db,
-    server::{AppState, middleware::AuthUser},
+    server::{AppState, middleware::AuthUser, session::is_form_request},
 };
 use aide::transform::TransformOperation;
 use axum::{
     Json,
     extract::{Query, State},
     http::{HeaderMap, StatusCode},
-    response::Response,
+    response::{IntoResponse, Redirect, Response},
 };
+use percent_encoding::{AsciiSet, NON_ALPHANUMERIC, utf8_percent_encode};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -212,9 +213,162 @@ pub fn hops_handler_docs(op: TransformOperation) -> TransformOperation {
     .tag("hops")
 }
 
+const QUERY_ENCODE_SET: &AsciiSet = &NON_ALPHANUMERIC
+    .remove(b'-')
+    .remove(b'_')
+    .remove(b'.')
+    .remove(b'~');
+
+fn encode_query_value(s: &str) -> String {
+    utf8_percent_encode(s, QUERY_ENCODE_SET).to_string()
+}
+
+/// Request body for manually creating a flight hop.
+#[derive(Deserialize, JsonSchema)]
+pub struct CreateHopRequest {
+    /// IATA airport code for the origin (e.g. "LHR").
+    pub origin: String,
+    /// IATA airport code for the destination (e.g. "JFK").
+    pub destination: String,
+    /// Departure date in `YYYY-MM-DD` format.
+    pub date: String,
+    /// Airline name or IATA code.
+    #[serde(default)]
+    pub airline: Option<String>,
+    /// Flight number (e.g. "BA117").
+    #[serde(default)]
+    pub flight_number: Option<String>,
+    /// Aircraft type (e.g. "Boeing 777-300ER").
+    #[serde(default)]
+    pub aircraft_type: Option<String>,
+    /// Cabin class (e.g. "Economy", "Business").
+    #[serde(default)]
+    pub cabin_class: Option<String>,
+    /// Seat assignment.
+    #[serde(default)]
+    pub seat: Option<String>,
+    /// Passenger Name Record / booking reference.
+    #[serde(default)]
+    pub pnr: Option<String>,
+}
+
+/// Successful response after creating a hop.
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct CreateHopResponse {
+    /// Number of hops created.
+    pub created: u64,
+}
+
+/// Create a flight hop manually.
+///
+/// Accepts JSON or form-encoded body. Form submissions redirect to the add
+/// flight page with a success or error query parameter.
+pub async fn create_hop_handler(
+    State(state): State<AppState>,
+    auth: AuthUser,
+    headers: HeaderMap,
+    body: axum::body::Bytes,
+) -> Response {
+    let is_form = is_form_request(&headers);
+
+    let parsed: Result<CreateHopRequest, String> = if is_form {
+        serde_urlencoded::from_bytes(&body).map_err(|e| e.to_string())
+    } else {
+        serde_json::from_slice(&body).map_err(|e| e.to_string())
+    };
+
+    let req = match parsed {
+        Ok(r) => r,
+        Err(err) => {
+            return if is_form {
+                Redirect::to(&format!(
+                    "/flights/new?error={}",
+                    encode_query_value(&format!("Invalid form data: {err}"))
+                ))
+                .into_response()
+            } else {
+                let format = negotiate_format(&headers);
+                ErrorResponse::into_format_response(
+                    format!("invalid request body: {err}"),
+                    format,
+                    StatusCode::BAD_REQUEST,
+                )
+            };
+        }
+    };
+
+    if req.origin.is_empty() || req.destination.is_empty() || req.date.is_empty() {
+        let msg = "origin, destination, and date are required";
+        return if is_form {
+            Redirect::to(&format!("/flights/new?error={}", encode_query_value(msg))).into_response()
+        } else {
+            let format = negotiate_format(&headers);
+            ErrorResponse::into_format_response(msg.to_string(), format, StatusCode::BAD_REQUEST)
+        };
+    }
+
+    let detail = db::hops::FlightDetail {
+        airline: req.airline.unwrap_or_default(),
+        flight_number: req.flight_number.unwrap_or_default(),
+        aircraft_type: req.aircraft_type.unwrap_or_default(),
+        cabin_class: req.cabin_class.unwrap_or_default(),
+        seat: req.seat.unwrap_or_default(),
+        pnr: req.pnr.unwrap_or_default(),
+    };
+
+    let result = (db::hops::CreateManual {
+        user_id: auth.user_id,
+        origin: req.origin,
+        destination: req.destination,
+        date: req.date,
+        flight_detail: detail,
+    })
+    .execute(&state.db)
+    .await;
+
+    match result {
+        Ok(created) => {
+            if is_form {
+                Redirect::to("/flights/new?success=1").into_response()
+            } else {
+                (StatusCode::CREATED, Json(CreateHopResponse { created })).into_response()
+            }
+        }
+        Err(err) => {
+            let msg = format!("failed to create hop: {err}");
+            if is_form {
+                Redirect::to(&format!("/flights/new?error={}", encode_query_value(&msg)))
+                    .into_response()
+            } else {
+                let format = negotiate_format(&headers);
+                ErrorResponse::into_format_response(msg, format, StatusCode::INTERNAL_SERVER_ERROR)
+            }
+        }
+    }
+}
+
+pub fn create_hop_handler_docs(op: TransformOperation) -> TransformOperation {
+    op.description("Create a flight hop manually. Accepts JSON or form-encoded body.")
+        .input::<Json<CreateHopRequest>>()
+        .with(|mut op| {
+            if let Some(aide::openapi::ReferenceOr::Item(body)) = &mut op.inner_mut().request_body
+                && let Some(json_media) = body.content.get("application/json").cloned()
+            {
+                body.content
+                    .insert("application/x-www-form-urlencoded".to_string(), json_media);
+            }
+            op
+        })
+        .response::<201, Json<CreateHopResponse>>()
+        .response::<400, Json<ErrorResponse>>()
+        .response::<401, Json<ErrorResponse>>()
+        .response::<500, Json<ErrorResponse>>()
+        .tag("hops")
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{HopResponse, HopTravelType};
+    use super::{CreateHopResponse, HopResponse, HopTravelType};
     use crate::{
         db::{self, hops::TravelType},
         server::create_router,
@@ -546,5 +700,150 @@ mod tests {
         assert!(body.contains("Travel Hops"));
         assert!(body.contains("Paris"));
         assert!(body.contains("London"));
+    }
+
+    #[tokio::test]
+    async fn post_hops_without_auth_returns_unauthorized() {
+        let pool = test_pool().await;
+        let app = create_router(test_app_state(pool));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/hops")
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(
+                        r#"{"origin":"DUB","destination":"LHR","date":"2025-06-15"}"#,
+                    ))
+                    .expect("failed to build request"),
+            )
+            .await
+            .expect("router request failed");
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[tokio::test]
+    async fn post_hops_json_creates_hop() {
+        let pool = test_pool().await;
+        let cookie = auth_cookie_for_user(&pool, "alice").await;
+        let app = create_router(test_app_state(pool.clone()));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/hops")
+                    .header(header::COOKIE, &cookie)
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(
+                        r#"{"origin":"DUB","destination":"LHR","date":"2025-06-15","airline":"Aer Lingus","flight_number":"EI154"}"#,
+                    ))
+                    .expect("failed to build request"),
+            )
+            .await
+            .expect("router request failed");
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+        let body = to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("failed to read body");
+        let parsed: CreateHopResponse = serde_json::from_slice(&body).expect("valid json response");
+        assert_eq!(parsed.created, 1);
+
+        let user = db::users::GetByUsername { username: "alice" }
+            .execute(&pool)
+            .await
+            .expect("lookup failed")
+            .expect("missing user");
+        let hops = db::hops::GetAll {
+            user_id: user.id,
+            travel_type_filter: Some("air"),
+        }
+        .execute(&pool)
+        .await
+        .expect("fetch failed");
+        assert_eq!(hops.len(), 1);
+        assert_eq!(hops[0].origin_name, "DUB");
+        assert_eq!(hops[0].dest_name, "LHR");
+    }
+
+    #[tokio::test]
+    async fn post_hops_form_redirects_on_success() {
+        let pool = test_pool().await;
+        let cookie = auth_cookie_for_user(&pool, "alice").await;
+        let app = create_router(test_app_state(pool));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/hops")
+                    .header(header::COOKIE, &cookie)
+                    .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+                    .body(Body::from("origin=DUB&destination=LHR&date=2025-06-15"))
+                    .expect("failed to build request"),
+            )
+            .await
+            .expect("router request failed");
+
+        assert_eq!(response.status(), StatusCode::SEE_OTHER);
+        let location = response
+            .headers()
+            .get(header::LOCATION)
+            .expect("missing Location header")
+            .to_str()
+            .expect("non-ascii location");
+        assert_eq!(location, "/flights/new?success=1");
+    }
+
+    #[tokio::test]
+    async fn post_hops_json_missing_fields_returns_bad_request() {
+        let pool = test_pool().await;
+        let cookie = auth_cookie_for_user(&pool, "alice").await;
+        let app = create_router(test_app_state(pool));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/hops")
+                    .header(header::COOKIE, &cookie)
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(
+                        r#"{"origin":"","destination":"LHR","date":"2025-06-15"}"#,
+                    ))
+                    .expect("failed to build request"),
+            )
+            .await
+            .expect("router request failed");
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn get_flights_new_page_returns_add_flight_form() {
+        let pool = test_pool().await;
+        let cookie = auth_cookie_for_user(&pool, "alice").await;
+        let app = create_router(test_app_state(pool));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/flights/new")
+                    .header(header::COOKIE, cookie)
+                    .body(Body::empty())
+                    .expect("failed to build request"),
+            )
+            .await
+            .expect("router request failed");
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = body_text(response).await;
+        assert!(
+            body.contains("Add Flight"),
+            "page should contain 'Add Flight'"
+        );
     }
 }

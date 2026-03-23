@@ -10,6 +10,7 @@ pub fn NavBar(#[prop(into)] current: String) -> impl IntoView {
             <div class="spacer"></div>
             <a class="nav-link" href="/dashboard" aria-current=aria("dashboard")>"Dashboard"</a>
             <a class="nav-link" href="/hops" aria-current=aria("hops")>"Hops"</a>
+            <a class="nav-link" href="/flights/new" aria-current=aria("add-flight")>"Add Flight"</a>
             <a class="nav-link" href="/settings" aria-current=aria("settings")>"Settings"</a>
             <form method="post" action="/auth/logout" style="margin:0">
                 <button class="btn btn-danger" type="submit">"Log Out"</button>

@@ -2,6 +2,7 @@
 // and component props must own their data (String, not &str).
 #![allow(clippy::must_use_candidate, clippy::needless_pass_by_value)]
 
+mod add_flight_page;
 mod auth_page;
 mod dashboard_page;
 mod error_page;
@@ -10,6 +11,7 @@ mod navbar;
 mod settings_page;
 mod shell;
 
+pub(crate) use add_flight_page::AddFlightPage;
 pub(crate) use auth_page::AuthFormPage;
 pub(crate) use dashboard_page::DashboardPage;
 pub(crate) use error_page::ErrorPage;
