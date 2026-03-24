@@ -3,7 +3,7 @@ use super::{
 };
 use crate::{
     db,
-    server::{AppState, error::AppError, middleware::AuthUser, session::is_form_request},
+    server::{AppState, error::AppError, extractors::AuthUser, session::is_form_request},
 };
 use aide::transform::TransformOperation;
 use axum::{
@@ -67,7 +67,7 @@ impl MultiFormatResponse for TripResponse {
               </div>\
               <div class=\"hop-card-meta\">\
               <span class=\"hop-card-date\">{}</span>\
-              <span class=\"hop-card-badge\">{} hops</span>\
+              <span class=\"hop-card-badge\">{} journeys</span>\
               </div>\
               </div>\
              </a>",
@@ -288,7 +288,7 @@ pub async fn delete_handler(
 
 pub fn delete_handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
-        op.description("Delete a trip. Assigned hops are unassigned via FK set null."),
+        op.description("Delete a trip. Assigned journeys are unassigned via FK set null."),
         200 => StatusResponse,
         401 | 404 | 500 => ErrorResponse,
     )
@@ -328,7 +328,7 @@ pub async fn auto_group_handler(
 }
 
 pub fn auto_group_handler_docs(op: TransformOperation) -> TransformOperation {
-    op.description("Automatically group unassigned hops into trips by date proximity.")
+    op.description("Automatically group unassigned journeys into trips by date proximity.")
         .input::<Json<AutoGroupRequest>>()
         .with(|mut op| {
             if let Some(aide::openapi::ReferenceOr::Item(body)) = &mut op.inner_mut().request_body
@@ -382,7 +382,7 @@ pub async fn assign_hop_handler(
             }
         }
         Ok(false) => ErrorResponse::into_format_response(
-            "trip or hop not found",
+            "trip or journey not found",
             format,
             StatusCode::NOT_FOUND,
         ),
@@ -391,7 +391,7 @@ pub async fn assign_hop_handler(
 }
 
 pub fn assign_hop_handler_docs(op: TransformOperation) -> TransformOperation {
-    op.description("Assign a hop to a trip.")
+    op.description("Assign a journey to a trip.")
         .input::<Json<AssignHopRequest>>()
         .with(|mut op| {
             if let Some(aide::openapi::ReferenceOr::Item(body)) = &mut op.inner_mut().request_body
@@ -436,7 +436,7 @@ pub async fn unassign_hop_handler(
 
     if !in_trip {
         return ErrorResponse::into_format_response(
-            "hop not found in trip",
+            "journey not found in trip",
             format,
             StatusCode::NOT_FOUND,
         );
@@ -460,7 +460,7 @@ pub async fn unassign_hop_handler(
             }
         }
         Ok(false) => {
-            ErrorResponse::into_format_response("hop not found", format, StatusCode::NOT_FOUND)
+            ErrorResponse::into_format_response("journey not found", format, StatusCode::NOT_FOUND)
         }
         Err(err) => AppError::from(err).into_format_response(format),
     }
@@ -468,7 +468,7 @@ pub async fn unassign_hop_handler(
 
 pub fn unassign_hop_handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
-        op.description("Remove a hop from a trip."),
+        op.description("Remove a journey from a trip."),
         200 => StatusResponse,
         401 | 404 | 500 => ErrorResponse,
     )

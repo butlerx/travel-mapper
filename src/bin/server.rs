@@ -19,6 +19,9 @@ struct Cli {
 
     #[arg(long, env = "PORT", default_value_t = 3000)]
     port: u16,
+
+    #[arg(long, env = "REGISTRATION_ENABLED", default_value_t = true)]
+    registration_enabled: bool,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -61,6 +64,7 @@ async fn run() -> Result<(), ServerError> {
         tripit_consumer_key: cli.consumer_key,
         tripit_consumer_secret: cli.consumer_secret,
         tripit_override: None,
+        registration_enabled: cli.registration_enabled,
     };
     let app = travel_mapper::server::create_router(state);
 

@@ -2,6 +2,9 @@
 
 pub(crate) mod components;
 pub(crate) mod error;
+/// Axum extractors for request authentication and authorization.
+pub(crate) mod extractors;
+/// Tower middleware for HTTP request tracing and diagnostics.
 pub(crate) mod middleware;
 pub(crate) mod pages;
 pub(crate) mod routes;
@@ -11,13 +14,13 @@ mod state;
 pub use state::{AppState, create_router};
 
 /// User-facing application name shown in the navbar, HTML titles, and PWA manifest.
-pub(crate) const APP_NAME: &str = "Travel Export";
+pub(crate) const APP_NAME: &str = "Travel Mapper";
 
 /// Abbreviated name for PWA home-screen icons and space-constrained UI.
-pub(crate) const APP_SHORT_NAME: &str = "Travel";
+pub(crate) const APP_SHORT_NAME: &str = env!("CARGO_PKG_NAME");
 
 /// One-line tagline used in the PWA manifest description.
-pub(crate) const APP_DESCRIPTION: &str = "Track and visualise your travel history";
+pub(crate) const APP_DESCRIPTION: &str = env!("CARGO_PKG_DESCRIPTION");
 
 /// Primary theme colour applied to the PWA chrome and `<meta name="theme-color">`.
 pub(crate) const THEME_COLOR: &str = "#0a0e1a";
@@ -110,6 +113,7 @@ pub(crate) mod test_helpers {
             tripit_consumer_key: "consumer-key".to_string(),
             tripit_consumer_secret: "consumer-secret".to_string(),
             tripit_override: None,
+            registration_enabled: true,
         }
     }
 

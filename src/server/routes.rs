@@ -231,7 +231,7 @@ fn build_html<T: MultiFormatResponse>(items: &[T]) -> Response {
 
     let html = view! {
         <Shell title=title.to_owned()>
-            <NavBar current="hops" />
+            <NavBar current="journeys" />
             <main class="data-page">
                 <div class="data-page-header">
                     <h1>{title}</h1>
@@ -341,7 +341,6 @@ pub(super) fn auth_api_routes() -> ApiRouter<super::AppState> {
         )
 }
 
-/// Hop API routes, nested under `/hops`.
 pub(super) fn hops_api_routes() -> ApiRouter<super::AppState> {
     ApiRouter::new()
         .api_route(
@@ -374,11 +373,11 @@ pub(super) fn trip_api_routes() -> ApiRouter<super::AppState> {
             post_with(trips::auto_group_handler, trips::auto_group_handler_docs),
         )
         .api_route(
-            "/{id}/hops",
+            "/{id}/journeys",
             post_with(trips::assign_hop_handler, trips::assign_hop_handler_docs),
         )
         .api_route(
-            "/{id}/hops/{hop_id}",
+            "/{id}/journeys/{journey_id}",
             delete_with(
                 trips::unassign_hop_handler,
                 trips::unassign_hop_handler_docs,

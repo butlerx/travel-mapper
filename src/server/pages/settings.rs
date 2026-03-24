@@ -12,7 +12,7 @@ use crate::{
     server::{
         AppState,
         components::{NavBar, Shell},
-        middleware::AuthUser,
+        extractors::AuthUser,
     },
 };
 use api_keys_section::ApiKeysSection;

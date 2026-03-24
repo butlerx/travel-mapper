@@ -9,7 +9,7 @@ dashboard, API, or CSV export for tools like Kepler.gl.
   trips
 - **Web dashboard** — view your travel history, sync status, and travel map in
   the browser
-- **Multiple export formats** — get your hops as JSON, CSV, or an HTML table
+- **Multiple export formats** — get your journeys as JSON, CSV, or an HTML table
 - **Multi-user** — each user connects their own TripIt account with isolated
   data
 - **API keys** — generate keys for programmatic or scripted access
@@ -233,17 +233,17 @@ Enqueues a sync job. If a sync worker is running, it will process the job in the
 background. For browser requests, redirects back to the dashboard on completion.
 
 ```json
-{ "trips_fetched": 42, "hops_fetched": 287, "duration_ms": 15230 }
+{ "trips_fetched": 42, "journeys_fetched": 287, "duration_ms": 15230 }
 ```
 
-#### Get Hops
+#### Get Journeys
 
 ```
-GET /hops
-GET /hops?type=air
+GET /journeys
+GET /journeys?type=air
 ```
 
-Returns your travel hops. Optionally filter by type (`air`, `rail`, `boat`,
+Returns your travel journeys. Optionally filter by type (`air`, `rail`, `boat`,
 `transport`).
 
 Response format is determined by the `Accept` header:
@@ -274,7 +274,7 @@ The server also serves rendered HTML pages:
    ```bash
    curl -H "Authorization: Bearer <your-api-key>" \
      -H "Accept: text/csv" \
-     http://localhost:3000/hops -o travel_map.csv
+     http://localhost:3000/journeys -o travel_map.csv
    ```
 3. Go to [kepler.gl/demo](https://kepler.gl/demo)
 4. Drag and drop `travel_map.csv`
@@ -290,5 +290,6 @@ The server also serves rendered HTML pages:
 | `ENCRYPTION_KEY`          | Yes      | --                 | 32-byte hex key (64 hex chars) for AES-256-GCM |
 | `DATABASE_URL`            | No       | `sqlite:travel.db` | SQLite database URL                            |
 | `PORT`                    | No       | `3000`             | Server port                                    |
+| `REGISTRATION_ENABLED`    | No       | `true`             | Set to `false` to disable new user registration |
 | `SYNC_POLL_INTERVAL_SECS` | No       | `5`                | Sync worker poll interval in seconds           |
 | `RUST_LOG`                | No       | --                 | Log level (e.g. `info`, `debug`)               |

@@ -4,7 +4,7 @@ use crate::{
     server::{
         AppState,
         components::{NavBar, Shell},
-        middleware::AuthUser,
+        extractors::AuthUser,
         routes::hops::HopTravelType,
     },
 };
@@ -139,7 +139,7 @@ fn TripDetailPage(
 
     let trip_id = trip.id;
     let delete_click = format!(
-        "if (confirm('Delete this trip? Hops will remain but be unassigned.')) {{ fetch('/trips/{trip_id}', {{ method: 'DELETE' }}).then(function(r) {{ if (r.ok) window.location = '/trips'; else window.location.reload(); }}); }}"
+        "if (confirm('Delete this trip? Journeys will remain but be unassigned.')) {{ fetch('/trips/{trip_id}', {{ method: 'DELETE' }}).then(function(r) {{ if (r.ok) window.location = '/trips'; else window.location.reload(); }}); }}"
     );
 
     view! {
@@ -158,7 +158,7 @@ fn TripDetailPage(
                 <section class="card">
                     <h1>{trip.name.clone()}</h1>
                     <p class="muted">{date_range}</p>
-                    <p class="muted">{format!("{} hops", trip.hop_count)}</p>
+                    <p class="muted">{format!("{} journeys", trip.hop_count)}</p>
 
                     <form method="post" action={format!("/trips/{trip_id}")}>
                         <div class="form-group">
@@ -177,9 +177,9 @@ fn TripDetailPage(
                 </section>
 
                 <section class="card" style="margin-top:1rem;">
-                    <h2>"Hops in this trip"</h2>
+                    <h2>"Journeys in this trip"</h2>
                     {if trip_hops.is_empty() {
-                        view! { <p class="muted">"No hops assigned yet."</p> }.into_any()
+                        view! { <p class="muted">"No journeys assigned yet."</p> }.into_any()
                     } else {
                         view! {
                             <ul class="stats-top-list">
@@ -191,11 +191,11 @@ fn TripDetailPage(
                                             <div>
                                                 <span>{emoji}</span>
                                                 " "
-                                                <a href={format!("/hop/{hop_id}")}>{format!("{} → {}", row.origin_name, row.dest_name)}</a>
+                                                <a href={format!("/journey/{hop_id}")}>{format!("{} → {}", row.origin_name, row.dest_name)}</a>
                                                 " "
                                                 <span class="muted">{row.start_date}</span>
                                             </div>
-                                            <form method="post" action={format!("/trips/{trip_id}/hops/{hop_id}")}>
+                                            <form method="post" action={format!("/trips/{trip_id}/journeys/{hop_id}")}>
                                                 <button class="btn btn-secondary" type="submit">"Remove"</button>
                                             </form>
                                         </li>
@@ -207,12 +207,12 @@ fn TripDetailPage(
                 </section>
 
                 <section class="card" style="margin-top:1rem;">
-                    <h2>"Add hop to trip"</h2>
-                    <form method="post" action={format!("/trips/{trip_id}/hops")}>
+                    <h2>"Add journey to trip"</h2>
+                    <form method="post" action={format!("/trips/{trip_id}/journeys")}>
                         <div class="form-group">
-                            <label for="hop-id">"Unassigned hop"</label>
+                            <label for="hop-id">"Unassigned journey"</label>
                             <select id="hop-id" name="hop_id" required>
-                                <option value="">"Select hop"</option>
+                                <option value="">"Select journey"</option>
                                 {unassigned_hops.into_iter().map(|row| {
                                     let hop_id = row.id;
                                     let emoji = travel_type_emoji(&row.travel_type);
@@ -223,7 +223,7 @@ fn TripDetailPage(
                                 }).collect::<Vec<_>>()}
                             </select>
                         </div>
-                        <button class="btn btn-primary" type="submit">"Assign Hop"</button>
+                        <button class="btn btn-primary" type="submit">"Assign Journey"</button>
                     </form>
                 </section>
             </main>

@@ -33,8 +33,8 @@ pub(super) fn page_routes() -> ApiRouter<AppState> {
         .route("/dashboard", get(dashboard::page))
         .route("/settings", get(settings::page))
         .route("/stats", get(stats::page))
-        .route("/hops/new", get(add_hop::page))
-        .route("/hop/{id}", get(hop_detail::page))
+        .route("/journeys/new", get(add_hop::page))
+        .route("/journey/{id}", get(hop_detail::page))
         .route("/trips", get(trips::page))
         .route("/trip/{id}", get(trip_detail::page))
 }

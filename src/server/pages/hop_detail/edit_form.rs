@@ -115,7 +115,7 @@ fn TransportEditFields(detail: crate::db::hops::TransportDetail) -> impl IntoVie
 
 #[component]
 pub(super) fn EditForm(hop: DetailRow) -> impl IntoView {
-    let action = format!("/hops/{}", hop.id);
+    let action = format!("/journeys/{}", hop.id);
     let travel_type_str = hop.travel_type.to_string();
     let origin_lat = hop.origin_lat.to_string();
     let origin_lng = hop.origin_lng.to_string();
@@ -149,7 +149,7 @@ pub(super) fn EditForm(hop: DetailRow) -> impl IntoView {
         </div>
         <section id="edit-form" class="hop-edit-form">
             <h3>
-                "Edit Hop"
+                "Edit Journey"
                 <button class="edit-panel-close" type="button"
                     onclick="document.getElementById('edit-form').classList.remove('open');document.getElementById('edit-backdrop').classList.remove('open')"
                 >"\u{2715}"</button>

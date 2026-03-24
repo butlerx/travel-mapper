@@ -11,6 +11,7 @@ pub fn AuthFormPage(
     footer_link_text: &'static str,
     autocomplete_password: &'static str,
     #[prop(optional_no_strip)] error: Option<String>,
+    #[prop(default = true)] show_footer: bool,
 ) -> impl IntoView {
     view! {
         <Shell title=title.to_owned()>
@@ -31,9 +32,11 @@ pub fn AuthFormPage(
                         </div>
                         <button class="btn btn-primary btn-full" type="submit">{submit_label}</button>
                     </form>
-                    <div class="form-footer">
-                        <p>{footer_text} <a href=footer_link_href>{footer_link_text}</a></p>
-                    </div>
+                    {show_footer.then(|| view! {
+                        <div class="form-footer">
+                            <p>{footer_text} <a href=footer_link_href>{footer_link_text}</a></p>
+                        </div>
+                    })}
                 </div>
             </main>
         </Shell>

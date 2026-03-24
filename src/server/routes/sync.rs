@@ -2,7 +2,7 @@ use super::{ErrorResponse, MultiFormatResponse, multi_format_docs, negotiate_for
 use crate::{
     db,
     geocode::Geocoder,
-    server::{AppState, error::AppError, middleware::AuthUser},
+    server::{AppState, error::AppError, extractors::AuthUser},
     worker::{SyncOutcome, sync_all},
 };
 use aide::transform::TransformOperation;
@@ -19,7 +19,8 @@ use serde::Serialize;
 pub struct SyncResponse {
     /// Number of trips fetched from `TripIt`.
     pub trips_fetched: u64,
-    /// Number of individual travel hops extracted.
+    /// Number of individual travel journeys extracted.
+    #[serde(rename = "journeys_fetched")]
     pub hops_fetched: u64,
     /// Wall-clock duration of the sync in milliseconds.
     pub duration_ms: u64,
@@ -37,7 +38,8 @@ impl From<SyncOutcome> for SyncResponse {
 
 impl MultiFormatResponse for SyncResponse {
     const HTML_TITLE: &'static str = "Sync Result";
-    const CSV_HEADERS: &'static [&'static str] = &["trips_fetched", "hops_fetched", "duration_ms"];
+    const CSV_HEADERS: &'static [&'static str] =
+        &["trips_fetched", "journeys_fetched", "duration_ms"];
 
     fn csv_row(&self) -> Vec<String> {
         vec![
@@ -186,7 +188,7 @@ mod tests {
         let hops_response = app
             .oneshot(
                 Request::builder()
-                    .uri("/hops")
+                    .uri("/journeys")
                     .header(header::COOKIE, cookie)
                     .body(Body::empty())
                     .expect("failed to build request"),

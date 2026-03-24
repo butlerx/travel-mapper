@@ -39,6 +39,25 @@ pub async fn handler(
     headers: HeaderMap,
     body: axum::body::Bytes,
 ) -> (CookieJar, Response) {
+    if !state.registration_enabled {
+        return if is_form_request(&headers) {
+            (
+                jar,
+                Redirect::to("/login?error=Registration+is+disabled").into_response(),
+            )
+        } else {
+            let format = negotiate_format(&headers);
+            (
+                jar,
+                ErrorResponse::into_format_response(
+                    "Registration is disabled",
+                    format,
+                    StatusCode::FORBIDDEN,
+                ),
+            )
+        };
+    }
+
     let parsed: Result<RegisterRequest, AppError> = if is_form_request(&headers) {
         serde_urlencoded::from_bytes(&body).map_err(AppError::from)
     } else {
@@ -211,5 +230,26 @@ mod tests {
 
         let second = app.oneshot(request()).await.expect("second request failed");
         assert_eq!(second.status(), StatusCode::CONFLICT);
+    }
+
+    #[tokio::test]
+    async fn register_returns_forbidden_when_disabled() {
+        let pool = test_pool().await;
+        let mut state = test_app_state(pool);
+        state.registration_enabled = false;
+        let app = create_router(state);
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/auth/register")
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(r#"{"username":"alice","password":"secret"}"#))
+                    .expect("failed to build request"),
+            )
+            .await
+            .expect("router request failed");
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
     }
 }

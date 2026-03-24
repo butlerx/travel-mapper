@@ -3,7 +3,7 @@ use super::{
 };
 use crate::{
     db,
-    server::{AppState, error::AppError, middleware::AuthUser, session::is_form_request},
+    server::{AppState, error::AppError, extractors::AuthUser, session::is_form_request},
 };
 use aide::transform::TransformOperation;
 use axum::{
@@ -129,7 +129,7 @@ impl From<db::hops::Row> for HopResponse {
 }
 
 impl MultiFormatResponse for HopResponse {
-    const HTML_TITLE: &'static str = "Travel Hops";
+    const HTML_TITLE: &'static str = "Travel Journeys";
 
     const CSV_HEADERS: &'static [&'static str] = &[
         "id",
@@ -168,7 +168,7 @@ impl MultiFormatResponse for HopResponse {
         let date = &self.start_date;
 
         format!(
-            "<a href=\"/hop/{id}\" class=\"hop-card-link\">\
+            "<a href=\"/journey/{id}\" class=\"hop-card-link\">\
              <div class=\"data-card hop-card\">\
              <div class=\"hop-card-route\">\
              <span class=\"hop-card-place\">{origin}</span>\
@@ -235,14 +235,14 @@ pub async fn handler(
 
 pub fn handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
-        op.description("List travel hops for the authenticated user.")
+        op.description("List travel journeys for the authenticated user.")
             .response_with::<200, Json<Vec<HopResponse>>, _>(|mut res| {
                 add_multi_format_docs::<HopResponse>(res.inner());
                 res
             }),
         401 | 500 => ErrorResponse,
     )
-    .tag("hops")
+    .tag("journeys")
 }
 
 const QUERY_ENCODE_SET: &AsciiSet = &NON_ALPHANUMERIC
@@ -388,7 +388,7 @@ pub async fn create_handler(
         Err(err) => {
             return if is_form {
                 Redirect::to(&format!(
-                    "/hops/new?error={}",
+                    "/journeys/new?error={}",
                     encode_query_value(&format!("Invalid form data: {err}"))
                 ))
                 .into_response()
@@ -403,7 +403,7 @@ pub async fn create_handler(
         let err = AppError::MissingField("origin, destination, and date are required");
         return if is_form {
             Redirect::to(&format!(
-                "/hops/new?error={}",
+                "/journeys/new?error={}",
                 encode_query_value(&err.to_string())
             ))
             .into_response()
@@ -428,7 +428,7 @@ pub async fn create_handler(
     match result {
         Ok(created) => {
             if is_form {
-                Redirect::to("/hops/new?success=1").into_response()
+                Redirect::to("/journeys/new?success=1").into_response()
             } else {
                 (StatusCode::CREATED, Json(CreateHopResponse { created })).into_response()
             }
@@ -437,7 +437,7 @@ pub async fn create_handler(
             let err = AppError::from(err);
             if is_form {
                 Redirect::to(&format!(
-                    "/hops/new?error={}",
+                    "/journeys/new?error={}",
                     encode_query_value(&err.to_string())
                 ))
                 .into_response()
@@ -450,22 +450,24 @@ pub async fn create_handler(
 }
 
 pub fn create_handler_docs(op: TransformOperation) -> TransformOperation {
-    op.description("Create a hop manually for any travel type. Accepts JSON or form-encoded body.")
-        .input::<Json<CreateHopRequest>>()
-        .with(|mut op| {
-            if let Some(aide::openapi::ReferenceOr::Item(body)) = &mut op.inner_mut().request_body
-                && let Some(json_media) = body.content.get("application/json").cloned()
-            {
-                body.content
-                    .insert("application/x-www-form-urlencoded".to_string(), json_media);
-            }
-            op
-        })
-        .response::<201, Json<CreateHopResponse>>()
-        .response::<400, Json<ErrorResponse>>()
-        .response::<401, Json<ErrorResponse>>()
-        .response::<500, Json<ErrorResponse>>()
-        .tag("hops")
+    op.description(
+        "Create a journey manually for any travel type. Accepts JSON or form-encoded body.",
+    )
+    .input::<Json<CreateHopRequest>>()
+    .with(|mut op| {
+        if let Some(aide::openapi::ReferenceOr::Item(body)) = &mut op.inner_mut().request_body
+            && let Some(json_media) = body.content.get("application/json").cloned()
+        {
+            body.content
+                .insert("application/x-www-form-urlencoded".to_string(), json_media);
+        }
+        op
+    })
+    .response::<201, Json<CreateHopResponse>>()
+    .response::<400, Json<ErrorResponse>>()
+    .response::<401, Json<ErrorResponse>>()
+    .response::<500, Json<ErrorResponse>>()
+    .tag("journeys")
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -658,7 +660,7 @@ pub async fn update_handler(
         Err(err) => {
             return if is_form {
                 Redirect::to(&format!(
-                    "/hop/{id}?error={}",
+                    "/journey/{id}?error={}",
                     encode_query_value(&format!("Invalid form data: {err}"))
                 ))
                 .into_response()
@@ -673,7 +675,7 @@ pub async fn update_handler(
         let err = AppError::MissingField("origin_name, dest_name, and start_date are required");
         return if is_form {
             Redirect::to(&format!(
-                "/hop/{id}?error={}",
+                "/journey/{id}?error={}",
                 encode_query_value(&err.to_string())
             ))
             .into_response()
@@ -713,7 +715,7 @@ pub async fn update_handler(
     match result {
         Ok(true) => {
             if is_form {
-                Redirect::to(&format!("/hop/{id}?success=1")).into_response()
+                Redirect::to(&format!("/journey/{id}?success=1")).into_response()
             } else {
                 (StatusCode::OK, Json(UpdateHopResponse { updated: true })).into_response()
             }
@@ -721,15 +723,15 @@ pub async fn update_handler(
         Ok(false) => {
             if is_form {
                 Redirect::to(&format!(
-                    "/hop/{id}?error={}",
-                    encode_query_value("Hop not found")
+                    "/journey/{id}?error={}",
+                    encode_query_value("Journey not found")
                 ))
                 .into_response()
             } else {
                 (
                     StatusCode::NOT_FOUND,
                     Json(ErrorResponse {
-                        error: "hop not found".to_owned(),
+                        error: "journey not found".to_owned(),
                     }),
                 )
                     .into_response()
@@ -739,7 +741,7 @@ pub async fn update_handler(
             let err = AppError::from(err);
             if is_form {
                 Redirect::to(&format!(
-                    "/hop/{id}?error={}",
+                    "/journey/{id}?error={}",
                     encode_query_value(&err.to_string())
                 ))
                 .into_response()
@@ -752,7 +754,7 @@ pub async fn update_handler(
 }
 
 pub fn update_handler_docs(op: TransformOperation) -> TransformOperation {
-    op.description("Update an existing hop by ID. Accepts JSON or form-encoded body.")
+    op.description("Update an existing journey by ID. Accepts JSON or form-encoded body.")
         .input::<Json<UpdateHopRequest>>()
         .with(|mut op| {
             if let Some(aide::openapi::ReferenceOr::Item(body)) = &mut op.inner_mut().request_body
@@ -768,7 +770,7 @@ pub fn update_handler_docs(op: TransformOperation) -> TransformOperation {
         .response::<401, Json<ErrorResponse>>()
         .response::<404, Json<ErrorResponse>>()
         .response::<500, Json<ErrorResponse>>()
-        .tag("hops")
+        .tag("journeys")
 }
 
 #[cfg(test)]
@@ -793,7 +795,7 @@ mod tests {
         let response = app
             .oneshot(
                 Request::builder()
-                    .uri("/hops")
+                    .uri("/journeys")
                     .body(Body::empty())
                     .expect("failed to build request"),
             )
@@ -831,7 +833,7 @@ mod tests {
         let response = app
             .oneshot(
                 Request::builder()
-                    .uri("/hops")
+                    .uri("/journeys")
                     .header(header::COOKIE, cookie)
                     .body(Body::empty())
                     .expect("failed to build request"),
@@ -870,7 +872,7 @@ mod tests {
         let response = app
             .oneshot(
                 Request::builder()
-                    .uri("/hops")
+                    .uri("/journeys")
                     .header(header::AUTHORIZATION, "Bearer my-api-key")
                     .body(Body::empty())
                     .expect("failed to build request"),
@@ -913,7 +915,7 @@ mod tests {
         let response = app
             .oneshot(
                 Request::builder()
-                    .uri("/hops")
+                    .uri("/journeys")
                     .header(header::COOKIE, cookie)
                     .body(Body::empty())
                     .expect("failed to build request"),
@@ -965,7 +967,7 @@ mod tests {
         let response = app
             .oneshot(
                 Request::builder()
-                    .uri("/hops?type=rail")
+                    .uri("/journeys?type=rail")
                     .header(header::COOKIE, cookie)
                     .body(Body::empty())
                     .expect("failed to build request"),
@@ -1010,7 +1012,7 @@ mod tests {
         let response = app
             .oneshot(
                 Request::builder()
-                    .uri("/hops")
+                    .uri("/journeys")
                     .header(header::COOKIE, cookie)
                     .header(header::ACCEPT, "text/csv")
                     .body(Body::empty())
@@ -1050,7 +1052,7 @@ mod tests {
         let response = app
             .oneshot(
                 Request::builder()
-                    .uri("/hops")
+                    .uri("/journeys")
                     .header(header::COOKIE, cookie)
                     .header(header::ACCEPT, "text/html")
                     .body(Body::empty())
@@ -1090,7 +1092,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method("GET")
-                    .uri("/hops")
+                    .uri("/journeys")
                     .header(header::COOKIE, cookie)
                     .header(header::ACCEPT, "text/html")
                     .body(Body::empty())
@@ -1102,7 +1104,7 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
         let body = body_text(response).await;
         assert!(body.contains("data-card"));
-        assert!(body.contains("Travel Hops"));
+        assert!(body.contains("Travel Journeys"));
         assert!(body.contains("Paris"));
         assert!(body.contains("London"));
     }
@@ -1116,7 +1118,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method("POST")
-                    .uri("/hops")
+                    .uri("/journeys")
                     .header(header::CONTENT_TYPE, "application/json")
                     .body(Body::from(
                         r#"{"origin":"DUB","destination":"LHR","date":"2025-06-15"}"#,
@@ -1139,7 +1141,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method("POST")
-                    .uri("/hops")
+                    .uri("/journeys")
                     .header(header::COOKIE, &cookie)
                     .header(header::CONTENT_TYPE, "application/json")
                     .body(Body::from(
@@ -1184,7 +1186,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method("POST")
-                    .uri("/hops")
+                    .uri("/journeys")
                     .header(header::COOKIE, &cookie)
                     .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
                     .body(Body::from("origin=DUB&destination=LHR&date=2025-06-15"))
@@ -1200,7 +1202,7 @@ mod tests {
             .expect("missing Location header")
             .to_str()
             .expect("non-ascii location");
-        assert_eq!(location, "/hops/new?success=1");
+        assert_eq!(location, "/journeys/new?success=1");
     }
 
     #[tokio::test]
@@ -1213,7 +1215,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method("POST")
-                    .uri("/hops")
+                    .uri("/journeys")
                     .header(header::COOKIE, &cookie)
                     .header(header::CONTENT_TYPE, "application/json")
                     .body(Body::from(
@@ -1236,7 +1238,7 @@ mod tests {
         let response = app
             .oneshot(
                 Request::builder()
-                    .uri("/hops/new")
+                    .uri("/journeys/new")
                     .header(header::COOKIE, cookie)
                     .body(Body::empty())
                     .expect("failed to build request"),
@@ -1246,7 +1248,10 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
         let body = body_text(response).await;
-        assert!(body.contains("Add Hop"), "page should contain 'Add Hop'");
+        assert!(
+            body.contains("Add Journey"),
+            "page should contain 'Add Journey'"
+        );
     }
 
     #[tokio::test]
@@ -1259,7 +1264,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method("POST")
-                    .uri("/hops")
+                    .uri("/journeys")
                     .header(header::COOKIE, &cookie)
                     .header(header::CONTENT_TYPE, "application/json")
                     .body(Body::from(

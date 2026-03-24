@@ -4,7 +4,7 @@ use super::{
 use crate::{
     auth::encrypt_token,
     db,
-    server::{AppState, error::AppError, middleware::AuthUser},
+    server::{AppState, error::AppError, extractors::AuthUser},
 };
 use aide::transform::TransformOperation;
 use axum::{

@@ -1,7 +1,7 @@
 use super::{ErrorResponse, MultiFormatResponse, multi_format_docs, negotiate_format};
 use crate::{
     db,
-    server::{AppState, error::AppError, middleware::AuthUser, session::sha256_hex},
+    server::{AppState, error::AppError, extractors::AuthUser, session::sha256_hex},
 };
 use aide::transform::TransformOperation;
 use axum::{

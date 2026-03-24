@@ -2,7 +2,7 @@
 
 use crate::{
     integrations::tripit::TripItApi,
-    server::{pages, routes},
+    server::{middleware, pages, routes},
 };
 use aide::{
     axum::IntoApiResponse,
@@ -10,15 +10,11 @@ use aide::{
     swagger::Swagger,
     transform::TransformOpenApi,
 };
-use axum::{
-    Extension, Json, Router,
-    extract::{FromRef, MatchedPath},
-    routing::get,
-};
+use axum::{Extension, Json, Router, extract::FromRef, routing::get};
 use indexmap::IndexMap;
 use leptos::prelude::LeptosOptions;
 use sqlx::SqlitePool;
-use std::{sync::Arc, time::Duration};
+use std::sync::Arc;
 use tower_http::trace::TraceLayer;
 
 /// Shared application state passed to every Axum handler.
@@ -30,6 +26,8 @@ pub struct AppState {
     pub tripit_consumer_key: String,
     pub tripit_consumer_secret: String,
     pub tripit_override: Option<Arc<dyn TripItApi>>,
+    /// Whether new user registration is allowed (`REGISTRATION_ENABLED` env var).
+    pub registration_enabled: bool,
 }
 
 impl FromRef<AppState> for LeptosOptions {
@@ -43,7 +41,7 @@ async fn serve_api(Extension(api): Extension<Arc<OpenApi>>) -> impl IntoApiRespo
 }
 
 fn api_docs(api: TransformOpenApi) -> TransformOpenApi {
-    api.title(env!("CARGO_PKG_NAME"))
+    api.title(super::APP_NAME)
         .summary(env!("CARGO_PKG_DESCRIPTION"))
         .version(env!("CARGO_PKG_VERSION"))
         .tag(Tag {
@@ -52,8 +50,8 @@ fn api_docs(api: TransformOpenApi) -> TransformOpenApi {
             ..Default::default()
         })
         .tag(Tag {
-            name: "hops".into(),
-            description: Some("Travel hop queries".into()),
+            name: "journeys".into(),
+            description: Some("Travel journey queries".into()),
             ..Default::default()
         })
         .tag(Tag {
@@ -107,7 +105,7 @@ pub fn create_router(state: AppState) -> Router {
         .route("/sw.js", get(routes::static_assets::serve_sw))
         .nest("/auth", routes::auth_api_routes())
         .nest("/auth/tripit", routes::tripit_api_routes())
-        .nest("/hops", routes::hops_api_routes())
+        .nest("/journeys", routes::hops_api_routes())
         .nest("/trips", routes::trip_api_routes())
         .nest("/import", routes::import_api_routes())
         .route(
@@ -122,28 +120,8 @@ pub fn create_router(state: AppState) -> Router {
         .fallback(pages::not_found::page)
         .layer(
             TraceLayer::new_for_http()
-                .make_span_with(|request: &axum::http::Request<_>| {
-                    let path = request.extensions().get::<MatchedPath>().map_or_else(
-                        || request.uri().path().to_owned(),
-                        |m| m.as_str().to_owned(),
-                    );
-                    tracing::info_span!(
-                        "http",
-                        method = %request.method(),
-                        path,
-                    )
-                })
-                .on_response(
-                    |response: &axum::http::Response<_>,
-                     latency: Duration,
-                     _span: &tracing::Span| {
-                        tracing::info!(
-                            status = response.status().as_u16(),
-                            latency_ms = u64::try_from(latency.as_millis()).unwrap_or(u64::MAX),
-                            "response",
-                        );
-                    },
-                ),
+                .make_span_with(middleware::request_span)
+                .on_response(middleware::on_response),
         )
         .with_state(state)
 }

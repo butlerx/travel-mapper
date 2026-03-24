@@ -152,7 +152,7 @@
     }
 
     return (
-      '<a href="/hop/' +
+      '<a href="/journey/' +
       hop.id +
       '" class="hop-card-link">' +
       '<div class="journey-card">' +
@@ -234,7 +234,7 @@
         ')</h3>';
       upcoming.forEach(function (hop) {
         html +=
-          '<a href="/hop/' +
+          '<a href="/journey/' +
           hop.id +
           '" class="hop-card-link">' +
           '<div class="journey-card journey-card--upcoming">' +
@@ -398,7 +398,7 @@
             : route.dest_name + ' \u2192 ' + route.origin_name;
 
         popup +=
-          '<a href="/hop/' +
+          '<a href="/journey/' +
           hop.id +
           '" class="hop-popup-item">' +
           '<span class="hop-popup-item-emoji">' +
@@ -640,12 +640,12 @@
 
   function fetchAndRender(params) {
     var qs = buildQueryString(params);
-    fetch('/hops' + qs, {
+    fetch('/journeys' + qs, {
       headers: { Accept: 'application/json' },
       credentials: 'same-origin',
     })
       .then(function (res) {
-        if (!res.ok) throw new Error('Failed to fetch hops');
+        if (!res.ok) throw new Error('Failed to fetch journeys');
         return res.json();
       })
       .then(function (hops) {

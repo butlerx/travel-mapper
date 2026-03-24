@@ -1,7 +1,7 @@
 use crate::server::{
     AppState,
     components::{NavBar, Shell},
-    middleware::AuthUser,
+    extractors::AuthUser,
 };
 use axum::{
     extract::{Query, State},
@@ -34,19 +34,19 @@ fn AddHop(
     #[prop(optional_no_strip)] success: Option<String>,
 ) -> impl IntoView {
     view! {
-        <Shell title="Add Hop".to_owned()>
-            <NavBar current="add-hop" />
+        <Shell title="Add Journey".to_owned()>
+            <NavBar current="add-journey" />
             <main class="container">
                 {error.map(|e| view! {
                     <div class="alert alert-error" role="alert">{e}</div>
                 })}
                 {success.filter(|v| v == "1").map(|_| view! {
-                    <div class="alert alert-success" role="status">"Hop added successfully!"</div>
+                    <div class="alert alert-success" role="status">"Journey added successfully!"</div>
                 })}
 
                 <section class="card">
-                    <h2>"Add Hop"</h2>
-                    <form method="post" action="/hops">
+                    <h2>"Add Journey"</h2>
+                    <form method="post" action="/journeys">
                         <div class="form-group">
                             <label for="travel_type">"Travel Type"</label>
                             <select id="travel_type" name="travel_type">
@@ -178,7 +178,7 @@ fn AddHop(
                             </div>
                         </div>
 
-                        <button class="btn btn-primary btn-full" type="submit">"Add Hop"</button>
+                        <button class="btn btn-primary btn-full" type="submit">"Add Journey"</button>
                     </form>
                 </section>
 

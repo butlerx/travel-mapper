@@ -4,7 +4,7 @@ use super::{
 };
 use crate::{
     db,
-    server::{AppState, middleware::AuthUser, session::clear_session_cookie},
+    server::{AppState, extractors::AuthUser, session::clear_session_cookie},
 };
 use aide::transform::TransformOperation;
 use axum::{

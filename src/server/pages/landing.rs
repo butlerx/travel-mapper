@@ -12,12 +12,13 @@ pub async fn page(State(state): State<AppState>, jar: CookieJar) -> Response {
         return Redirect::to("/dashboard").into_response();
     }
 
-    let html = view! { <Landing /> };
+    let show_register = state.registration_enabled;
+    let html = view! { <Landing show_register /> };
     (StatusCode::OK, axum::response::Html(html.to_html())).into_response()
 }
 
 #[component]
-fn Landing() -> impl IntoView {
+fn Landing(show_register: bool) -> impl IntoView {
     view! {
         <Shell title="Travel Mapper".to_owned()>
             <main class="auth-page">
@@ -28,7 +29,9 @@ fn Landing() -> impl IntoView {
                         <h1>"Your Travel Story,\u{2003}Visualised"</h1>
                         <p>"Import your trips from TripIt and see every journey mapped, measured, and beautifully presented \u{2014} air, rail, boat trips, and more."</p>
                         <div class="hero-actions">
-                            <a class="btn btn-primary" href="/register">"Get Started"</a>
+                            {show_register.then(|| view! {
+                                <a class="btn btn-primary" href="/register">"Get Started"</a>
+                            })}
                             <a class="btn btn-secondary" href="/login">"Log In"</a>
                         </div>
                     </div>
@@ -88,9 +91,34 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
         let body = body_text(response).await;
-        assert!(body.contains("Travel Export"));
+        assert!(body.contains("Travel Mapper"));
         assert!(body.contains("Get Started"));
         assert!(body.contains("href=\"/register\""));
+        assert!(body.contains("href=\"/login\""));
+    }
+
+    #[tokio::test]
+    async fn landing_page_hides_register_when_disabled() {
+        let pool = test_pool().await;
+        let mut state = test_app_state(pool);
+        state.registration_enabled = false;
+        let app = create_router(state);
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/")
+                    .body(Body::empty())
+                    .expect("failed to build request"),
+            )
+            .await
+            .expect("router request failed");
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = body_text(response).await;
+        assert!(!body.contains("Get Started"));
+        assert!(!body.contains("href=\"/register\""));
         assert!(body.contains("href=\"/login\""));
     }
 }

@@ -96,8 +96,8 @@ src/
     components.rs + components/     # shared Leptos UI components
       auth_page.rs, error_page.rs, navbar.rs, shell.rs
     error.rs                        # error response types
-    middleware.rs + middleware/
-      auth.rs                       # AuthUser extractor
+    extractors.rs                   # AuthUser extractor (FromRequestParts)
+    middleware.rs                   # Tower tracing middleware (request spans, response logging)
     pages.rs + pages/               # Leptos SSR page components
       add_flight.rs, landing.rs, login.rs, register.rs
       not_found.rs, unauthorized.rs, stats.rs
@@ -142,7 +142,7 @@ Three groups separated by blank lines:
 use super::{ErrorResponse, MultiFormatResponse};
 use crate::{
     db,
-    server::{AppState, middleware::AuthUser},
+    server::{AppState, extractors::AuthUser},
 };
 
 // 2. External crates (grouped by crate, nested braces)

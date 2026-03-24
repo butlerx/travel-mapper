@@ -6,7 +6,7 @@ use crate::{
     server::{
         AppState,
         components::{NavBar, Shell},
-        middleware::AuthUser,
+        extractors::AuthUser,
         routes::HopResponse,
     },
 };
@@ -98,7 +98,7 @@ fn DashboardPage(
                         <section class="card">
                             <div class="empty-state">
                                 <div class="empty-state-icon">{"\u{1F30D}"}</div>
-                                <p>"No hops yet. Connect TripIt in " <a href="/settings">"Settings"</a> " and sync to see your travel data."</p>
+                                <p>"No journeys yet. Connect TripIt in " <a href="/settings">"Settings"</a> " and sync to see your travel data."</p>
                             </div>
                         </section>
                     </main>
@@ -258,7 +258,7 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
         let body = body_text(response).await;
-        assert!(body.contains("No hops yet"));
+        assert!(body.contains("No journeys yet"));
         assert!(body.contains("href=\"/settings\""));
         assert!(body.contains("<nav"));
         assert!(body.contains("Dashboard"));

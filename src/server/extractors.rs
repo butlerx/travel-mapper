@@ -1,3 +1,5 @@
+//! Axum extractors for request authentication and authorization.
+
 use crate::{
     db,
     server::{AppState, pages},

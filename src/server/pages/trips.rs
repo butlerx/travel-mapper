@@ -4,7 +4,7 @@ use crate::{
     server::{
         AppState,
         components::{NavBar, Shell},
-        middleware::AuthUser,
+        extractors::AuthUser,
     },
 };
 use axum::{
@@ -67,7 +67,7 @@ fn TripsPage(
                             <label for="gap-days">"Gap days"</label>
                             <input id="gap-days" name="gap_days" type="number" min="0" value="3" />
                         </div>
-                        <button class="btn btn-secondary" type="submit">"Auto-Group Unassigned Hops"</button>
+                        <button class="btn btn-secondary" type="submit">"Auto-Group Unassigned Journeys"</button>
                     </form>
                 </section>
 
@@ -75,7 +75,7 @@ fn TripsPage(
                     <h2>"Trips"</h2>
                     {if trips.is_empty() {
                         view! {
-                            <p class="muted">"No trips yet. Create one or auto-group your hops."</p>
+                            <p class="muted">"No trips yet. Create one or auto-group your journeys."</p>
                         }.into_any()
                     } else {
                         view! {
@@ -94,7 +94,7 @@ fn TripsPage(
                                                 <div class="hop-card-route">{trip.name}</div>
                                                 <div class="hop-card-meta">
                                                     <span class="hop-card-date">{range}</span>
-                                                    <span class="hop-card-badge">{format!("{} hops", trip.hop_count)}</span>
+                                                    <span class="hop-card-badge">{format!("{} journeys", trip.hop_count)}</span>
                                                 </div>
                                             </div>
                                         </a>

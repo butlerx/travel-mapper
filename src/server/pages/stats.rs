@@ -6,7 +6,7 @@ use crate::{
     server::{
         AppState,
         components::{NavBar, Shell},
-        middleware::AuthUser,
+        extractors::AuthUser,
     },
 };
 use axum::{

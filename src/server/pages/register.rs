@@ -14,6 +14,10 @@ pub async fn page(
     jar: CookieJar,
     Query(feedback): Query<FormFeedback>,
 ) -> Response {
+    if !state.registration_enabled {
+        return Redirect::to("/login?error=Registration+is+disabled").into_response();
+    }
+
     if super::has_valid_session(&jar, &state).await {
         return Redirect::to("/dashboard").into_response();
     }
@@ -91,5 +95,30 @@ mod tests {
         let body = body_text(response).await;
         assert!(body.contains("Username taken"));
         assert!(body.contains("alert-error"));
+    }
+
+    #[tokio::test]
+    async fn register_page_redirects_when_disabled() {
+        let pool = test_pool().await;
+        let mut state = test_app_state(pool);
+        state.registration_enabled = false;
+        let app = create_router(state);
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/register")
+                    .body(Body::empty())
+                    .expect("failed to build request"),
+            )
+            .await
+            .expect("router request failed");
+
+        assert_eq!(response.status(), StatusCode::SEE_OTHER);
+        assert_eq!(
+            response.headers().get("location").unwrap(),
+            "/login?error=Registration+is+disabled"
+        );
     }
 }

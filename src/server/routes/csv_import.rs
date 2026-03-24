@@ -1,7 +1,7 @@
 use crate::{
     db,
     integrations::generic_csv::{self, GenericRow, ImportFormat},
-    server::{AppState, error::AppError, middleware::AuthUser},
+    server::{AppState, error::AppError, extractors::AuthUser},
 };
 use axum::{
     Json,

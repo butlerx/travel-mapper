@@ -17,7 +17,7 @@ use crate::{
     server::{
         AppState,
         components::{NavBar, Shell},
-        middleware::AuthUser,
+        extractors::AuthUser,
     },
 };
 use axum::{
@@ -70,7 +70,7 @@ pub async fn page(
                 axum::response::Html(super::render_error_page(
                     "500",
                     "Server Error",
-                    "Something went wrong loading this hop.",
+                    "Something went wrong loading this journey.",
                     "/dashboard",
                     "Back to Dashboard",
                 )),
@@ -195,7 +195,7 @@ fn HopDetailPage(
 ";
 
     view! {
-        <Shell title="Hop Detail".to_owned() body_class="hop-detail-layout">
+        <Shell title="Journey Detail".to_owned() body_class="hop-detail-layout">
             <NavBar current="" />
             <main class="hop-detail-page">
                 <a href="/dashboard" class="hop-detail-back">"\u{2190} Dashboard"</a>
@@ -204,7 +204,7 @@ fn HopDetailPage(
                     <div class="alert alert-error" role="alert">{e}</div>
                 })}
                 {success_msg.filter(|v| v == "1").map(|_| view! {
-                    <div class="alert alert-success" role="status">"Hop updated successfully!"</div>
+                    <div class="alert alert-success" role="status">"Journey updated successfully!"</div>
                 })}
 
                 <header class="hop-detail-header">
@@ -311,7 +311,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method("GET")
-                    .uri(format!("/hop/{hop_id}"))
+                    .uri(format!("/journey/{hop_id}"))
                     .header("cookie", &cookie)
                     .body(Body::empty())
                     .expect("failed to build request"),
@@ -336,7 +336,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method("GET")
-                    .uri("/hop/99999")
+                    .uri("/journey/99999")
                     .header("cookie", &cookie)
                     .body(Body::empty())
                     .expect("failed to build request"),
@@ -356,7 +356,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method("GET")
-                    .uri("/hop/1")
+                    .uri("/journey/1")
                     .body(Body::empty())
                     .expect("failed to build request"),
             )
@@ -383,7 +383,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method("GET")
-                    .uri(format!("/hop/{hop_id}"))
+                    .uri(format!("/journey/{hop_id}"))
                     .header("cookie", &bob_cookie)
                     .body(Body::empty())
                     .expect("failed to build request"),

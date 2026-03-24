@@ -18,6 +18,7 @@ pub async fn page(
         return Redirect::to("/dashboard").into_response();
     }
 
+    let show_register = state.registration_enabled;
     let html = view! {
         <AuthFormPage
             title="Log In"
@@ -28,6 +29,7 @@ pub async fn page(
             footer_link_text="Register"
             autocomplete_password="current-password"
             error=feedback.error
+            show_footer=show_register
         />
     };
     (StatusCode::OK, axum::response::Html(html.to_html())).into_response()
@@ -90,5 +92,30 @@ mod tests {
         let body = body_text(response).await;
         assert!(body.contains("Invalid credentials"));
         assert!(body.contains("alert-error"));
+    }
+
+    #[tokio::test]
+    async fn login_page_hides_register_link_when_disabled() {
+        let pool = test_pool().await;
+        let mut state = test_app_state(pool);
+        state.registration_enabled = false;
+        let app = create_router(state);
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/login")
+                    .body(Body::empty())
+                    .expect("failed to build request"),
+            )
+            .await
+            .expect("router request failed");
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = body_text(response).await;
+        assert!(body.contains("Log In"));
+        assert!(!body.contains("href=\"/register\""));
+        assert!(!body.contains("Register"));
     }
 }
