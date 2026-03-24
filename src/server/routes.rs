@@ -22,7 +22,7 @@ pub(super) mod api_keys;
 /// Generic CSV/delimited import handler (Flighty, myFlightradar24, `OpenFlights`, App in the Air).
 pub(super) mod csv_import;
 pub(super) mod health;
-pub(super) mod hops;
+pub(super) mod journeys;
 pub(super) mod login;
 pub(super) mod logout;
 pub(super) mod register;
@@ -33,7 +33,7 @@ pub(super) mod tripit_connect;
 pub(super) mod tripit_credentials;
 pub(super) mod trips;
 
-pub(super) use hops::HopResponse;
+pub(super) use journeys::JourneyResponse;
 pub(super) use login::AuthResponse;
 
 /// Chain `.response_with` calls that attach multi-format (CSV + HTML) docs.
@@ -119,25 +119,32 @@ pub trait MultiFormatResponse: Serialize + Default + Sized {
     /// Return the values for a single CSV row, aligned with [`CSV_HEADERS`].
     fn csv_row(&self) -> Vec<String>;
 
-    /// Render a single item as a card HTML fragment.
+    /// Render a single item as a Leptos card component.
     ///
     /// Default builds a generic key-value card from headers + cells.
-    fn html_card(&self) -> String {
-        let fields: String = Self::CSV_HEADERS
+    fn html_card(&self) -> AnyView {
+        let fields: Vec<(String, String)> = Self::CSV_HEADERS
             .iter()
             .zip(self.csv_row())
             .filter(|(_, v)| !v.is_empty())
-            .fold(String::new(), |mut acc, (h, v)| {
-                let _ = write!(
-                    acc,
-                    "<div class=\"data-card-field\">\
-                     <span class=\"data-card-label\">{h}</span>\
-                     <span class=\"data-card-value\">{v}</span>\
-                     </div>"
-                );
-                acc
-            });
-        format!("<div class=\"data-card\">{fields}</div>")
+            .map(|(h, v)| ((*h).to_owned(), v))
+            .collect();
+        view! {
+            <div class="data-card">
+                {fields
+                    .into_iter()
+                    .map(|(h, v)| {
+                        view! {
+                            <div class="data-card-field">
+                                <span class="data-card-label">{h}</span>
+                                <span class="data-card-value">{v}</span>
+                            </div>
+                        }
+                    })
+                    .collect_view()}
+            </div>
+        }
+        .into_any()
     }
 
     /// Build the final [`Response`] in the requested format.
@@ -226,7 +233,7 @@ fn build_csv<T: MultiFormatResponse>(items: &[T]) -> Response {
 
 fn build_html<T: MultiFormatResponse>(items: &[T]) -> Response {
     let title = T::HTML_TITLE;
-    let cards: String = items.iter().map(T::html_card).collect();
+    let cards: Vec<AnyView> = items.iter().map(T::html_card).collect();
     let count = items.len();
 
     let html = view! {
@@ -237,7 +244,7 @@ fn build_html<T: MultiFormatResponse>(items: &[T]) -> Response {
                     <h1>{title}</h1>
                     <span class="data-page-count">{format!("{count} records")}</span>
                 </div>
-                <div class="data-card-list" inner_html=cards />
+                <div class="data-card-list">{cards}</div>
             </main>
         </Shell>
     };
@@ -341,17 +348,21 @@ pub(super) fn auth_api_routes() -> ApiRouter<super::AppState> {
         )
 }
 
-pub(super) fn hops_api_routes() -> ApiRouter<super::AppState> {
+pub(super) fn journeys_api_routes() -> ApiRouter<super::AppState> {
     ApiRouter::new()
         .api_route(
             "/",
-            get_with(hops::handler, hops::handler_docs)
-                .post_with(hops::create_handler, hops::create_handler_docs),
+            get_with(journeys::handler, journeys::handler_docs)
+                .post_with(journeys::create_handler, journeys::create_handler_docs),
         )
         .api_route(
             "/{id}",
-            put_with(hops::update_handler, hops::update_handler_docs)
-                .post_with(hops::update_handler, hops::update_handler_docs),
+            get_with(
+                journeys::get_journey_handler,
+                journeys::get_journey_handler_docs,
+            )
+            .put_with(journeys::update_handler, journeys::update_handler_docs)
+            .post_with(journeys::update_handler, journeys::update_handler_docs),
         )
 }
 
@@ -360,11 +371,13 @@ pub(super) fn trip_api_routes() -> ApiRouter<super::AppState> {
     ApiRouter::new()
         .api_route(
             "/",
-            post_with(trips::create_handler, trips::create_handler_docs),
+            get_with(trips::handler, trips::handler_docs)
+                .post_with(trips::create_handler, trips::create_handler_docs),
         )
         .api_route(
             "/{id}",
-            put_with(trips::update_handler, trips::update_handler_docs)
+            get_with(trips::get_trip_handler, trips::get_trip_handler_docs)
+                .put_with(trips::update_handler, trips::update_handler_docs)
                 .delete_with(trips::delete_handler, trips::delete_handler_docs)
                 .post_with(trips::update_handler, trips::update_handler_docs),
         )
@@ -374,17 +387,16 @@ pub(super) fn trip_api_routes() -> ApiRouter<super::AppState> {
         )
         .api_route(
             "/{id}/journeys",
-            post_with(trips::assign_hop_handler, trips::assign_hop_handler_docs),
+            post_with(
+                trips::assign_journey_handler,
+                trips::assign_journey_handler_docs,
+            ),
         )
         .api_route(
             "/{id}/journeys/{journey_id}",
             delete_with(
-                trips::unassign_hop_handler,
-                trips::unassign_hop_handler_docs,
-            )
-            .post_with(
-                trips::unassign_hop_handler,
-                trips::unassign_hop_handler_docs,
+                trips::unassign_journey_handler,
+                trips::unassign_journey_handler_docs,
             ),
         )
 }

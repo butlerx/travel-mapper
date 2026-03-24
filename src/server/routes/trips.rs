@@ -3,17 +3,24 @@ use super::{
 };
 use crate::{
     db,
-    server::{AppState, error::AppError, extractors::AuthUser, session::is_form_request},
+    server::{
+        AppState,
+        error::AppError,
+        extractors::{AuthUser, FormOrJson},
+        pages::FormFeedback,
+        session::is_form_request,
+    },
 };
 use aide::transform::TransformOperation;
 use axum::{
     Json,
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::{HeaderMap, StatusCode, header},
     response::{IntoResponse, Redirect, Response},
 };
+use leptos::prelude::*;
 use schemars::JsonSchema;
-use serde::{Deserialize, Serialize, de::DeserializeOwned};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Default, Serialize, JsonSchema)]
 pub struct TripResponse {
@@ -21,6 +28,7 @@ pub struct TripResponse {
     pub name: String,
     pub start_date: Option<String>,
     pub end_date: Option<String>,
+    #[serde(rename = "journey_count")]
     pub hop_count: i64,
 }
 
@@ -39,7 +47,7 @@ impl From<db::trips::Row> for TripResponse {
 impl MultiFormatResponse for TripResponse {
     const HTML_TITLE: &'static str = "Trips";
     const CSV_HEADERS: &'static [&'static str] =
-        &["id", "name", "start_date", "end_date", "hop_count"];
+        &["id", "name", "start_date", "end_date", "journey_count"];
 
     fn csv_row(&self) -> Vec<String> {
         vec![
@@ -51,7 +59,9 @@ impl MultiFormatResponse for TripResponse {
         ]
     }
 
-    fn html_card(&self) -> String {
+    fn html_card(&self) -> AnyView {
+        let href = format!("/trips/{}", self.id);
+        let name = self.name.clone();
         let date_range = match (&self.start_date, &self.end_date) {
             (Some(start), Some(end)) if start == end => start.clone(),
             (Some(start), Some(end)) => format!("{start} – {end}"),
@@ -59,21 +69,138 @@ impl MultiFormatResponse for TripResponse {
             (None, Some(end)) => end.clone(),
             (None, None) => "No dates yet".to_string(),
         };
+        let badge_text = format!("{} journeys", self.hop_count);
 
-        format!(
-            "<a href=\"/trip/{}\" class=\"hop-card-link\">\
-              <div class=\"data-card hop-card\">\
-              <div class=\"hop-card-route\">{}\
-              </div>\
-              <div class=\"hop-card-meta\">\
-              <span class=\"hop-card-date\">{}</span>\
-              <span class=\"hop-card-badge\">{} journeys</span>\
-              </div>\
-              </div>\
-             </a>",
-            self.id, self.name, date_range, self.hop_count,
-        )
+        view! {
+            <a href=href class="journey-card-link">
+                <div class="data-card journey-card">
+                    <div class="journey-card-route">{name}</div>
+                    <div class="journey-card-meta">
+                        <span class="journey-card-date">{date_range}</span>
+                        <span class="journey-card-badge">{badge_text}</span>
+                    </div>
+                </div>
+            </a>
+        }
+        .into_any()
     }
+}
+
+pub async fn handler(
+    State(state): State<AppState>,
+    auth: AuthUser,
+    Query(feedback): Query<FormFeedback>,
+    headers: HeaderMap,
+) -> Response {
+    let format = negotiate_format(&headers);
+    let trips = match (db::trips::GetAll {
+        user_id: auth.user_id,
+    })
+    .execute(&state.db)
+    .await
+    {
+        Ok(trips) => trips,
+        Err(err) => {
+            return AppError::from(err).into_format_response(format);
+        }
+    };
+
+    if format == super::ResponseFormat::Html {
+        crate::server::pages::trips::render_page(trips, feedback)
+    } else {
+        let responses: Vec<TripResponse> = trips.into_iter().map(TripResponse::from).collect();
+        TripResponse::into_format_response(&responses, format, StatusCode::OK)
+    }
+}
+
+pub fn handler_docs(op: TransformOperation) -> TransformOperation {
+    multi_format_docs!(
+        op.description("List trips for the authenticated user.")
+            .response_with::<200, Json<Vec<TripResponse>>, _>(|mut res| {
+                super::add_multi_format_docs::<TripResponse>(res.inner());
+                res
+            }),
+        401 | 500 => ErrorResponse,
+    )
+    .tag("trips")
+}
+
+pub async fn get_trip_handler(
+    State(state): State<AppState>,
+    auth: AuthUser,
+    Path(id): Path<i64>,
+    Query(feedback): Query<FormFeedback>,
+    headers: HeaderMap,
+) -> Response {
+    let format = negotiate_format(&headers);
+
+    let trip = match (db::trips::GetById {
+        id,
+        user_id: auth.user_id,
+    })
+    .execute(&state.db)
+    .await
+    {
+        Ok(Some(trip)) => trip,
+        Ok(None) => {
+            return if format == super::ResponseFormat::Html {
+                crate::server::pages::not_found::page().await
+            } else {
+                (
+                    StatusCode::NOT_FOUND,
+                    Json(ErrorResponse {
+                        error: "trip not found".to_owned(),
+                    }),
+                )
+                    .into_response()
+            };
+        }
+        Err(err) => {
+            return AppError::from(err).into_format_response(format);
+        }
+    };
+
+    if format == super::ResponseFormat::Html {
+        use crate::server::pages::trip_detail::{TripHopRow, UnassignedHopRow};
+
+        let trip_hops = (db::hops::GetForTrip {
+            user_id: auth.user_id,
+            trip_id: id,
+        })
+        .execute(&state.db)
+        .await
+        .unwrap_or_default()
+        .into_iter()
+        .map(TripHopRow::from)
+        .collect();
+
+        let unassigned_hops = (db::hops::GetUnassigned {
+            user_id: auth.user_id,
+        })
+        .execute(&state.db)
+        .await
+        .unwrap_or_default()
+        .into_iter()
+        .map(UnassignedHopRow::from)
+        .collect();
+
+        crate::server::pages::trip_detail::render_page(trip, trip_hops, unassigned_hops, feedback)
+    } else {
+        let response = TripResponse::from(trip);
+        TripResponse::single_format_response(&response, format, StatusCode::OK)
+    }
+}
+
+pub fn get_trip_handler_docs(op: TransformOperation) -> TransformOperation {
+    multi_format_docs!(
+        op.description("Get a single trip by ID.")
+            .response_with::<200, Json<TripResponse>, _>(|mut res| {
+                super::add_multi_format_docs::<TripResponse>(res.inner());
+                res
+            }),
+        401 | 404 | 500 => ErrorResponse,
+    )
+    .tag("trips")
 }
 
 #[derive(Deserialize, JsonSchema, Default)]
@@ -92,8 +219,9 @@ pub struct AutoGroupRequest {
 }
 
 #[derive(Deserialize, JsonSchema, Default)]
-pub struct AssignHopRequest {
-    pub hop_id: i64,
+pub struct AssignJourneyRequest {
+    #[serde(alias = "hop_id")]
+    pub journey_id: i64,
 }
 
 #[derive(Debug, Default, Serialize, JsonSchema)]
@@ -118,21 +246,6 @@ fn redirect_back_or(headers: &HeaderMap, fallback: &str) -> Response {
     }
 }
 
-fn parse_payload<T>(headers: &HeaderMap, body: &[u8]) -> Result<T, AppError>
-where
-    T: DeserializeOwned + Default,
-{
-    if body.is_empty() {
-        return Ok(T::default());
-    }
-
-    if is_form_request(headers) {
-        serde_urlencoded::from_bytes(body).map_err(AppError::from)
-    } else {
-        serde_json::from_slice(body).map_err(AppError::from)
-    }
-}
-
 pub async fn create_handler(
     State(state): State<AppState>,
     auth: AuthUser,
@@ -140,7 +253,7 @@ pub async fn create_handler(
     body: axum::body::Bytes,
 ) -> Response {
     let format = negotiate_format(&headers);
-    let req: CreateTripRequest = match parse_payload(&headers, &body) {
+    let req: CreateTripRequest = match FormOrJson::<CreateTripRequest>::parse(&headers, &body) {
         Ok(r) => r,
         Err(err) => return err.into_format_response(format),
     };
@@ -175,22 +288,13 @@ pub async fn create_handler(
 }
 
 pub fn create_handler_docs(op: TransformOperation) -> TransformOperation {
-    op.description("Create a named trip for the authenticated user.")
-        .input::<Json<CreateTripRequest>>()
-        .with(|mut op| {
-            if let Some(aide::openapi::ReferenceOr::Item(body)) = &mut op.inner_mut().request_body
-                && let Some(json_media) = body.content.get("application/json").cloned()
-            {
-                body.content
-                    .insert("application/x-www-form-urlencoded".to_string(), json_media);
-            }
-            op
-        })
-        .response::<201, Json<TripResponse>>()
-        .response::<400, Json<ErrorResponse>>()
-        .response::<401, Json<ErrorResponse>>()
-        .response::<500, Json<ErrorResponse>>()
-        .tag("trips")
+    multi_format_docs!(
+        op.description("Create a named trip for the authenticated user.")
+            .input::<FormOrJson<CreateTripRequest>>(),
+        201 => TripResponse,
+        400 | 401 | 500 => ErrorResponse,
+    )
+    .tag("trips")
 }
 
 pub async fn update_handler(
@@ -201,7 +305,7 @@ pub async fn update_handler(
     body: axum::body::Bytes,
 ) -> Response {
     let format = negotiate_format(&headers);
-    let req: UpdateTripRequest = match parse_payload(&headers, &body) {
+    let req: UpdateTripRequest = match FormOrJson::<UpdateTripRequest>::parse(&headers, &body) {
         Ok(r) => r,
         Err(err) => return err.into_format_response(format),
     };
@@ -220,7 +324,7 @@ pub async fn update_handler(
     {
         Ok(true) => {
             if is_form_request(&headers) {
-                redirect_back_or(&headers, &format!("/trip/{id}"))
+                redirect_back_or(&headers, &format!("/trips/{id}"))
             } else {
                 let response = StatusResponse {
                     status: "ok".to_string(),
@@ -236,23 +340,13 @@ pub async fn update_handler(
 }
 
 pub fn update_handler_docs(op: TransformOperation) -> TransformOperation {
-    op.description("Update a trip name.")
-        .input::<Json<UpdateTripRequest>>()
-        .with(|mut op| {
-            if let Some(aide::openapi::ReferenceOr::Item(body)) = &mut op.inner_mut().request_body
-                && let Some(json_media) = body.content.get("application/json").cloned()
-            {
-                body.content
-                    .insert("application/x-www-form-urlencoded".to_string(), json_media);
-            }
-            op
-        })
-        .response::<200, Json<StatusResponse>>()
-        .response::<400, Json<ErrorResponse>>()
-        .response::<401, Json<ErrorResponse>>()
-        .response::<404, Json<ErrorResponse>>()
-        .response::<500, Json<ErrorResponse>>()
-        .tag("trips")
+    multi_format_docs!(
+        op.description("Update a trip name.")
+            .input::<FormOrJson<UpdateTripRequest>>(),
+        200 => StatusResponse,
+        400 | 401 | 404 | 500 => ErrorResponse,
+    )
+    .tag("trips")
 }
 
 pub async fn delete_handler(
@@ -302,7 +396,7 @@ pub async fn auto_group_handler(
     body: axum::body::Bytes,
 ) -> Response {
     let format = negotiate_format(&headers);
-    let req: AutoGroupRequest = match parse_payload(&headers, &body) {
+    let req: AutoGroupRequest = match FormOrJson::<AutoGroupRequest>::parse(&headers, &body) {
         Ok(r) => r,
         Err(err) => return err.into_format_response(format),
     };
@@ -328,25 +422,16 @@ pub async fn auto_group_handler(
 }
 
 pub fn auto_group_handler_docs(op: TransformOperation) -> TransformOperation {
-    op.description("Automatically group unassigned journeys into trips by date proximity.")
-        .input::<Json<AutoGroupRequest>>()
-        .with(|mut op| {
-            if let Some(aide::openapi::ReferenceOr::Item(body)) = &mut op.inner_mut().request_body
-                && let Some(json_media) = body.content.get("application/json").cloned()
-            {
-                body.content
-                    .insert("application/x-www-form-urlencoded".to_string(), json_media);
-            }
-            op
-        })
-        .response::<200, Json<AutoGroupResponse>>()
-        .response::<400, Json<ErrorResponse>>()
-        .response::<401, Json<ErrorResponse>>()
-        .response::<500, Json<ErrorResponse>>()
-        .tag("trips")
+    multi_format_docs!(
+        op.description("Automatically group unassigned journeys into trips by date proximity.")
+            .input::<FormOrJson<AutoGroupRequest>>(),
+        200 => AutoGroupResponse,
+        400 | 401 | 500 => ErrorResponse,
+    )
+    .tag("trips")
 }
 
-pub async fn assign_hop_handler(
+pub async fn assign_journey_handler(
     State(state): State<AppState>,
     auth: AuthUser,
     Path(id): Path<i64>,
@@ -354,17 +439,18 @@ pub async fn assign_hop_handler(
     body: axum::body::Bytes,
 ) -> Response {
     let format = negotiate_format(&headers);
-    let req: AssignHopRequest = match parse_payload(&headers, &body) {
+    let req: AssignJourneyRequest = match FormOrJson::<AssignJourneyRequest>::parse(&headers, &body)
+    {
         Ok(r) => r,
         Err(err) => return err.into_format_response(format),
     };
 
-    if req.hop_id == 0 {
-        return AppError::MissingField("hop_id is required").into_format_response(format);
+    if req.journey_id == 0 {
+        return AppError::MissingField("journey_id is required").into_format_response(format);
     }
 
     match (db::trips::AssignHop {
-        hop_id: req.hop_id,
+        hop_id: req.journey_id,
         trip_id: id,
         user_id: auth.user_id,
     })
@@ -373,7 +459,7 @@ pub async fn assign_hop_handler(
     {
         Ok(true) => {
             if is_form_request(&headers) {
-                redirect_back_or(&headers, &format!("/trip/{id}"))
+                redirect_back_or(&headers, &format!("/trips/{id}"))
             } else {
                 let response = StatusResponse {
                     status: "ok".to_string(),
@@ -390,47 +476,33 @@ pub async fn assign_hop_handler(
     }
 }
 
-pub fn assign_hop_handler_docs(op: TransformOperation) -> TransformOperation {
-    op.description("Assign a journey to a trip.")
-        .input::<Json<AssignHopRequest>>()
-        .with(|mut op| {
-            if let Some(aide::openapi::ReferenceOr::Item(body)) = &mut op.inner_mut().request_body
-                && let Some(json_media) = body.content.get("application/json").cloned()
-            {
-                body.content
-                    .insert("application/x-www-form-urlencoded".to_string(), json_media);
-            }
-            op
-        })
-        .response::<200, Json<StatusResponse>>()
-        .response::<400, Json<ErrorResponse>>()
-        .response::<401, Json<ErrorResponse>>()
-        .response::<404, Json<ErrorResponse>>()
-        .response::<500, Json<ErrorResponse>>()
-        .tag("trips")
+pub fn assign_journey_handler_docs(op: TransformOperation) -> TransformOperation {
+    multi_format_docs!(
+        op.description("Assign a journey to a trip.")
+            .input::<FormOrJson<AssignJourneyRequest>>(),
+        200 => StatusResponse,
+        400 | 401 | 404 | 500 => ErrorResponse,
+    )
+    .tag("trips")
 }
 
-pub async fn unassign_hop_handler(
+pub async fn unassign_journey_handler(
     State(state): State<AppState>,
     auth: AuthUser,
-    Path((id, hop_id)): Path<(i64, i64)>,
+    Path((id, journey_id)): Path<(i64, i64)>,
     headers: HeaderMap,
 ) -> Response {
     let format = negotiate_format(&headers);
 
-    let in_trip = match sqlx::query_scalar!(
-        r#"SELECT EXISTS(
-               SELECT 1 FROM hops
-               WHERE id = ? AND user_id = ? AND user_trip_id = ?
-           ) as "exists!: i64""#,
-        hop_id,
-        auth.user_id,
-        id,
-    )
-    .fetch_one(&state.db)
+    let in_trip = match (db::hops::ExistsInTrip {
+        hop_id: journey_id,
+        user_id: auth.user_id,
+        trip_id: id,
+    })
+    .execute(&state.db)
     .await
     {
-        Ok(exists) => exists == 1,
+        Ok(exists) => exists,
         Err(err) => return AppError::from(err).into_format_response(format),
     };
 
@@ -443,7 +515,7 @@ pub async fn unassign_hop_handler(
     }
 
     match (db::trips::UnassignHop {
-        hop_id,
+        hop_id: journey_id,
         user_id: auth.user_id,
     })
     .execute(&state.db)
@@ -451,7 +523,7 @@ pub async fn unassign_hop_handler(
     {
         Ok(true) => {
             if is_form_request(&headers) {
-                redirect_back_or(&headers, &format!("/trip/{id}"))
+                redirect_back_or(&headers, &format!("/trips/{id}"))
             } else {
                 let response = StatusResponse {
                     status: "ok".to_string(),
@@ -466,7 +538,7 @@ pub async fn unassign_hop_handler(
     }
 }
 
-pub fn unassign_hop_handler_docs(op: TransformOperation) -> TransformOperation {
+pub fn unassign_journey_handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
         op.description("Remove a journey from a trip."),
         200 => StatusResponse,

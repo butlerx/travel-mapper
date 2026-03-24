@@ -9,9 +9,12 @@ mod create_from_csv;
 mod create_manual;
 mod delete_for_trip;
 mod delete_stale;
+mod exists_in_trip;
 mod get_all;
 mod get_all_for_stats;
 mod get_by_id;
+mod get_for_trip;
+mod get_unassigned;
 mod replace_for_trip;
 /// Search hops with optional filters across all travel types and detail tables.
 mod search;
@@ -23,9 +26,12 @@ pub use create_from_csv::CreateFromCsv;
 pub use create_manual::CreateManual;
 pub use delete_for_trip::DeleteForTrip;
 pub use delete_stale::DeleteStaleTripItTrips;
+pub use exists_in_trip::ExistsInTrip;
 pub use get_all::GetAll;
 pub use get_all_for_stats::{GetAllForStats, StatsRow};
 pub use get_by_id::{DetailRow, FullFlightDetail, GetById};
+pub use get_for_trip::GetForTrip;
+pub use get_unassigned::GetUnassigned;
 pub use replace_for_trip::ReplaceForTrip;
 pub use search::Search;
 pub use update_by_id::UpdateById;
@@ -168,6 +174,16 @@ pub(super) struct HopRow {
     pub dest_country: Option<String>,
     pub start_date: String,
     pub end_date: String,
+}
+
+/// Lightweight summary of a hop — used for trip detail listings and
+/// unassigned-hop dropdowns where full coordinate data is unnecessary.
+pub struct SummaryRow {
+    pub id: i64,
+    pub travel_type: String,
+    pub origin_name: String,
+    pub dest_name: String,
+    pub start_date: String,
 }
 
 impl TryFrom<HopRow> for Row {

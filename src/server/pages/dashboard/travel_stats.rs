@@ -1,7 +1,7 @@
-use crate::server::routes::HopResponse;
+use crate::server::routes::JourneyResponse;
 use std::collections::HashSet;
 
-/// Stats computed from a user's travel hops.
+/// Stats computed from a user's travel journeys.
 #[derive(Default, Clone)]
 pub(super) struct TravelStats {
     pub(super) total_journeys: usize,
@@ -28,50 +28,55 @@ fn positive_km_to_u64(km: f64) -> u64 {
     km.max(0.0).trunc() as u64
 }
 
-pub(super) fn compute_stats(hops: &[HopResponse]) -> TravelStats {
+pub(super) fn compute_stats(journeys: &[JourneyResponse]) -> TravelStats {
     let mut stats = TravelStats {
-        total_journeys: hops.len(),
+        total_journeys: journeys.len(),
         ..Default::default()
     };
 
     let mut places: HashSet<String> = HashSet::new();
     let mut years: Vec<&str> = Vec::new();
 
-    for hop in hops {
-        match hop.travel_type.as_str() {
+    for journey in journeys {
+        match journey.travel_type.as_str() {
             "air" => stats.total_flights += 1,
             "rail" => stats.total_rail += 1,
             _ => {}
         }
 
-        if hop.origin_lat != 0.0
-            || hop.origin_lng != 0.0
-            || hop.dest_lat != 0.0
-            || hop.dest_lng != 0.0
+        if journey.origin_lat != 0.0
+            || journey.origin_lng != 0.0
+            || journey.dest_lat != 0.0
+            || journey.dest_lng != 0.0
         {
-            let km = haversine_km(hop.origin_lat, hop.origin_lng, hop.dest_lat, hop.dest_lng);
+            let km = haversine_km(
+                journey.origin_lat,
+                journey.origin_lng,
+                journey.dest_lat,
+                journey.dest_lng,
+            );
             if km.is_finite() && km > 0.0 {
                 stats.total_distance_km += positive_km_to_u64(km);
             }
         }
 
-        places.insert(hop.origin_name.clone());
-        places.insert(hop.dest_name.clone());
+        places.insert(journey.origin_name.clone());
+        places.insert(journey.dest_name.clone());
 
-        if !hop.start_date.is_empty()
-            && let Some(y) = hop.start_date.get(..4)
+        if !journey.start_date.is_empty()
+            && let Some(y) = journey.start_date.get(..4)
         {
             years.push(y);
         }
     }
 
     stats.cities_visited = places.len();
-    // For airport count, count only places referenced by air hops
+    // For airport count, count only places referenced by air journeys
     let mut airports: HashSet<String> = HashSet::new();
-    for hop in hops {
-        if hop.travel_type.as_str() == "air" {
-            airports.insert(hop.origin_name.clone());
-            airports.insert(hop.dest_name.clone());
+    for journey in journeys {
+        if journey.travel_type.as_str() == "air" {
+            airports.insert(journey.origin_name.clone());
+            airports.insert(journey.dest_name.clone());
         }
     }
     stats.airports_visited = airports.len();

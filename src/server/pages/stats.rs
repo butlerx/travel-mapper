@@ -32,7 +32,7 @@ pub struct CountedItem {
 
 #[derive(Default, Clone)]
 pub struct DetailedStats {
-    pub total_hops: usize,
+    pub total_journeys: usize,
     pub total_flights: usize,
     pub total_rail: usize,
     pub total_boat: usize,
@@ -95,19 +95,19 @@ fn extract_year(date: &str) -> Option<&str> {
     }
 }
 
-fn count_hop_countries(row: &StatsRow, countries: &mut HashMap<String, usize>) {
-    let mut hop_countries: HashSet<String> = HashSet::new();
+fn count_journey_countries(row: &StatsRow, countries: &mut HashMap<String, usize>) {
+    let mut journey_countries: HashSet<String> = HashSet::new();
     if let Some(c) = &row.origin_country
         && !c.is_empty()
     {
-        hop_countries.insert(c.to_uppercase());
+        journey_countries.insert(c.to_uppercase());
     }
     if let Some(c) = &row.dest_country
         && !c.is_empty()
     {
-        hop_countries.insert(c.to_uppercase());
+        journey_countries.insert(c.to_uppercase());
     }
-    for code in &hop_countries {
+    for code in &journey_countries {
         *countries.entry(code.clone()).or_insert(0) += 1;
     }
 }
@@ -132,7 +132,7 @@ pub fn compute_detailed_stats(all_rows: &[StatsRow], year_filter: Option<&str>) 
     };
 
     let mut stats = DetailedStats {
-        total_hops: rows.len(),
+        total_journeys: rows.len(),
         available_years,
         selected_year: year_filter.map(str::to_owned),
         ..Default::default()
@@ -172,7 +172,7 @@ pub fn compute_detailed_stats(all_rows: &[StatsRow], year_filter: Option<&str>) 
             airports.insert(row.dest_name.clone());
         }
 
-        count_hop_countries(row, &mut countries);
+        count_journey_countries(row, &mut countries);
 
         if let Some(a) = &row.airline {
             increment(&mut airlines, a);
@@ -275,7 +275,7 @@ fn OverviewCards(stats: DetailedStats, distance: String, year_range: String) -> 
             <div class="stat-row">
                 <div class="stat-card">
                     <div class="stat-label">"Total Journeys"</div>
-                    <div class="stat-value">{stats.total_hops}</div>
+                    <div class="stat-value">{stats.total_journeys}</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">"Flights"</div>
@@ -363,7 +363,7 @@ fn YearFilter(available_years: Vec<String>, selected_year: Option<String>) -> im
 #[allow(clippy::must_use_candidate, clippy::needless_pass_by_value)]
 #[component]
 fn StatsPage(stats: DetailedStats) -> impl IntoView {
-    let has_data = stats.total_hops > 0;
+    let has_data = stats.total_journeys > 0;
     let distance = format_distance(stats.total_distance_km);
     let year_range = format_year_range(stats.first_year.as_ref(), stats.last_year.as_ref());
 
@@ -376,7 +376,7 @@ fn StatsPage(stats: DetailedStats) -> impl IntoView {
     let seat_type = stats.seat_type_breakdown.clone();
     let flight_reason = stats.flight_reason_breakdown.clone();
     let countries = stats.countries.clone();
-    let countries_script = format!("window.countryCounts={};", countries_json(&countries));
+    let country_counts_json = countries_json(&countries);
 
     view! {
         <Shell title="Stats".to_owned() body_class="stats-layout">
@@ -407,8 +407,8 @@ fn StatsPage(stats: DetailedStats) -> impl IntoView {
                             integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
                             crossorigin=""></script>
                         <script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
-                        <script inner_html=countries_script></script>
-                        <script src="/static/stats-map.js"></script>
+                        <script type="application/json" id="country-counts" inner_html=country_counts_json></script>
+                        <script type="module" src="/static/stats-map.js"></script>
                     </main>
                 }.into_any()
             } else {
@@ -486,7 +486,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn stats_page_renders_data_with_hops() {
+    async fn stats_page_renders_data_with_journeys() {
         let pool = test_pool().await;
         let cookie = auth_cookie_for_user(&pool, "alice").await;
         let user = db::users::GetByUsername { username: "alice" }
@@ -495,8 +495,8 @@ mod tests {
             .expect("lookup failed")
             .expect("missing user");
 
-        let mut hop = sample_hop(TravelType::Air, "DUB", "LHR", "2024-06-15", "2024-06-15");
-        hop.flight_detail = Some(FlightDetail {
+        let mut journey = sample_hop(TravelType::Air, "DUB", "LHR", "2024-06-15", "2024-06-15");
+        journey.flight_detail = Some(FlightDetail {
             airline: "Aer Lingus".to_string(),
             flight_number: "EI154".to_string(),
             aircraft_type: "A320".to_string(),
@@ -507,7 +507,7 @@ mod tests {
         db::hops::Create {
             trip_id: "trip-1",
             user_id: user.id,
-            hops: &[hop],
+            hops: &[journey],
         }
         .execute(&pool)
         .await
@@ -543,13 +543,15 @@ mod tests {
             .expect("lookup failed")
             .expect("missing user");
 
-        let mut hop_2024 = sample_hop(TravelType::Air, "DUB", "LHR", "2024-06-15", "2024-06-15");
-        hop_2024.flight_detail = Some(FlightDetail {
+        let mut journey_2024 =
+            sample_hop(TravelType::Air, "DUB", "LHR", "2024-06-15", "2024-06-15");
+        journey_2024.flight_detail = Some(FlightDetail {
             airline: "Aer Lingus".to_string(),
             ..Default::default()
         });
-        let mut hop_2023 = sample_hop(TravelType::Air, "SFO", "NRT", "2023-03-01", "2023-03-01");
-        hop_2023.flight_detail = Some(FlightDetail {
+        let mut journey_2023 =
+            sample_hop(TravelType::Air, "SFO", "NRT", "2023-03-01", "2023-03-01");
+        journey_2023.flight_detail = Some(FlightDetail {
             airline: "United".to_string(),
             ..Default::default()
         });
@@ -557,7 +559,7 @@ mod tests {
         db::hops::Create {
             trip_id: "trip-1",
             user_id: user.id,
-            hops: &[hop_2024],
+            hops: &[journey_2024],
         }
         .execute(&pool)
         .await
@@ -565,7 +567,7 @@ mod tests {
         db::hops::Create {
             trip_id: "trip-2",
             user_id: user.id,
-            hops: &[hop_2023],
+            hops: &[journey_2023],
         }
         .execute(&pool)
         .await
@@ -599,7 +601,7 @@ mod tests {
     #[test]
     fn compute_detailed_stats_empty_input() {
         let stats = compute_detailed_stats(&[], None);
-        assert_eq!(stats.total_hops, 0);
+        assert_eq!(stats.total_journeys, 0);
         assert_eq!(stats.total_flights, 0);
         assert_eq!(stats.unique_airports, 0);
         assert!(stats.top_airlines.is_empty());
@@ -647,13 +649,13 @@ mod tests {
         ];
 
         let stats = compute_detailed_stats(&rows, None);
-        assert_eq!(stats.total_hops, 2);
+        assert_eq!(stats.total_journeys, 2);
         assert_eq!(stats.total_flights, 1);
         assert_eq!(stats.total_rail, 1);
         assert_eq!(stats.unique_airports, 2);
         assert_eq!(stats.unique_countries, 3);
         assert_eq!(stats.countries.len(), 3);
-        // GB appears in both hops (DUB→LHR and Paris→London), IE in 1, FR in 1
+        // GB appears in both journeys (DUB→LHR and Paris→London), IE in 1, FR in 1
         assert_eq!(stats.countries[0].name, "GB");
         assert_eq!(stats.countries[0].count, 2);
         assert_eq!(stats.top_airlines.len(), 1);
@@ -661,7 +663,7 @@ mod tests {
     }
 
     #[test]
-    fn compute_detailed_stats_deduplicates_same_country_hop() {
+    fn compute_detailed_stats_deduplicates_same_country_journey() {
         let rows = vec![StatsRow {
             travel_type: TravelType::Air,
             origin_name: "SFO".to_string(),

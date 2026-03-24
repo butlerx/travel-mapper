@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Close on outside click
   document.addEventListener('click', (e) => {
-    if (nav.classList.contains('nav-open') && !nav.contains(e.target)) {
+    if (nav.classList.contains('nav-open') && !nav.contains(/** @type {Node} */ (e.target))) {
       nav.classList.remove('nav-open');
       toggle.setAttribute('aria-expanded', 'false');
     }
@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'Escape' && nav.classList.contains('nav-open')) {
       nav.classList.remove('nav-open');
       toggle.setAttribute('aria-expanded', 'false');
-      toggle.focus();
+      /** @type {HTMLElement} */ (toggle).focus();
     }
   });
 });

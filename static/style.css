@@ -245,7 +245,9 @@ code {
   height: 2px;
   background: var(--color-text-secondary);
   border-radius: 1px;
-  transition: transform 0.25s, opacity 0.25s;
+  transition:
+    transform 0.25s,
+    opacity 0.25s;
   position: relative;
 }
 
@@ -605,13 +607,13 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
 }
 
 /* ===== Hop List ===== */
-.hop-list {
+.journey-list {
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
 }
 
-.hop-item {
+.journey-item {
   display: grid;
   grid-template-columns: 2.5rem 1fr 1fr auto;
   align-items: center;
@@ -626,17 +628,17 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
     box-shadow 0.15s;
 }
 
-.hop-item:hover {
+.journey-item:hover {
   border-color: var(--color-primary);
   box-shadow: var(--shadow-glow);
 }
 
-.hop-type {
+.journey-type {
   font-size: var(--text-xl);
   text-align: center;
 }
 
-.hop-label {
+.journey-label {
   font-size: var(--text-xs);
   color: var(--color-text-muted);
   text-transform: uppercase;
@@ -644,45 +646,45 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
   margin-bottom: 1px;
 }
 
-.hop-value {
+.journey-value {
   font-weight: 500;
   color: var(--color-text);
 }
 
-.hop-date {
+.journey-date {
   color: var(--color-text-secondary);
   white-space: nowrap;
 }
 
-.hop-header {
+.journey-header {
   display: none;
 }
 
 /* Travel type text colors */
-.hop-item[data-type='air'] .hop-value,
+.journey-item[data-type='air'] .journey-value,
 .type-air {
   color: var(--color-type-air);
 }
-.hop-item[data-type='rail'] .hop-value,
+.journey-item[data-type='rail'] .journey-value,
 .type-rail {
   color: var(--color-type-rail);
 }
-.hop-item[data-type='boat'] .hop-value,
+.journey-item[data-type='boat'] .journey-value,
 .type-boat {
   color: var(--color-type-boat);
 }
-.hop-item[data-type='transport'] .hop-value,
+.journey-item[data-type='transport'] .journey-value,
 .type-transport {
   color: var(--color-type-transport);
 }
 
 @media (max-width: 640px) {
-  .hop-item {
+  .journey-item {
     grid-template-columns: 2.5rem 1fr;
     gap: var(--space-sm);
   }
 
-  .hop-date {
+  .journey-date {
     grid-column: 2;
   }
 }
@@ -825,11 +827,7 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
 
 .journey-card--upcoming {
   border-color: rgba(56, 189, 248, 0.3);
-  background: linear-gradient(
-    135deg,
-    rgba(56, 189, 248, 0.08),
-    var(--color-surface-raised)
-  );
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.08), var(--color-surface-raised));
 }
 
 .journey-card--upcoming:hover {
@@ -1072,11 +1070,7 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
 .auth-card h1 {
   text-align: center;
   margin-bottom: var(--space-lg);
-  background: linear-gradient(
-    to right,
-    var(--color-text),
-    var(--color-primary)
-  );
+  background: linear-gradient(to right, var(--color-text), var(--color-primary));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -1396,7 +1390,7 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
 }
 
 /* ===== Hop Popups ===== */
-.hop-popup-container .leaflet-popup-content-wrapper {
+.journey-popup-container .leaflet-popup-content-wrapper {
   background: var(--color-surface-raised);
   color: var(--color-text);
   border-radius: var(--radius-lg);
@@ -1404,34 +1398,34 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
   padding: 0;
 }
 
-.hop-popup-container .leaflet-popup-tip {
+.journey-popup-container .leaflet-popup-tip {
   background: var(--color-surface-raised);
 }
 
-.hop-popup-container .leaflet-popup-content {
+.journey-popup-container .leaflet-popup-content {
   margin: 0;
   min-width: 200px;
 }
 
-.hop-popup {
+.journey-popup {
   font-family: var(--font-sans);
   font-size: var(--text-sm);
   line-height: 1.5;
   color: var(--color-text);
 }
 
-.hop-popup-header {
+.journey-popup-header {
   padding: var(--space-sm) var(--space-md);
   border-bottom: 1px solid var(--color-border-subtle);
   font-size: var(--text-sm);
   background: linear-gradient(to right, rgba(56, 189, 248, 0.1), transparent);
 }
 
-.hop-popup-header strong {
+.journey-popup-header strong {
   font-weight: 600;
 }
 
-.hop-popup-summary {
+.journey-popup-summary {
   display: flex;
   justify-content: space-between;
   padding: var(--space-xs) var(--space-md);
@@ -1440,12 +1434,12 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
   border-bottom: 1px solid var(--color-border-subtle);
 }
 
-.hop-popup-list {
+.journey-popup-list {
   max-height: 240px;
   overflow-y: auto;
 }
 
-.hop-popup-item {
+.journey-popup-item {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
@@ -1457,19 +1451,19 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
   transition: background 0.15s;
 }
 
-.hop-popup-item:last-child {
+.journey-popup-item:last-child {
   border-bottom: none;
 }
 
-.hop-popup-item:hover {
+.journey-popup-item:hover {
   background: rgba(56, 189, 248, 0.08);
 }
 
-.hop-popup-item-emoji {
+.journey-popup-item-emoji {
   flex-shrink: 0;
 }
 
-.hop-popup-item-direction {
+.journey-popup-item-direction {
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -1477,13 +1471,13 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
   white-space: nowrap;
 }
 
-.hop-popup-item-date {
+.journey-popup-item-date {
   flex-shrink: 0;
   color: var(--color-text-muted);
   font-family: var(--font-mono);
 }
 
-.hop-popup-more {
+.journey-popup-more {
   padding: var(--space-xs) var(--space-md);
   font-size: var(--text-xs);
   color: var(--color-text-muted);
@@ -1751,14 +1745,14 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
 }
 
 /* ===== Hop Cards (custom override) ===== */
-.hop-card {
+.journey-card {
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
   padding: var(--space-md) var(--space-lg);
 }
 
-.hop-card-route {
+.journey-card-route {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
@@ -1768,26 +1762,26 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
   min-width: 0;
 }
 
-.hop-card-place {
+.journey-card-place {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.hop-card-arrow {
+.journey-card-arrow {
   color: var(--color-primary);
   flex-shrink: 0;
   font-size: var(--text-lg);
 }
 
-.hop-card-meta {
+.journey-card-meta {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
   font-size: var(--text-xs);
 }
 
-.hop-card-badge {
+.journey-card-badge {
   display: inline-flex;
   align-items: center;
   gap: 0.25em;
@@ -1801,24 +1795,24 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
   color: var(--color-text-secondary);
 }
 
-.hop-card-badge.badge-air {
+.journey-card-badge.badge-air {
   color: var(--color-type-air);
   border-color: var(--color-type-air-border);
 }
-.hop-card-badge.badge-rail {
+.journey-card-badge.badge-rail {
   color: var(--color-type-rail);
   border-color: var(--color-type-rail-border);
 }
-.hop-card-badge.badge-boat {
+.journey-card-badge.badge-boat {
   color: var(--color-type-boat);
   border-color: var(--color-type-boat-border);
 }
-.hop-card-badge.badge-transport {
+.journey-card-badge.badge-transport {
   color: var(--color-type-transport);
   border-color: var(--color-type-transport-border);
 }
 
-.hop-card-date {
+.journey-card-date {
   color: var(--color-text-secondary);
   white-space: nowrap;
 }
@@ -2051,13 +2045,13 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
 }
 
 /* ===== Hop Detail Page ===== */
-.hop-detail-layout {
+.journey-detail-layout {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
 }
 
-.hop-detail-page {
+.journey-detail-page {
   flex: 1;
   padding: var(--space-lg) var(--space-xl);
   max-width: 800px;
@@ -2065,7 +2059,7 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
   width: 100%;
 }
 
-.hop-detail-back {
+.journey-detail-back {
   display: inline-block;
   font-size: var(--text-sm);
   color: var(--color-text-secondary);
@@ -2074,15 +2068,15 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
   transition: color 0.15s;
 }
 
-.hop-detail-back:hover {
+.journey-detail-back:hover {
   color: var(--color-text);
 }
 
-.hop-detail-header {
+.journey-detail-header {
   margin-bottom: var(--space-xl);
 }
 
-.hop-detail-route {
+.journey-detail-route {
   font-size: var(--text-2xl);
   font-weight: 700;
   display: flex;
@@ -2091,13 +2085,13 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
   flex-wrap: wrap;
 }
 
-.hop-detail-dates {
+.journey-detail-dates {
   font-size: var(--text-sm);
   color: var(--color-text-secondary);
   margin: var(--space-xs) 0 var(--space-sm);
 }
 
-.hop-detail-badge {
+.journey-detail-badge {
   display: inline-flex;
   align-items: center;
   gap: 0.25em;
@@ -2111,30 +2105,30 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
   color: var(--color-text-secondary);
 }
 
-.hop-detail-badge.air {
+.journey-detail-badge.air {
   color: var(--color-type-air);
   border-color: var(--color-type-air-border);
 }
-.hop-detail-badge.rail {
+.journey-detail-badge.rail {
   color: var(--color-type-rail);
   border-color: var(--color-type-rail-border);
 }
-.hop-detail-badge.boat {
+.journey-detail-badge.boat {
   color: var(--color-type-boat);
   border-color: var(--color-type-boat-border);
 }
-.hop-detail-badge.transport {
+.journey-detail-badge.transport {
   color: var(--color-type-transport);
   border-color: var(--color-type-transport-border);
 }
 
-.hop-detail-countries {
+.journey-detail-countries {
   font-size: var(--text-sm);
   color: var(--color-text-muted);
   margin: var(--space-xs) 0 0;
 }
 
-#hop-map {
+#journey-map {
   height: 300px;
   width: 100%;
   border-radius: var(--radius-lg);
@@ -2143,7 +2137,7 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
   background: var(--color-surface);
 }
 
-.hop-detail-section {
+.journey-detail-section {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -2151,21 +2145,21 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
   margin-bottom: var(--space-md);
 }
 
-.hop-detail-section h3 {
+.journey-detail-section h3 {
   font-size: var(--text-base);
   font-weight: 600;
   color: var(--color-text);
   margin: 0 0 var(--space-md) 0;
 }
 
-.hop-detail-grid {
+.journey-detail-grid {
   display: grid;
   grid-template-columns: auto 1fr;
   gap: var(--space-xs) var(--space-md);
   align-items: baseline;
 }
 
-.hop-detail-label {
+.journey-detail-label {
   font-size: var(--text-xs);
   color: var(--color-text-muted);
   text-transform: uppercase;
@@ -2174,24 +2168,24 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
   white-space: nowrap;
 }
 
-.hop-detail-value {
+.journey-detail-value {
   font-size: var(--text-sm);
   font-weight: 500;
   color: var(--color-text);
 }
 
-.hop-detail-canceled {
+.journey-detail-canceled {
   color: var(--color-danger);
   font-weight: 600;
 }
 
-.hop-detail-timing {
+.journey-detail-timing {
   width: 100%;
   border-collapse: collapse;
   font-size: var(--text-sm);
 }
 
-.hop-detail-timing th {
+.journey-detail-timing th {
   text-align: left;
   padding: var(--space-xs) var(--space-sm);
   font-size: var(--text-xs);
@@ -2201,17 +2195,17 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
   border-bottom: 1px solid var(--color-border);
 }
 
-.hop-detail-timing td {
+.journey-detail-timing td {
   padding: var(--space-xs) var(--space-sm);
   color: var(--color-text-secondary);
   border-bottom: 1px solid var(--color-border-subtle);
 }
 
-.hop-detail-timing tr:last-child td {
+.journey-detail-timing tr:last-child td {
   border-bottom: none;
 }
 
-.hop-detail-notes {
+.journey-detail-notes {
   font-size: var(--text-sm);
   color: var(--color-text-secondary);
   line-height: 1.6;
@@ -2219,30 +2213,30 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
 }
 
 /* Journey card links */
-.hop-card-link {
+.journey-card-link {
   text-decoration: none;
   color: inherit;
   display: block;
 }
 
-.hop-card-link:hover {
+.journey-card-link:hover {
   color: inherit;
 }
 
 @media (max-width: 640px) {
-  .hop-detail-page {
+  .journey-detail-page {
     padding: var(--space-md) var(--space-sm);
   }
 
-  .hop-detail-route {
+  .journey-detail-route {
     font-size: var(--text-xl);
   }
 
-  #hop-map {
+  #journey-map {
     height: 200px;
   }
 
-  .hop-detail-grid {
+  .journey-detail-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -2265,7 +2259,7 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
   visibility: visible;
 }
 
-.hop-edit-form {
+.journey-edit-form {
   position: fixed;
   top: 0;
   right: 0;
@@ -2280,11 +2274,11 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
   z-index: 1101;
 }
 
-.hop-edit-form.open {
+.journey-edit-form.open {
   transform: translateX(0);
 }
 
-.hop-edit-form h3 {
+.journey-edit-form h3 {
   font-size: var(--text-lg);
   font-weight: 600;
   color: var(--color-text);
@@ -2331,7 +2325,7 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
 }
 
 @media (max-width: 640px) {
-  .hop-edit-form {
+  .journey-edit-form {
     width: 100vw;
   }
 }

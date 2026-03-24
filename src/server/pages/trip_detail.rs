@@ -2,108 +2,67 @@ use super::FormFeedback;
 use crate::{
     db,
     server::{
-        AppState,
         components::{NavBar, Shell},
-        extractors::AuthUser,
-        routes::hops::HopTravelType,
+        routes::journeys::JourneyTravelType,
     },
 };
 use axum::{
-    extract::{Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
 };
 use leptos::prelude::*;
 
-struct TripHopRow {
-    id: i64,
-    travel_type: String,
-    origin_name: String,
-    dest_name: String,
-    start_date: String,
+pub(crate) struct TripHopRow {
+    pub(crate) id: i64,
+    pub(crate) travel_type: String,
+    pub(crate) origin_name: String,
+    pub(crate) dest_name: String,
+    pub(crate) start_date: String,
 }
 
-struct UnassignedHopRow {
-    id: i64,
-    travel_type: String,
-    origin_name: String,
-    dest_name: String,
-    start_date: String,
+impl From<db::hops::SummaryRow> for TripHopRow {
+    fn from(row: db::hops::SummaryRow) -> Self {
+        Self {
+            id: row.id,
+            travel_type: row.travel_type,
+            origin_name: row.origin_name,
+            dest_name: row.dest_name,
+            start_date: row.start_date,
+        }
+    }
 }
 
-pub async fn page(
-    State(state): State<AppState>,
-    auth: AuthUser,
-    Path(id): Path<i64>,
-    Query(feedback): Query<FormFeedback>,
+pub(crate) struct UnassignedHopRow {
+    pub(crate) id: i64,
+    pub(crate) travel_type: String,
+    pub(crate) origin_name: String,
+    pub(crate) dest_name: String,
+    pub(crate) start_date: String,
+}
+
+impl From<db::hops::SummaryRow> for UnassignedHopRow {
+    fn from(row: db::hops::SummaryRow) -> Self {
+        Self {
+            id: row.id,
+            travel_type: row.travel_type,
+            origin_name: row.origin_name,
+            dest_name: row.dest_name,
+            start_date: row.start_date,
+        }
+    }
+}
+
+pub(crate) fn render_page(
+    trip: db::trips::Row,
+    trip_journeys: Vec<TripHopRow>,
+    unassigned_journeys: Vec<UnassignedHopRow>,
+    feedback: FormFeedback,
 ) -> Response {
-    let Some(trip) = (db::trips::GetById {
-        id,
-        user_id: auth.user_id,
-    })
-    .execute(&state.db)
-    .await
-    .unwrap_or_default() else {
-        return super::not_found::page().await;
-    };
-
-    let trip_hops = sqlx::query!(
-        r#"SELECT
-               id as "id!: i64",
-               travel_type as "travel_type!: String",
-               origin_name as "origin_name!: String",
-               dest_name as "dest_name!: String",
-               start_date as "start_date!: String"
-           FROM hops
-           WHERE user_id = ? AND user_trip_id = ?
-           ORDER BY start_date ASC, id ASC"#,
-        auth.user_id,
-        id,
-    )
-    .fetch_all(&state.db)
-    .await
-    .unwrap_or_default()
-    .into_iter()
-    .map(|row| TripHopRow {
-        id: row.id,
-        travel_type: row.travel_type,
-        origin_name: row.origin_name,
-        dest_name: row.dest_name,
-        start_date: row.start_date,
-    })
-    .collect();
-
-    let unassigned_hops = sqlx::query!(
-        r#"SELECT
-               id as "id!: i64",
-               travel_type as "travel_type!: String",
-               origin_name as "origin_name!: String",
-               dest_name as "dest_name!: String",
-               start_date as "start_date!: String"
-           FROM hops
-           WHERE user_id = ? AND user_trip_id IS NULL
-           ORDER BY start_date DESC, id DESC
-           LIMIT 200"#,
-        auth.user_id,
-    )
-    .fetch_all(&state.db)
-    .await
-    .unwrap_or_default()
-    .into_iter()
-    .map(|row| UnassignedHopRow {
-        id: row.id,
-        travel_type: row.travel_type,
-        origin_name: row.origin_name,
-        dest_name: row.dest_name,
-        start_date: row.start_date,
-    })
-    .collect();
-
     let html = view! {
         <TripDetailPage
             trip=trip
-            trip_hops=trip_hops
-            unassigned_hops=unassigned_hops
+            trip_journeys=trip_journeys
+            unassigned_journeys=unassigned_journeys
             error=feedback.error
             success=feedback.success
         />
@@ -113,10 +72,10 @@ pub async fn page(
 
 fn travel_type_emoji(travel_type: &str) -> &'static str {
     match travel_type {
-        "air" => HopTravelType::Air.emoji(),
-        "rail" => HopTravelType::Rail.emoji(),
-        "boat" => HopTravelType::Boat.emoji(),
-        "transport" => HopTravelType::Transport.emoji(),
+        "air" => JourneyTravelType::Air.emoji(),
+        "rail" => JourneyTravelType::Rail.emoji(),
+        "boat" => JourneyTravelType::Boat.emoji(),
+        "transport" => JourneyTravelType::Transport.emoji(),
         _ => "",
     }
 }
@@ -124,8 +83,8 @@ fn travel_type_emoji(travel_type: &str) -> &'static str {
 #[component]
 fn TripDetailPage(
     trip: db::trips::Row,
-    trip_hops: Vec<TripHopRow>,
-    unassigned_hops: Vec<UnassignedHopRow>,
+    trip_journeys: Vec<TripHopRow>,
+    unassigned_journeys: Vec<UnassignedHopRow>,
     #[prop(optional_no_strip)] error: Option<String>,
     #[prop(optional_no_strip)] success: Option<String>,
 ) -> impl IntoView {
@@ -146,7 +105,7 @@ fn TripDetailPage(
         <Shell title="Trip Detail".to_owned()>
             <NavBar current="trips" />
             <main class="container-wide">
-                <a href="/trips" class="hop-detail-back">"← Trips"</a>
+                <a href="/trips" class="journey-detail-back">"← Trips"</a>
 
                 {error.map(|e| view! {
                     <div class="alert alert-error" role="alert">{e}</div>
@@ -178,26 +137,29 @@ fn TripDetailPage(
 
                 <section class="card" style="margin-top:1rem;">
                     <h2>"Journeys in this trip"</h2>
-                    {if trip_hops.is_empty() {
+                    {if trip_journeys.is_empty() {
                         view! { <p class="muted">"No journeys assigned yet."</p> }.into_any()
                     } else {
                         view! {
                             <ul class="stats-top-list">
-                                {trip_hops.into_iter().map(|row| {
-                                    let hop_id = row.id;
+                                {trip_journeys.into_iter().map(|row| {
+                                    let journey_id = row.id;
                                     let emoji = travel_type_emoji(&row.travel_type);
                                     view! {
                                         <li class="stats-top-item" style="display:flex;justify-content:space-between;align-items:center;gap:1rem;">
                                             <div>
                                                 <span>{emoji}</span>
                                                 " "
-                                                <a href={format!("/journey/{hop_id}")}>{format!("{} → {}", row.origin_name, row.dest_name)}</a>
+                                                <a href={format!("/journeys/{journey_id}")}>{format!("{} → {}", row.origin_name, row.dest_name)}</a>
                                                 " "
                                                 <span class="muted">{row.start_date}</span>
                                             </div>
-                                            <form method="post" action={format!("/trips/{trip_id}/journeys/{hop_id}")}>
-                                                <button class="btn btn-secondary" type="submit">"Remove"</button>
-                                            </form>
+                                            <button class="btn btn-secondary" type="button"
+                                                onclick={format!(
+                                                    "fetch('/trips/{trip_id}/journeys/{journey_id}', {{ method: 'DELETE' }}).then(function(r) {{ if (r.ok) window.location.reload(); }});"
+                                                )}>
+                                                "Remove"
+                                            </button>
                                         </li>
                                     }
                                 }).collect::<Vec<_>>()}
@@ -210,15 +172,15 @@ fn TripDetailPage(
                     <h2>"Add journey to trip"</h2>
                     <form method="post" action={format!("/trips/{trip_id}/journeys")}>
                         <div class="form-group">
-                            <label for="hop-id">"Unassigned journey"</label>
-                            <select id="hop-id" name="hop_id" required>
+                            <label for="journey-id">"Unassigned journey"</label>
+                            <select id="journey-id" name="hop_id" required>
                                 <option value="">"Select journey"</option>
-                                {unassigned_hops.into_iter().map(|row| {
-                                    let hop_id = row.id;
+                                {unassigned_journeys.into_iter().map(|row| {
+                                    let journey_id = row.id;
                                     let emoji = travel_type_emoji(&row.travel_type);
-                                    let label = format!("{emoji} {} — {} → {} (#{hop_id})", row.start_date, row.origin_name, row.dest_name);
+                                    let label = format!("{emoji} {} — {} → {} (#{journey_id})", row.start_date, row.origin_name, row.dest_name);
                                     view! {
-                                        <option value={hop_id.to_string()}>{label}</option>
+                                        <option value={journey_id.to_string()}>{label}</option>
                                     }
                                 }).collect::<Vec<_>>()}
                             </select>

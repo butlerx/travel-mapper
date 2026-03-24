@@ -1,6 +1,6 @@
 /// Boat travel detail section component.
 mod boat_section;
-/// Edit form component for modifying hop details.
+/// Edit form component for modifying journey details.
 mod edit_form;
 /// Flight detail section component.
 mod flight_section;
@@ -10,18 +10,10 @@ mod rail_section;
 mod transport_section;
 
 use crate::{
-    db::{
-        self,
-        hops::{DetailRow, TravelType},
-    },
-    server::{
-        AppState,
-        components::{NavBar, Shell},
-        extractors::AuthUser,
-    },
+    db::hops::{DetailRow, TravelType},
+    server::components::{NavBar, Shell},
 };
 use axum::{
-    extract::{Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
 };
@@ -30,54 +22,28 @@ use edit_form::EditForm;
 use flight_section::FlightSection;
 use leptos::prelude::*;
 use rail_section::RailSection;
+use schemars::JsonSchema;
 use serde::Deserialize;
 use transport_section::TransportSection;
 
-#[derive(Deserialize, Default)]
-pub struct HopDetailFeedback {
+#[derive(Deserialize, Default, JsonSchema)]
+pub struct JourneyDetailFeedback {
+    /// Error message to display after a failed form submission.
     pub error: Option<String>,
+    /// Success message to display after a successful form submission.
     pub success: Option<String>,
 }
 
-pub async fn page(
-    State(state): State<AppState>,
-    auth: AuthUser,
-    Path(id): Path<i64>,
-    Query(feedback): Query<HopDetailFeedback>,
-) -> Response {
-    match (db::hops::GetById {
-        id,
-        user_id: auth.user_id,
-    })
-    .execute(&state.db)
-    .await
-    {
-        Ok(Some(hop)) => {
-            let html = view! {
-                <HopDetailPage
-                    error_msg=feedback.error
-                    success_msg=feedback.success
-                    hop=hop
-                />
-            };
-            (StatusCode::OK, axum::response::Html(html.to_html())).into_response()
-        }
-        Ok(None) => super::not_found::page().await,
-        Err(err) => {
-            tracing::error!(hop_id = id, %err, "failed to fetch hop detail");
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                axum::response::Html(super::render_error_page(
-                    "500",
-                    "Server Error",
-                    "Something went wrong loading this journey.",
-                    "/dashboard",
-                    "Back to Dashboard",
-                )),
-            )
-                .into_response()
-        }
-    }
+/// Render the journey detail HTML page from a [`DetailRow`] and optional feedback.
+pub fn render_page(journey: DetailRow, feedback: JourneyDetailFeedback) -> Response {
+    let html = view! {
+        <JourneyDetailPage
+            error_msg=feedback.error
+            success_msg=feedback.success
+            journey=journey
+        />
+    };
+    (StatusCode::OK, axum::response::Html(html.to_html())).into_response()
 }
 
 fn travel_type_class(tt: &TravelType) -> &'static str {
@@ -95,8 +61,8 @@ fn detail_row_view(label: &'static str, value: &str) -> impl IntoView + use<> {
     } else {
         let v = value.to_owned();
         view! {
-            <div class="hop-detail-label">{label}</div>
-            <div class="hop-detail-value">{v}</div>
+            <div class="journey-detail-label">{label}</div>
+            <div class="journey-detail-value">{v}</div>
         }
         .into_any()
     }
@@ -118,87 +84,67 @@ fn timing_row(phase: &'static str, scheduled: &str, actual: &str) -> Option<impl
 }
 
 #[component]
-fn HopDetailPage(
+fn JourneyDetailPage(
     #[prop(optional_no_strip)] error_msg: Option<String>,
     #[prop(optional_no_strip)] success_msg: Option<String>,
-    hop: DetailRow,
+    journey: DetailRow,
 ) -> impl IntoView {
-    let edit_hop = hop.clone();
+    let edit_journey = journey.clone();
 
-    let emoji = hop.travel_type.emoji();
-    let badge_class = format!("hop-detail-badge {}", travel_type_class(&hop.travel_type));
-    let type_label = hop.travel_type.to_string();
+    let emoji = journey.travel_type.emoji();
+    let badge_class = format!(
+        "journey-detail-badge {}",
+        travel_type_class(&journey.travel_type)
+    );
+    let type_label = journey.travel_type.to_string();
 
-    let dates = if hop.start_date == hop.end_date {
-        hop.start_date.clone()
+    let dates = if journey.start_date == journey.end_date {
+        journey.start_date.clone()
     } else {
-        format!("{} \u{2013} {}", hop.start_date, hop.end_date)
+        format!("{} \u{2013} {}", journey.start_date, journey.end_date)
     };
 
-    let countries_view = match (&hop.origin_country, &hop.dest_country) {
+    let countries_view = match (&journey.origin_country, &journey.dest_country) {
         (Some(orig), Some(dest)) if orig == dest => {
             let c = orig.clone();
-            view! { <p class="hop-detail-countries">{c}</p> }.into_any()
+            view! { <p class="journey-detail-countries">{c}</p> }.into_any()
         }
         (Some(orig), Some(dest)) => {
             let text = format!("{orig} \u{2192} {dest}");
-            view! { <p class="hop-detail-countries">{text}</p> }.into_any()
+            view! { <p class="journey-detail-countries">{text}</p> }.into_any()
         }
         _ => ().into_any(),
     };
 
-    let origin_lat = hop.origin_lat.to_string();
-    let origin_lng = hop.origin_lng.to_string();
-    let dest_lat = hop.dest_lat.to_string();
-    let dest_lng = hop.dest_lng.to_string();
+    let origin_lat = journey.origin_lat.to_string();
+    let origin_lng = journey.origin_lng.to_string();
+    let dest_lat = journey.dest_lat.to_string();
+    let dest_lng = journey.dest_lng.to_string();
 
-    let detail_section = match hop.travel_type {
-        TravelType::Air => hop.flight_detail.map_or_else(
+    let detail_section = match journey.travel_type {
+        TravelType::Air => journey.flight_detail.map_or_else(
             || ().into_any(),
             |d| view! { <FlightSection detail=d /> }.into_any(),
         ),
-        TravelType::Rail => hop.rail_detail.map_or_else(
+        TravelType::Rail => journey.rail_detail.map_or_else(
             || ().into_any(),
             |d| view! { <RailSection detail=d /> }.into_any(),
         ),
-        TravelType::Boat => hop.boat_detail.map_or_else(
+        TravelType::Boat => journey.boat_detail.map_or_else(
             || ().into_any(),
             |d| view! { <BoatSection detail=d /> }.into_any(),
         ),
-        TravelType::Transport => hop.transport_detail.map_or_else(
+        TravelType::Transport => journey.transport_detail.map_or_else(
             || ().into_any(),
             |d| view! { <TransportSection detail=d /> }.into_any(),
         ),
     };
 
-    let map_script = r"
-(function() {
-    var el = document.getElementById('hop-map');
-    if (!el || typeof L === 'undefined') return;
-    var oLat = parseFloat(el.dataset.originLat);
-    var oLng = parseFloat(el.dataset.originLng);
-    var dLat = parseFloat(el.dataset.destLat);
-    var dLng = parseFloat(el.dataset.destLng);
-    if (isNaN(oLat) || isNaN(dLat)) return;
-    var map = L.map('hop-map', { scrollWheelZoom: false });
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors',
-        maxZoom: 18
-    }).addTo(map);
-    L.marker([oLat, oLng]).addTo(map);
-    L.marker([dLat, dLng]).addTo(map);
-    L.polyline([[oLat, oLng], [dLat, dLng]], {
-        color: '#4a90d9', weight: 3, dashArray: '8 4'
-    }).addTo(map);
-    map.fitBounds([[oLat, oLng], [dLat, dLng]], { padding: [40, 40] });
-})();
-";
-
     view! {
-        <Shell title="Journey Detail".to_owned() body_class="hop-detail-layout">
+        <Shell title="Journey Detail".to_owned() body_class="journey-detail-layout">
             <NavBar current="" />
-            <main class="hop-detail-page">
-                <a href="/dashboard" class="hop-detail-back">"\u{2190} Dashboard"</a>
+            <main class="journey-detail-page">
+                <a href="/dashboard" class="journey-detail-back">"\u{2190} Dashboard"</a>
 
                 {error_msg.map(|e| view! {
                     <div class="alert alert-error" role="alert">{e}</div>
@@ -207,21 +153,21 @@ fn HopDetailPage(
                     <div class="alert alert-success" role="status">"Journey updated successfully!"</div>
                 })}
 
-                <header class="hop-detail-header">
-                    <h1 class="hop-detail-route">
+                <header class="journey-detail-header">
+                    <h1 class="journey-detail-route">
                         <span>{emoji}</span>
                         " "
-                        {hop.origin_name}
+                        {journey.origin_name}
                         " \u{2192} "
-                        {hop.dest_name}
+                        {journey.dest_name}
                     </h1>
-                    <p class="hop-detail-dates">{dates}</p>
+                    <p class="journey-detail-dates">{dates}</p>
                     <span class=badge_class>{type_label}</span>
                     {countries_view}
                 </header>
 
                 <div
-                    id="hop-map"
+                    id="journey-map"
                     data-origin-lat=origin_lat
                     data-origin-lng=origin_lng
                     data-dest-lat=dest_lat
@@ -236,7 +182,7 @@ fn HopDetailPage(
                     onclick="document.getElementById('edit-form').classList.add('open');document.getElementById('edit-backdrop').classList.add('open')"
                 >"Edit"</button>
 
-                <EditForm hop=edit_hop />
+                <EditForm journey=edit_journey />
 
                 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
                     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
@@ -244,7 +190,7 @@ fn HopDetailPage(
                 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
                     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
                     crossorigin=""></script>
-                <script inner_html=map_script></script>
+                <script type="module" src="/static/journey-map.js"></script>
             </main>
         </Shell>
     }
@@ -265,7 +211,7 @@ mod tests {
     };
     use tower::ServiceExt;
 
-    async fn insert_hop_for_user(pool: &sqlx::SqlitePool, username: &str) -> (String, i64) {
+    async fn insert_journey_for_user(pool: &sqlx::SqlitePool, username: &str) -> (String, i64) {
         let cookie = auth_cookie_for_user(pool, username).await;
         let user = db::users::GetByUsername { username }
             .execute(pool)
@@ -273,7 +219,7 @@ mod tests {
             .expect("lookup")
             .expect("user exists");
 
-        let hop = sample_hop(
+        let journey = sample_hop(
             TravelType::Air,
             "Dublin",
             "London Heathrow",
@@ -284,11 +230,11 @@ mod tests {
         Create {
             trip_id: "trip-test",
             user_id: user.id,
-            hops: &[hop],
+            hops: &[journey],
         }
         .execute(pool)
         .await
-        .expect("insert hop");
+        .expect("insert journey");
 
         let rows = GetAll {
             user_id: user.id,
@@ -296,23 +242,24 @@ mod tests {
         }
         .execute(pool)
         .await
-        .expect("get hops");
+        .expect("get journeys");
 
         (cookie, rows[0].id)
     }
 
     #[tokio::test]
-    async fn hop_detail_page_renders_flight() {
+    async fn journey_detail_page_renders_flight() {
         let pool = test_pool().await;
-        let (cookie, hop_id) = insert_hop_for_user(&pool, "alice").await;
+        let (cookie, journey_id) = insert_journey_for_user(&pool, "alice").await;
         let app = create_router(test_app_state(pool));
 
         let response = app
             .oneshot(
                 Request::builder()
                     .method("GET")
-                    .uri(format!("/journey/{hop_id}"))
+                    .uri(format!("/journeys/{journey_id}"))
                     .header("cookie", &cookie)
+                    .header("accept", "text/html")
                     .body(Body::empty())
                     .expect("failed to build request"),
             )
@@ -323,11 +270,11 @@ mod tests {
         let body = body_text(response).await;
         assert!(body.contains("Dublin"), "should contain origin name");
         assert!(body.contains("London Heathrow"), "should contain dest name");
-        assert!(body.contains("hop-map"), "should contain map div");
+        assert!(body.contains("journey-map"), "should contain map div");
     }
 
     #[tokio::test]
-    async fn hop_detail_page_returns_404_for_missing_hop() {
+    async fn journey_detail_page_returns_404_for_missing() {
         let pool = test_pool().await;
         let cookie = auth_cookie_for_user(&pool, "alice").await;
         let app = create_router(test_app_state(pool));
@@ -336,7 +283,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method("GET")
-                    .uri("/journey/99999")
+                    .uri("/journeys/99999")
                     .header("cookie", &cookie)
                     .body(Body::empty())
                     .expect("failed to build request"),
@@ -348,7 +295,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn hop_detail_page_redirects_without_auth() {
+    async fn journey_detail_page_redirects_without_auth() {
         let pool = test_pool().await;
         let app = create_router(test_app_state(pool));
 
@@ -356,7 +303,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method("GET")
-                    .uri("/journey/1")
+                    .uri("/journeys/1")
                     .body(Body::empty())
                     .expect("failed to build request"),
             )
@@ -372,9 +319,9 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn hop_detail_page_returns_404_for_other_users_hop() {
+    async fn journey_detail_page_returns_404_for_other_users_journey() {
         let pool = test_pool().await;
-        let (_alice_cookie, hop_id) = insert_hop_for_user(&pool, "alice").await;
+        let (_alice_cookie, journey_id) = insert_journey_for_user(&pool, "alice").await;
         let bob_cookie = auth_cookie_for_user(&pool, "bob").await;
 
         let app = create_router(test_app_state(pool));
@@ -383,7 +330,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method("GET")
-                    .uri(format!("/journey/{hop_id}"))
+                    .uri(format!("/journeys/{journey_id}"))
                     .header("cookie", &bob_cookie)
                     .body(Body::empty())
                     .expect("failed to build request"),

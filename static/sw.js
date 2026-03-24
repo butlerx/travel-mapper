@@ -29,11 +29,7 @@ self.addEventListener('activate', (event) => {
     caches
       .keys()
       .then((keys) =>
-        Promise.all(
-          keys
-            .filter((key) => key !== STATIC_CACHE)
-            .map((key) => caches.delete(key)),
-        ),
+        Promise.all(keys.filter((key) => key !== STATIC_CACHE).map((key) => caches.delete(key))),
       )
       .then(() => self.clients.claim()),
   );
@@ -67,7 +63,5 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Network-first for pages and API
-  event.respondWith(
-    fetch(request).catch(() => caches.match(request)),
-  );
+  event.respondWith(fetch(request).catch(() => caches.match(request)));
 });

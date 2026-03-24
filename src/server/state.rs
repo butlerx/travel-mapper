@@ -105,7 +105,7 @@ pub fn create_router(state: AppState) -> Router {
         .route("/sw.js", get(routes::static_assets::serve_sw))
         .nest("/auth", routes::auth_api_routes())
         .nest("/auth/tripit", routes::tripit_api_routes())
-        .nest("/journeys", routes::hops_api_routes())
+        .nest("/journeys", routes::journeys_api_routes())
         .nest("/trips", routes::trip_api_routes())
         .nest("/import", routes::import_api_routes())
         .route(

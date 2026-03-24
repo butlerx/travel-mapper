@@ -25,9 +25,9 @@ pub(super) fn FlightSection(detail: FullFlightDetail) -> impl IntoView {
     let has_timing = !timing_rows.is_empty();
 
     view! {
-        <section class="hop-detail-section">
+        <section class="journey-detail-section">
             <h3>"Flight Info"</h3>
-            <div class="hop-detail-grid">
+            <div class="journey-detail-grid">
                 {detail_row_view("Airline", &detail.airline)}
                 {detail_row_view("Flight", &detail.flight_number)}
                 {detail_row_view("Aircraft", &detail.aircraft_type)}
@@ -37,17 +37,17 @@ pub(super) fn FlightSection(detail: FullFlightDetail) -> impl IntoView {
                 {detail_row_view("Arrival Terminal", &detail.arr_terminal)}
                 {detail_row_view("Arrival Gate", &detail.arr_gate)}
                 {if detail.canceled { view! {
-                    <div class="hop-detail-label">"Status"</div>
-                    <div class="hop-detail-value hop-detail-canceled">"Canceled"</div>
+                    <div class="journey-detail-label">"Status"</div>
+                    <div class="journey-detail-value journey-detail-canceled">"Canceled"</div>
                 }.into_any() } else { ().into_any() }}
                 {detail_row_view("Diverted To", &detail.diverted_to)}
             </div>
         </section>
 
         {if has_timing { view! {
-            <section class="hop-detail-section">
+            <section class="journey-detail-section">
                 <h3>"Timing"</h3>
-                <table class="hop-detail-timing">
+                <table class="journey-detail-timing">
                     <thead>
                         <tr>
                             <th>"Phase"</th>
@@ -62,9 +62,9 @@ pub(super) fn FlightSection(detail: FullFlightDetail) -> impl IntoView {
             </section>
         }.into_any() } else { ().into_any() }}
 
-        <section class="hop-detail-section">
+        <section class="journey-detail-section">
             <h3>"Seat & Booking"</h3>
-            <div class="hop-detail-grid">
+            <div class="journey-detail-grid">
                 {detail_row_view("Cabin Class", &detail.cabin_class)}
                 {detail_row_view("Seat", &detail.seat)}
                 {detail_row_view("Seat Type", &detail.seat_type)}
@@ -76,9 +76,9 @@ pub(super) fn FlightSection(detail: FullFlightDetail) -> impl IntoView {
         {if detail.notes.is_empty() { ().into_any() } else {
             let notes = detail.notes.clone();
             view! {
-                <section class="hop-detail-section">
+                <section class="journey-detail-section">
                     <h3>"Notes"</h3>
-                    <p class="hop-detail-notes">{notes}</p>
+                    <p class="journey-detail-notes">{notes}</p>
                 </section>
             }.into_any()
         }}

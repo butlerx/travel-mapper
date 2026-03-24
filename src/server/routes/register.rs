@@ -7,12 +7,12 @@ use crate::{
     server::{
         AppState,
         error::AppError,
+        extractors::FormOrJson,
         session::{create_user_session, is_form_request, session_cookie},
     },
 };
 use aide::transform::TransformOperation;
 use axum::{
-    Json,
     extract::State,
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Redirect, Response},
@@ -22,7 +22,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 
 /// Credentials for creating a new account.
-#[derive(Deserialize, JsonSchema)]
+#[derive(Default, Deserialize, JsonSchema)]
 pub struct RegisterRequest {
     /// Desired username (must be unique).
     pub username: String,
@@ -58,13 +58,7 @@ pub async fn handler(
         };
     }
 
-    let parsed: Result<RegisterRequest, AppError> = if is_form_request(&headers) {
-        serde_urlencoded::from_bytes(&body).map_err(AppError::from)
-    } else {
-        serde_json::from_slice(&body).map_err(AppError::from)
-    };
-
-    let body = match parsed {
+    let parsed = match FormOrJson::<RegisterRequest>::parse(&headers, &body) {
         Ok(b) => b,
         Err(err) => {
             return if is_form_request(&headers) {
@@ -81,7 +75,7 @@ pub async fn handler(
 
     let is_form = is_form_request(&headers);
 
-    let hash = match hash_password(&body.password) {
+    let hash = match hash_password(&parsed.password) {
         Ok(hash) => hash,
         Err(err) => {
             let err = AppError::from(err);
@@ -97,7 +91,7 @@ pub async fn handler(
         }
     };
 
-    create_and_authenticate(state, jar, &headers, is_form, &body.username, &hash).await
+    create_and_authenticate(state, jar, &headers, is_form, &parsed.username, &hash).await
 }
 
 async fn create_and_authenticate(
@@ -162,17 +156,7 @@ async fn create_and_authenticate(
 pub fn handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
         op.description("Register a new user account. Accepts JSON or form-encoded body.")
-            .input::<Json<RegisterRequest>>()
-            .with(|mut op| {
-                if let Some(aide::openapi::ReferenceOr::Item(body)) =
-                    &mut op.inner_mut().request_body
-                    && let Some(json_media) = body.content.get("application/json").cloned()
-                {
-                    body.content
-                        .insert("application/x-www-form-urlencoded".to_string(), json_media);
-                }
-                op
-            }),
+            .input::<FormOrJson<RegisterRequest>>(),
         201 => AuthResponse,
         400 | 409 | 500 => ErrorResponse,
     )

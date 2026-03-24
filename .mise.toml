@@ -1,11 +1,14 @@
 [tools]
 rust                   = { version = "stable", profile = "default", components = "rust-analyzer" }
+node                   = "lts"
 prek                   = "latest"
 taplo                  = "latest"
 "cargo:cargo-binstall" = "latest"
 "cargo:cargo-nextest"  = "0.9.129"
 "cargo:cargo-watch"    = "latest"
 "cargo:sqlx-cli"       = { version = "latest", features = "sqlite" }
+"npm:prettier"         = "latest"
+"npm:typescript"       = "latest"
 
 [env]
 _.file = ".env"
@@ -50,19 +53,27 @@ usage       = 'arg "[args]" var=#true help="Additional arguments passed to cargo
 run         = "cargo clippy --fix --all-targets --all-features --allow-staged ${usage_args:-} -- -D warnings"
 
 [tasks.format]
-description = "Format code"
-usage       = 'arg "[args]" var=#true help="Additional arguments passed to cargo fmt"'
-run         = "cargo fmt ${usage_args:-}"
+description = "Format Rust code with cargo fmt and JS/CSS with Prettier"
+run         = ["cargo fmt", "prettier --write 'static/**/*.js' 'static/**/*.css'"]
 alias       = "f"
+sources     = ["static/**/*.js", "static/**/*.css", "src/**/*.rs"]
 
 [tasks."format:check"]
-description = "Check code formatting"
-usage       = 'arg "[args]" var=#true help="Additional arguments passed to cargo fmt"'
-run         = "cargo fmt --check ${usage_args:-}"
+description = "Check Rust code formatting with cargo fmt and JS/CSS with Prettier"
+run = [
+  "cargo fmt --check ",
+  "prettier --check 'static/**/*.js' 'static/**/*.css'",
+]
+sources = ["static/**/*.js", "static/**/*.css", "src/**/*.rs"]
+
+[tasks.typecheck]
+description = "Type-check JS files with TypeScript"
+run         = "tsc --noEmit"
+sources     = ["static/**/*.js", "tsconfig.json"]
 
 [tasks.check]
-description = "Run all checks (lint + format)"
-depends     = ["lint", "format:check"]
+description = "Run all checks (lint + format + typecheck)"
+depends     = ["lint", "format:check", "typecheck"]
 
 [tasks.test]
 description = "Run tests with cargo"

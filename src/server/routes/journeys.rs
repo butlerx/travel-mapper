@@ -3,7 +3,12 @@ use super::{
 };
 use crate::{
     db,
-    server::{AppState, error::AppError, extractors::AuthUser, session::is_form_request},
+    server::{
+        AppState,
+        error::AppError,
+        extractors::{AuthUser, FormOrJson},
+        session::is_form_request,
+    },
 };
 use aide::transform::TransformOperation;
 use axum::{
@@ -12,17 +17,18 @@ use axum::{
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Redirect, Response},
 };
+use leptos::prelude::*;
 use percent_encoding::{AsciiSet, NON_ALPHANUMERIC, utf8_percent_encode};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-/// API response type for a single travel hop.
+/// API response type for a single travel journey.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
-pub struct HopResponse {
-    /// Database identifier for this hop.
+pub struct JourneyResponse {
+    /// Database identifier for this journey.
     pub id: i64,
-    /// Mode of transport for this hop.
-    pub travel_type: HopTravelType,
+    /// Mode of transport for this journey.
+    pub travel_type: JourneyTravelType,
     /// Name of the origin location (airport code, city, or station).
     pub origin_name: String,
     /// Latitude of the origin location.
@@ -41,10 +47,10 @@ pub struct HopResponse {
     pub end_date: String,
 }
 
-/// Mode of transport for a travel hop.
+/// Mode of transport for a travel journey.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, JsonSchema)]
 #[serde(rename_all = "lowercase")]
-pub enum HopTravelType {
+pub enum JourneyTravelType {
     /// Flight segment.
     #[default]
     Air,
@@ -56,7 +62,7 @@ pub enum HopTravelType {
     Transport,
 }
 
-impl HopTravelType {
+impl JourneyTravelType {
     #[must_use]
     pub const fn as_str(&self) -> &'static str {
         match self {
@@ -78,7 +84,7 @@ impl HopTravelType {
     }
 }
 
-impl std::fmt::Display for HopTravelType {
+impl std::fmt::Display for JourneyTravelType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Air => write!(f, "air"),
@@ -89,7 +95,7 @@ impl std::fmt::Display for HopTravelType {
     }
 }
 
-impl From<db::hops::TravelType> for HopTravelType {
+impl From<db::hops::TravelType> for JourneyTravelType {
     fn from(t: db::hops::TravelType) -> Self {
         match t {
             db::hops::TravelType::Air => Self::Air,
@@ -100,18 +106,18 @@ impl From<db::hops::TravelType> for HopTravelType {
     }
 }
 
-impl From<HopTravelType> for db::hops::TravelType {
-    fn from(t: HopTravelType) -> Self {
+impl From<JourneyTravelType> for db::hops::TravelType {
+    fn from(t: JourneyTravelType) -> Self {
         match t {
-            HopTravelType::Air => Self::Air,
-            HopTravelType::Rail => Self::Rail,
-            HopTravelType::Boat => Self::Boat,
-            HopTravelType::Transport => Self::Transport,
+            JourneyTravelType::Air => Self::Air,
+            JourneyTravelType::Rail => Self::Rail,
+            JourneyTravelType::Boat => Self::Boat,
+            JourneyTravelType::Transport => Self::Transport,
         }
     }
 }
 
-impl From<db::hops::Row> for HopResponse {
+impl From<db::hops::Row> for JourneyResponse {
     fn from(hop: db::hops::Row) -> Self {
         Self {
             id: hop.id,
@@ -128,7 +134,24 @@ impl From<db::hops::Row> for HopResponse {
     }
 }
 
-impl MultiFormatResponse for HopResponse {
+impl From<db::hops::DetailRow> for JourneyResponse {
+    fn from(hop: db::hops::DetailRow) -> Self {
+        Self {
+            id: hop.id,
+            travel_type: hop.travel_type.into(),
+            origin_name: hop.origin_name,
+            origin_lat: hop.origin_lat,
+            origin_lng: hop.origin_lng,
+            dest_name: hop.dest_name,
+            dest_lat: hop.dest_lat,
+            dest_lng: hop.dest_lng,
+            start_date: hop.start_date,
+            end_date: hop.end_date,
+        }
+    }
+}
+
+impl MultiFormatResponse for JourneyResponse {
     const HTML_TITLE: &'static str = "Travel Journeys";
 
     const CSV_HEADERS: &'static [&'static str] = &[
@@ -159,36 +182,39 @@ impl MultiFormatResponse for HopResponse {
         ]
     }
 
-    fn html_card(&self) -> String {
-        let id = self.id;
+    fn html_card(&self) -> AnyView {
+        let href = format!("/journeys/{}", self.id);
         let emoji = self.travel_type.emoji();
         let travel_type = self.travel_type.as_str();
-        let origin = &self.origin_name;
-        let dest = &self.dest_name;
-        let date = &self.start_date;
+        let badge_class = format!("journey-card-badge badge-{travel_type}");
+        let badge_text = format!("{emoji} {travel_type}");
+        let origin = self.origin_name.clone();
+        let dest = self.dest_name.clone();
+        let date = self.start_date.clone();
 
-        format!(
-            "<a href=\"/journey/{id}\" class=\"hop-card-link\">\
-             <div class=\"data-card hop-card\">\
-             <div class=\"hop-card-route\">\
-             <span class=\"hop-card-place\">{origin}</span>\
-             <span class=\"hop-card-arrow\">→</span>\
-             <span class=\"hop-card-place\">{dest}</span>\
-             </div>\
-             <div class=\"hop-card-meta\">\
-             <span class=\"hop-card-badge badge-{travel_type}\">{emoji} {travel_type}</span>\
-             <span class=\"hop-card-date\">{date}</span>\
-             </div>\
-             </div>\
-             </a>"
-        )
+        view! {
+            <a href=href class="journey-card-link">
+                <div class="data-card journey-card">
+                    <div class="journey-card-route">
+                        <span class="journey-card-place">{origin}</span>
+                        <span class="journey-card-arrow">"→"</span>
+                        <span class="journey-card-place">{dest}</span>
+                    </div>
+                    <div class="journey-card-meta">
+                        <span class=badge_class>{badge_text}</span>
+                        <span class="journey-card-date">{date}</span>
+                    </div>
+                </div>
+            </a>
+        }
+        .into_any()
     }
 }
 
 #[derive(Deserialize, JsonSchema)]
-pub struct HopQuery {
+pub struct JourneyQuery {
     #[serde(rename = "type")]
-    travel_type: Option<HopTravelType>,
+    travel_type: Option<JourneyTravelType>,
     origin: Option<String>,
     dest: Option<String>,
     date_from: Option<String>,
@@ -203,13 +229,13 @@ pub struct HopQuery {
 pub async fn handler(
     State(state): State<AppState>,
     auth: AuthUser,
-    Query(query): Query<HopQuery>,
+    Query(query): Query<JourneyQuery>,
     headers: HeaderMap,
 ) -> Response {
     let format = negotiate_format(&headers);
     let hops = match (db::hops::Search {
         user_id: auth.user_id,
-        travel_type: query.travel_type.as_ref().map(HopTravelType::as_str),
+        travel_type: query.travel_type.as_ref().map(JourneyTravelType::as_str),
         origin: query.origin.as_deref(),
         dest: query.dest.as_deref(),
         date_from: query.date_from.as_deref(),
@@ -229,18 +255,73 @@ pub async fn handler(
         }
     };
 
-    let responses: Vec<HopResponse> = hops.into_iter().map(HopResponse::from).collect();
-    HopResponse::into_format_response(&responses, format, StatusCode::OK)
+    let responses: Vec<JourneyResponse> = hops.into_iter().map(JourneyResponse::from).collect();
+    JourneyResponse::into_format_response(&responses, format, StatusCode::OK)
 }
 
 pub fn handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
         op.description("List travel journeys for the authenticated user.")
-            .response_with::<200, Json<Vec<HopResponse>>, _>(|mut res| {
-                add_multi_format_docs::<HopResponse>(res.inner());
+            .response_with::<200, Json<Vec<JourneyResponse>>, _>(|mut res| {
+                add_multi_format_docs::<JourneyResponse>(res.inner());
                 res
             }),
         401 | 500 => ErrorResponse,
+    )
+    .tag("journeys")
+}
+
+pub async fn get_journey_handler(
+    State(state): State<AppState>,
+    auth: AuthUser,
+    Path(id): Path<i64>,
+    Query(feedback): Query<crate::server::pages::journey_detail::JourneyDetailFeedback>,
+    headers: HeaderMap,
+) -> Response {
+    let format = negotiate_format(&headers);
+
+    let detail = match (db::hops::GetById {
+        id,
+        user_id: auth.user_id,
+    })
+    .execute(&state.db)
+    .await
+    {
+        Ok(Some(detail)) => detail,
+        Ok(None) => {
+            return if format == super::ResponseFormat::Html {
+                crate::server::pages::not_found::page().await
+            } else {
+                (
+                    StatusCode::NOT_FOUND,
+                    Json(ErrorResponse {
+                        error: "journey not found".to_owned(),
+                    }),
+                )
+                    .into_response()
+            };
+        }
+        Err(err) => {
+            return AppError::from(err).into_format_response(format);
+        }
+    };
+
+    if format == super::ResponseFormat::Html {
+        crate::server::pages::journey_detail::render_page(detail, feedback)
+    } else {
+        let response: JourneyResponse = detail.into();
+        JourneyResponse::single_format_response(&response, format, StatusCode::OK)
+    }
+}
+
+pub fn get_journey_handler_docs(op: TransformOperation) -> TransformOperation {
+    multi_format_docs!(
+        op.description("Get a single journey by ID.")
+            .response_with::<200, Json<JourneyResponse>, _>(|mut res| {
+                add_multi_format_docs::<JourneyResponse>(res.inner());
+                res
+            }),
+        401 | 404 | 500 => ErrorResponse,
     )
     .tag("journeys")
 }
@@ -255,12 +336,12 @@ fn encode_query_value(s: &str) -> String {
     utf8_percent_encode(s, QUERY_ENCODE_SET).to_string()
 }
 
-/// Request body for manually creating a hop of any travel type.
-#[derive(Deserialize, JsonSchema)]
-pub struct CreateHopRequest {
+/// Request body for manually creating a journey of any travel type.
+#[derive(Default, Deserialize, JsonSchema)]
+pub struct CreateJourneyRequest {
     /// Mode of transport (defaults to `air` when omitted).
     #[serde(default)]
-    pub travel_type: HopTravelType,
+    pub travel_type: JourneyTravelType,
     /// Origin location — IATA code for flights, station/city name otherwise.
     pub origin: String,
     /// Destination location — IATA code for flights, station/city name otherwise.
@@ -317,10 +398,10 @@ pub struct CreateHopRequest {
     pub transport_notes: Option<String>,
 }
 
-impl CreateHopRequest {
+impl CreateJourneyRequest {
     fn build_manual_detail(&self) -> db::hops::ManualDetail {
         match self.travel_type {
-            HopTravelType::Air => db::hops::ManualDetail::Air(db::hops::FlightDetail {
+            JourneyTravelType::Air => db::hops::ManualDetail::Air(db::hops::FlightDetail {
                 airline: self.airline.clone().unwrap_or_default(),
                 flight_number: self.flight_number.clone().unwrap_or_default(),
                 aircraft_type: self.aircraft_type.clone().unwrap_or_default(),
@@ -328,7 +409,7 @@ impl CreateHopRequest {
                 seat: self.seat.clone().unwrap_or_default(),
                 pnr: self.pnr.clone().unwrap_or_default(),
             }),
-            HopTravelType::Rail => db::hops::ManualDetail::Rail(db::hops::RailDetail {
+            JourneyTravelType::Rail => db::hops::ManualDetail::Rail(db::hops::RailDetail {
                 carrier: self.rail_carrier.clone().unwrap_or_default(),
                 train_number: self.train_number.clone().unwrap_or_default(),
                 service_class: self.service_class.clone().unwrap_or_default(),
@@ -338,7 +419,7 @@ impl CreateHopRequest {
                 booking_site: self.rail_booking_site.clone().unwrap_or_default(),
                 notes: self.rail_notes.clone().unwrap_or_default(),
             }),
-            HopTravelType::Boat => db::hops::ManualDetail::Boat(db::hops::BoatDetail {
+            JourneyTravelType::Boat => db::hops::ManualDetail::Boat(db::hops::BoatDetail {
                 ship_name: self.ship_name.clone().unwrap_or_default(),
                 cabin_type: self.cabin_type.clone().unwrap_or_default(),
                 cabin_number: self.cabin_number.clone().unwrap_or_default(),
@@ -346,7 +427,7 @@ impl CreateHopRequest {
                 booking_site: self.boat_booking_site.clone().unwrap_or_default(),
                 notes: self.boat_notes.clone().unwrap_or_default(),
             }),
-            HopTravelType::Transport => {
+            JourneyTravelType::Transport => {
                 db::hops::ManualDetail::Transport(db::hops::TransportDetail {
                     carrier_name: self.transport_carrier.clone().unwrap_or_default(),
                     vehicle_description: self.vehicle_description.clone().unwrap_or_default(),
@@ -358,17 +439,17 @@ impl CreateHopRequest {
     }
 }
 
-/// Successful response after creating a hop.
+/// Successful response after creating a journey.
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct CreateHopResponse {
-    /// Number of hops created.
+pub struct CreateJourneyResponse {
+    /// Number of journeys created.
     pub created: u64,
 }
 
-/// Create a hop manually for any travel type.
+/// Create a journey manually for any travel type.
 ///
 /// Accepts JSON or form-encoded body. Form submissions redirect to the add
-/// hop page with a success or error query parameter.
+/// journey page with a success or error query parameter.
 pub async fn create_handler(
     State(state): State<AppState>,
     auth: AuthUser,
@@ -377,13 +458,7 @@ pub async fn create_handler(
 ) -> Response {
     let is_form = is_form_request(&headers);
 
-    let parsed: Result<CreateHopRequest, AppError> = if is_form {
-        serde_urlencoded::from_bytes(&body).map_err(AppError::from)
-    } else {
-        serde_json::from_slice(&body).map_err(AppError::from)
-    };
-
-    let req = match parsed {
+    let req = match FormOrJson::<CreateJourneyRequest>::parse(&headers, &body) {
         Ok(r) => r,
         Err(err) => {
             return if is_form {
@@ -430,7 +505,7 @@ pub async fn create_handler(
             if is_form {
                 Redirect::to("/journeys/new?success=1").into_response()
             } else {
-                (StatusCode::CREATED, Json(CreateHopResponse { created })).into_response()
+                (StatusCode::CREATED, Json(CreateJourneyResponse { created })).into_response()
             }
         }
         Err(err) => {
@@ -450,29 +525,20 @@ pub async fn create_handler(
 }
 
 pub fn create_handler_docs(op: TransformOperation) -> TransformOperation {
-    op.description(
-        "Create a journey manually for any travel type. Accepts JSON or form-encoded body.",
+    multi_format_docs!(
+        op.description(
+            "Create a journey manually for any travel type. Accepts JSON or form-encoded body.",
+        )
+        .input::<FormOrJson<CreateJourneyRequest>>()
+        .response::<201, Json<CreateJourneyResponse>>(),
+        400 | 401 | 500 => ErrorResponse,
     )
-    .input::<Json<CreateHopRequest>>()
-    .with(|mut op| {
-        if let Some(aide::openapi::ReferenceOr::Item(body)) = &mut op.inner_mut().request_body
-            && let Some(json_media) = body.content.get("application/json").cloned()
-        {
-            body.content
-                .insert("application/x-www-form-urlencoded".to_string(), json_media);
-        }
-        op
-    })
-    .response::<201, Json<CreateHopResponse>>()
-    .response::<400, Json<ErrorResponse>>()
-    .response::<401, Json<ErrorResponse>>()
-    .response::<500, Json<ErrorResponse>>()
     .tag("journeys")
 }
 
-#[derive(Deserialize, JsonSchema)]
-pub struct UpdateHopRequest {
-    pub travel_type: HopTravelType,
+#[derive(Default, Deserialize, JsonSchema)]
+pub struct UpdateJourneyRequest {
+    pub travel_type: JourneyTravelType,
     pub origin_name: String,
     pub dest_name: String,
     pub start_date: String,
@@ -571,9 +637,9 @@ pub struct UpdateHopRequest {
     pub transport_notes: Option<String>,
 }
 
-impl UpdateHopRequest {
+impl UpdateJourneyRequest {
     fn build_flight_detail(&self) -> Option<db::hops::FullFlightDetail> {
-        (self.travel_type == HopTravelType::Air).then(|| db::hops::FullFlightDetail {
+        (self.travel_type == JourneyTravelType::Air).then(|| db::hops::FullFlightDetail {
             airline: self.airline.clone().unwrap_or_default(),
             flight_number: self.flight_number.clone().unwrap_or_default(),
             dep_terminal: self.dep_terminal.clone().unwrap_or_default(),
@@ -602,7 +668,7 @@ impl UpdateHopRequest {
     }
 
     fn build_rail_detail(&self) -> Option<db::hops::RailDetail> {
-        (self.travel_type == HopTravelType::Rail).then(|| db::hops::RailDetail {
+        (self.travel_type == JourneyTravelType::Rail).then(|| db::hops::RailDetail {
             carrier: self.rail_carrier.clone().unwrap_or_default(),
             train_number: self.train_number.clone().unwrap_or_default(),
             service_class: self.service_class.clone().unwrap_or_default(),
@@ -615,7 +681,7 @@ impl UpdateHopRequest {
     }
 
     fn build_boat_detail(&self) -> Option<db::hops::BoatDetail> {
-        (self.travel_type == HopTravelType::Boat).then(|| db::hops::BoatDetail {
+        (self.travel_type == JourneyTravelType::Boat).then(|| db::hops::BoatDetail {
             ship_name: self.ship_name.clone().unwrap_or_default(),
             cabin_type: self.cabin_type.clone().unwrap_or_default(),
             cabin_number: self.cabin_number.clone().unwrap_or_default(),
@@ -626,7 +692,7 @@ impl UpdateHopRequest {
     }
 
     fn build_transport_detail(&self) -> Option<db::hops::TransportDetail> {
-        (self.travel_type == HopTravelType::Transport).then(|| db::hops::TransportDetail {
+        (self.travel_type == JourneyTravelType::Transport).then(|| db::hops::TransportDetail {
             carrier_name: self.transport_carrier.clone().unwrap_or_default(),
             vehicle_description: self.vehicle_description.clone().unwrap_or_default(),
             confirmation_num: self.transport_confirmation.clone().unwrap_or_default(),
@@ -636,7 +702,7 @@ impl UpdateHopRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
-pub struct UpdateHopResponse {
+pub struct UpdateJourneyResponse {
     pub updated: bool,
 }
 
@@ -649,18 +715,12 @@ pub async fn update_handler(
 ) -> Response {
     let is_form = is_form_request(&headers);
 
-    let parsed: Result<UpdateHopRequest, AppError> = if is_form {
-        serde_urlencoded::from_bytes(&body).map_err(AppError::from)
-    } else {
-        serde_json::from_slice(&body).map_err(AppError::from)
-    };
-
-    let req = match parsed {
+    let req = match FormOrJson::<UpdateJourneyRequest>::parse(&headers, &body) {
         Ok(r) => r,
         Err(err) => {
             return if is_form {
                 Redirect::to(&format!(
-                    "/journey/{id}?error={}",
+                    "/journeys/{id}?error={}",
                     encode_query_value(&format!("Invalid form data: {err}"))
                 ))
                 .into_response()
@@ -675,7 +735,7 @@ pub async fn update_handler(
         let err = AppError::MissingField("origin_name, dest_name, and start_date are required");
         return if is_form {
             Redirect::to(&format!(
-                "/journey/{id}?error={}",
+                "/journeys/{id}?error={}",
                 encode_query_value(&err.to_string())
             ))
             .into_response()
@@ -715,15 +775,19 @@ pub async fn update_handler(
     match result {
         Ok(true) => {
             if is_form {
-                Redirect::to(&format!("/journey/{id}?success=1")).into_response()
+                Redirect::to(&format!("/journeys/{id}?success=1")).into_response()
             } else {
-                (StatusCode::OK, Json(UpdateHopResponse { updated: true })).into_response()
+                (
+                    StatusCode::OK,
+                    Json(UpdateJourneyResponse { updated: true }),
+                )
+                    .into_response()
             }
         }
         Ok(false) => {
             if is_form {
                 Redirect::to(&format!(
-                    "/journey/{id}?error={}",
+                    "/journeys/{id}?error={}",
                     encode_query_value("Journey not found")
                 ))
                 .into_response()
@@ -741,7 +805,7 @@ pub async fn update_handler(
             let err = AppError::from(err);
             if is_form {
                 Redirect::to(&format!(
-                    "/journey/{id}?error={}",
+                    "/journeys/{id}?error={}",
                     encode_query_value(&err.to_string())
                 ))
                 .into_response()
@@ -754,28 +818,18 @@ pub async fn update_handler(
 }
 
 pub fn update_handler_docs(op: TransformOperation) -> TransformOperation {
-    op.description("Update an existing journey by ID. Accepts JSON or form-encoded body.")
-        .input::<Json<UpdateHopRequest>>()
-        .with(|mut op| {
-            if let Some(aide::openapi::ReferenceOr::Item(body)) = &mut op.inner_mut().request_body
-                && let Some(json_media) = body.content.get("application/json").cloned()
-            {
-                body.content
-                    .insert("application/x-www-form-urlencoded".to_string(), json_media);
-            }
-            op
-        })
-        .response::<200, Json<UpdateHopResponse>>()
-        .response::<400, Json<ErrorResponse>>()
-        .response::<401, Json<ErrorResponse>>()
-        .response::<404, Json<ErrorResponse>>()
-        .response::<500, Json<ErrorResponse>>()
-        .tag("journeys")
+    multi_format_docs!(
+        op.description("Update an existing journey by ID. Accepts JSON or form-encoded body.")
+            .input::<FormOrJson<UpdateJourneyRequest>>()
+            .response::<200, Json<UpdateJourneyResponse>>(),
+        400 | 401 | 404 | 500 => ErrorResponse,
+    )
+    .tag("journeys")
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{CreateHopResponse, HopResponse, HopTravelType};
+    use super::{CreateJourneyResponse, JourneyResponse, JourneyTravelType};
     use crate::{
         db::{self, hops::TravelType},
         server::create_router,
@@ -928,11 +982,11 @@ mod tests {
         let body = to_bytes(response.into_body(), usize::MAX)
             .await
             .expect("failed to read response body");
-        let parsed: Vec<HopResponse> =
+        let parsed: Vec<JourneyResponse> =
             serde_json::from_slice(&body).expect("body should be valid JSON array");
 
         assert_eq!(parsed.len(), 2);
-        assert_eq!(parsed[0].travel_type, HopTravelType::Rail);
+        assert_eq!(parsed[0].travel_type, JourneyTravelType::Rail);
     }
 
     #[tokio::test]
@@ -979,9 +1033,9 @@ mod tests {
         let body = to_bytes(response.into_body(), usize::MAX)
             .await
             .expect("failed to read response body");
-        let parsed: Vec<HopResponse> = serde_json::from_slice(&body).expect("valid json");
+        let parsed: Vec<JourneyResponse> = serde_json::from_slice(&body).expect("valid json");
         assert_eq!(parsed.len(), 1);
-        assert_eq!(parsed[0].travel_type, HopTravelType::Rail);
+        assert_eq!(parsed[0].travel_type, JourneyTravelType::Rail);
     }
 
     #[tokio::test]
@@ -1156,7 +1210,8 @@ mod tests {
         let body = to_bytes(response.into_body(), usize::MAX)
             .await
             .expect("failed to read body");
-        let parsed: CreateHopResponse = serde_json::from_slice(&body).expect("valid json response");
+        let parsed: CreateJourneyResponse =
+            serde_json::from_slice(&body).expect("valid json response");
         assert_eq!(parsed.created, 1);
 
         let user = db::users::GetByUsername { username: "alice" }
@@ -1279,7 +1334,8 @@ mod tests {
         let body = to_bytes(response.into_body(), usize::MAX)
             .await
             .expect("failed to read body");
-        let parsed: CreateHopResponse = serde_json::from_slice(&body).expect("valid json response");
+        let parsed: CreateJourneyResponse =
+            serde_json::from_slice(&body).expect("valid json response");
         assert_eq!(parsed.created, 1);
 
         let user = db::users::GetByUsername { username: "alice" }

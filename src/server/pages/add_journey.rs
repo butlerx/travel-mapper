@@ -182,48 +182,7 @@ fn AddHop(
                     </form>
                 </section>
 
-                <script type="text/javascript">
-                    r#"
-                    (function() {
-                        var sel = document.getElementById('travel_type');
-                        var origin = document.getElementById('origin');
-                        var dest = document.getElementById('destination');
-                        var originLabel = document.getElementById('origin-label');
-                        var destLabel = document.getElementById('destination-label');
-                        var sections = document.querySelectorAll('.type-fields');
-
-                        function update() {
-                            var t = sel.value;
-                            sections.forEach(function(s) { s.style.display = 'none'; });
-                            var active = document.getElementById('fields-' + t);
-                            if (active) active.style.display = '';
-
-                            if (t === 'air') {
-                                originLabel.textContent = 'Origin (IATA code)';
-                                destLabel.textContent = 'Destination (IATA code)';
-                                origin.placeholder = 'LHR';
-                                origin.maxLength = 4;
-                                origin.style.textTransform = 'uppercase';
-                                dest.placeholder = 'JFK';
-                                dest.maxLength = 4;
-                                dest.style.textTransform = 'uppercase';
-                            } else {
-                                originLabel.textContent = 'Origin';
-                                destLabel.textContent = 'Destination';
-                                origin.placeholder = 'Paris Gare du Nord';
-                                origin.removeAttribute('maxlength');
-                                origin.style.textTransform = '';
-                                dest.placeholder = 'London St Pancras';
-                                dest.removeAttribute('maxlength');
-                                dest.style.textTransform = '';
-                            }
-                        }
-
-                        sel.addEventListener('change', update);
-                        update();
-                    })();
-                    "#
-                </script>
+                <script type="module" src="/static/add-journey.js"></script>
             </main>
         </Shell>
     }

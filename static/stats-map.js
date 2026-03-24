@@ -1,9 +1,22 @@
-(function () {
-  var counts = window.countryCounts || {};
-  var mapEl = document.getElementById('stats-map');
-  if (!mapEl || Object.keys(counts).length === 0) return;
+// @ts-check
+/// <reference path="types.d.ts" />
 
-  var map = L.map('stats-map', {
+/** @type {CountryCounts} */
+const counts = JSON.parse(document.getElementById('country-counts').textContent || '{}');
+const mapEl = document.getElementById('stats-map');
+if (!mapEl || Object.keys(counts).length === 0) {
+} else {
+  /**
+   * @param {string} str
+   * @returns {string}
+   */
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.appendChild(document.createTextNode(str));
+    return div.innerHTML;
+  }
+
+  const map = L.map('stats-map', {
     zoomControl: true,
     scrollWheelZoom: false,
     worldCopyJump: true,
@@ -22,8 +35,7 @@
     subdomains: 'abcd',
   }).addTo(map);
 
-  // ISO 3166-1 numeric → alpha-2 lookup (world-atlas uses numeric IDs)
-  var n2a = {
+  const n2a = {
     '004': 'AF',
     '008': 'AL',
     '010': 'AQ',
@@ -255,14 +267,13 @@
     887: 'YE',
     894: 'ZM',
     '-99': 'CY',
-    '010': 'AQ',
-    '070': 'BA',
-    688: 'RS',
-    499: 'ME',
     900: 'XK',
   };
 
-  // Viridis palette — perceptually uniform, colorblind-safe
+  /**
+   * @param {number} count
+   * @returns {string}
+   */
   function getColor(count) {
     if (count >= 50) return '#fde724';
     if (count >= 25) return '#6ece58';
@@ -275,18 +286,18 @@
     return 'transparent';
   }
 
-  // Fix antimeridian rendering — polygons crossing 180° longitude
-  // (e.g. Russia, Fiji) get a horizontal line artifact in Leaflet.
-  // Shift negative longitudes to >180 so the polygon doesn't wrap.
+  /**
+   * @param {number[][][]} coords
+   * @returns {void}
+   */
   function fixAntimeridian(coords) {
-    var dominated = 0;
-    var i, j;
-    // Check if the majority of points are in the eastern hemisphere
+    let dominated = 0;
+    let i;
+    let j;
     for (i = 0; i < coords.length; i++) {
       for (j = 0; j < coords[i].length; j++) {
         if (Array.isArray(coords[i][j][0])) {
-          // MultiPolygon ring
-          for (var k = 0; k < coords[i][j].length; k++) {
+          for (let k = 0; k < coords[i][j].length; k++) {
             if (coords[i][j][k][0] > 0) dominated++;
             else dominated--;
           }
@@ -297,11 +308,10 @@
       }
     }
     if (dominated <= 0) return;
-    // Shift negative longitudes for eastern-dominated polygons
     for (i = 0; i < coords.length; i++) {
       for (j = 0; j < coords[i].length; j++) {
         if (Array.isArray(coords[i][j][0])) {
-          for (var m = 0; m < coords[i][j].length; m++) {
+          for (let m = 0; m < coords[i][j].length; m++) {
             if (coords[i][j][m][0] < 0) coords[i][j][m][0] += 360;
           }
         } else {
@@ -311,40 +321,47 @@
     }
   }
 
+  /**
+   * @param {GeoJSON.Feature} feature
+   * @returns {boolean}
+   */
   function needsAntimeridianFix(feature) {
-    var coords = feature.geometry.coordinates;
+    const coords = /** @type {number[][][]} */ (feature.geometry.coordinates);
     if (!coords) return false;
-    // Check if any ring spans > 180° longitude
     function checkRing(ring) {
-      var minLng = Infinity,
-        maxLng = -Infinity;
-      for (var i = 0; i < ring.length; i++) {
-        var lng = ring[i][0];
+      let minLng = Infinity;
+      let maxLng = -Infinity;
+      for (let i = 0; i < ring.length; i++) {
+        const lng = ring[i][0];
         if (lng < minLng) minLng = lng;
         if (lng > maxLng) maxLng = lng;
       }
       return maxLng - minLng > 180;
     }
     function checkPolygon(poly) {
-      for (var i = 0; i < poly.length; i++) {
+      for (let i = 0; i < poly.length; i++) {
         if (checkRing(poly[i])) return true;
       }
       return false;
     }
-    var type = feature.geometry.type;
+    const type = feature.geometry.type;
     if (type === 'Polygon') return checkPolygon(coords);
     if (type === 'MultiPolygon') {
-      for (var p = 0; p < coords.length; p++) {
+      for (let p = 0; p < coords.length; p++) {
         if (checkPolygon(coords[p])) return true;
       }
     }
     return false;
   }
 
+  /**
+   * @param {GeoJSON.Feature} feature
+   * @returns {{fillColor: string, fillOpacity: number, color: string, weight: number}}
+   */
   function style(feature) {
-    var id = feature.id || (feature.properties && feature.properties.id);
-    var alpha2 = n2a[String(id)] || '';
-    var count = counts[alpha2] || 0;
+    const id = feature.id || (feature.properties && feature.properties.id);
+    const alpha2 = n2a[String(id)] || '';
+    const count = counts[alpha2] || 0;
     return {
       fillColor: getColor(count),
       fillOpacity: count > 0 ? 0.75 : 0,
@@ -353,28 +370,34 @@
     };
   }
 
-  var info = L.control({ position: 'topright' });
+  const info = L.control({ position: 'topright' });
+  /** @type {HTMLElement | undefined} */
+  let infoDiv;
   info.onAdd = function () {
-    this._div = L.DomUtil.create('div', 'stats-map-tooltip');
-    this.update();
-    return this._div;
+    infoDiv = L.DomUtil.create('div', 'stats-map-tooltip');
+    infoDiv.style.display = 'none';
+    return infoDiv;
   };
-  info.update = function (name, count) {
+  /**
+   * @param {string} [name]
+   * @param {number} [count]
+   */
+  const updateInfo = (name, count) => {
+    if (!infoDiv) return;
     if (name) {
-      this._div.innerHTML =
-        '<strong>' + name + '</strong><br>' + (count || 0) + ' visit' + (count === 1 ? '' : 's');
-      this._div.style.display = 'block';
+      infoDiv.innerHTML = `<strong>${escapeHtml(name)}</strong><br>${count || 0} visit${count === 1 ? '' : 's'}`;
+      infoDiv.style.display = 'block';
     } else {
-      this._div.style.display = 'none';
+      infoDiv.style.display = 'none';
     }
   };
   info.addTo(map);
 
-  var legend = L.control({ position: 'bottomright' });
+  const legend = L.control({ position: 'bottomright' });
   legend.onAdd = function () {
-    var div = L.DomUtil.create('div', 'stats-map-legend');
-    var grades = [1, 2, 3, 5, 10, 15, 25, 50];
-    var labels = [
+    const div = L.DomUtil.create('div', 'stats-map-legend');
+    const grades = [1, 2, 3, 5, 10, 15, 25, 50];
+    const labels = [
       '1',
       '2',
       '3\u20134',
@@ -385,53 +408,51 @@
       '50+',
     ];
     div.innerHTML = '<strong>Visits</strong>';
-    for (var i = 0; i < grades.length; i++) {
-      div.innerHTML +=
-        '<div class="stats-map-legend-row">' +
-        '<span class="stats-map-legend-swatch" style="background:' +
-        getColor(grades[i]) +
-        '"></span>' +
-        labels[i] +
-        '</div>';
+    for (let i = 0; i < grades.length; i++) {
+      div.innerHTML += `<div class="stats-map-legend-row"><span class="stats-map-legend-swatch" style="background:${getColor(grades[i])}"></span>${labels[i]}</div>`;
     }
     return div;
   };
   legend.addTo(map);
 
-  fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json')
-    .then(function (r) {
-      return r.json();
-    })
-    .then(function (topo) {
-      var geo = topojson.feature(topo, topo.objects.countries);
-      geo.features.forEach(function (f) {
-        if (needsAntimeridianFix(f)) fixAntimeridian(f.geometry.coordinates);
+  /** @returns {Promise<void>} */
+  const loadMap = async () => {
+    try {
+      const r = await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json');
+      const topo = await r.json();
+      const geo = topojson.feature(topo, topo.objects.countries);
+      geo.features.forEach((f) => {
+        if (needsAntimeridianFix(f))
+          fixAntimeridian(/** @type {number[][][]} */ (f.geometry.coordinates));
       });
       L.geoJSON(geo, {
-        style: style,
-        onEachFeature: function (feature, layer) {
-          var id = feature.id || (feature.properties && feature.properties.id);
-          var alpha2 = n2a[String(id)] || '';
-          var count = counts[alpha2] || 0;
-          var name = (feature.properties && feature.properties.name) || alpha2 || 'Unknown';
+        style,
+        onEachFeature: (feature, layer) => {
+          const id = feature.id || (feature.properties && feature.properties.id);
+          const alpha2 = n2a[String(id)] || '';
+          const count = counts[alpha2] || 0;
+          const name = (feature.properties && feature.properties.name) || alpha2 || 'Unknown';
           layer.on({
-            mouseover: function (e) {
-              var l = e.target;
+            mouseover: (e) => {
+              const l = e.target;
               if (count > 0) {
                 l.setStyle({ weight: 2, color: 'rgba(255,255,255,0.7)', fillOpacity: 0.9 });
                 if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
                   l.bringToFront();
                 }
               }
-              info.update(name, count);
+              updateInfo(name, count);
             },
-            mouseout: function (e) {
-              var l = e.target;
+            mouseout: (e) => {
+              const l = e.target;
               l.setStyle(style(feature));
-              info.update();
+              updateInfo();
             },
           });
         },
       }).addTo(map);
-    });
-})();
+    } catch {}
+  };
+
+  loadMap();
+}

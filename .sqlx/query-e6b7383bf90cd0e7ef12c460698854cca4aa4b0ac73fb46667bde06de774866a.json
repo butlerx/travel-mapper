@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT\n               id as \"id!: i64\",\n               travel_type as \"travel_type!: String\",\n               origin_name as \"origin_name!: String\",\n               dest_name as \"dest_name!: String\",\n               start_date as \"start_date!: String\"\n           FROM hops\n           WHERE user_id = ? AND user_trip_id IS NULL\n           ORDER BY start_date DESC, id DESC\n           LIMIT 200",
+  "query": "SELECT\n                   id as \"id!: i64\",\n                   travel_type as \"travel_type!: String\",\n                   origin_name as \"origin_name!: String\",\n                   dest_name as \"dest_name!: String\",\n                   start_date as \"start_date!: String\"\n               FROM hops\n               WHERE user_id = ? AND user_trip_id IS NULL\n               ORDER BY start_date DESC, id DESC\n               LIMIT 200",
   "describe": {
     "columns": [
       {
@@ -40,5 +40,5 @@
       false
     ]
   },
-  "hash": "e2dd3ff23747f3322bc880299567c27c3743c0027073967f3c1601b2fcee900a"
+  "hash": "e6b7383bf90cd0e7ef12c460698854cca4aa4b0ac73fb46667bde06de774866a"
 }

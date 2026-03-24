@@ -2,11 +2,11 @@ use super::{ErrorResponse, MultiFormatResponse, multi_format_docs, negotiate_for
 use crate::server::{
     AppState,
     error::AppError,
+    extractors::FormOrJson,
     session::{create_user_session, is_form_request, session_cookie, verify_credentials},
 };
 use aide::transform::TransformOperation;
 use axum::{
-    Json,
     extract::State,
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Redirect, Response},
@@ -16,7 +16,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// Credentials for logging in.
-#[derive(Deserialize, JsonSchema)]
+#[derive(Default, Deserialize, JsonSchema)]
 pub struct LoginRequest {
     /// Account username.
     pub username: String,
@@ -51,16 +51,12 @@ pub async fn handler(
     headers: HeaderMap,
     body: axum::body::Bytes,
 ) -> (CookieJar, Response) {
-    let parsed: Result<LoginRequest, AppError> = if is_form_request(&headers) {
-        serde_urlencoded::from_bytes(&body).map_err(AppError::from)
-    } else {
-        serde_json::from_slice(&body).map_err(AppError::from)
-    };
+    let is_form = is_form_request(&headers);
 
-    let body = match parsed {
+    let body = match FormOrJson::<LoginRequest>::parse(&headers, &body) {
         Ok(b) => b,
         Err(err) => {
-            return if is_form_request(&headers) {
+            return if is_form {
                 (
                     jar,
                     Redirect::to("/login?error=Invalid+form+data").into_response(),
@@ -72,7 +68,6 @@ pub async fn handler(
         }
     };
 
-    let is_form = is_form_request(&headers);
     let user = match verify_credentials(&state.db, &body.username, &body.password).await {
         Ok(user) => user,
         Err(err) => {
@@ -115,17 +110,7 @@ pub async fn handler(
 pub fn handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
         op.description("Log in with username and password. Accepts JSON or form-encoded body.")
-            .input::<Json<LoginRequest>>()
-            .with(|mut op| {
-                if let Some(aide::openapi::ReferenceOr::Item(body)) =
-                    &mut op.inner_mut().request_body
-                    && let Some(json_media) = body.content.get("application/json").cloned()
-                {
-                    body.content
-                        .insert("application/x-www-form-urlencoded".to_string(), json_media);
-                }
-                op
-            }),
+            .input::<FormOrJson<LoginRequest>>(),
         200 => AuthResponse,
         400 | 401 | 500 => ErrorResponse,
     )

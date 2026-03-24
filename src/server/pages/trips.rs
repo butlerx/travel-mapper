@@ -1,31 +1,15 @@
 use super::FormFeedback;
 use crate::{
     db,
-    server::{
-        AppState,
-        components::{NavBar, Shell},
-        extractors::AuthUser,
-    },
+    server::components::{NavBar, Shell},
 };
 use axum::{
-    extract::{Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
 };
 use leptos::prelude::*;
 
-pub async fn page(
-    State(state): State<AppState>,
-    auth: AuthUser,
-    Query(feedback): Query<FormFeedback>,
-) -> Response {
-    let trips = (db::trips::GetAll {
-        user_id: auth.user_id,
-    })
-    .execute(&state.db)
-    .await
-    .unwrap_or_default();
-
+pub(crate) fn render_page(trips: Vec<db::trips::Row>, feedback: FormFeedback) -> Response {
     let html = view! {
         <TripsPage trips=trips error=feedback.error success=feedback.success />
     };
@@ -89,12 +73,12 @@ fn TripsPage(
                                         (None, None) => "No dates yet".to_string(),
                                     };
                                     view! {
-                                        <a href={format!("/trip/{}", trip.id)} class="hop-card-link">
-                                            <div class="data-card hop-card">
-                                                <div class="hop-card-route">{trip.name}</div>
-                                                <div class="hop-card-meta">
-                                                    <span class="hop-card-date">{range}</span>
-                                                    <span class="hop-card-badge">{format!("{} journeys", trip.hop_count)}</span>
+                                        <a href={format!("/trips/{}", trip.id)} class="journey-card-link">
+                                            <div class="data-card journey-card">
+                                                <div class="journey-card-route">{trip.name}</div>
+                                                <div class="journey-card-meta">
+                                                    <span class="journey-card-date">{range}</span>
+                                                    <span class="journey-card-badge">{format!("{} journeys", trip.hop_count)}</span>
                                                 </div>
                                             </div>
                                         </a>

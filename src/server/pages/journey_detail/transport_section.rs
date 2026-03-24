@@ -5,9 +5,9 @@ use leptos::prelude::*;
 #[component]
 pub(super) fn TransportSection(detail: db::hops::TransportDetail) -> impl IntoView {
     view! {
-        <section class="hop-detail-section">
+        <section class="journey-detail-section">
             <h3>"Transport Details"</h3>
-            <div class="hop-detail-grid">
+            <div class="journey-detail-grid">
                 {detail_row_view("Carrier", &detail.carrier_name)}
                 {detail_row_view("Vehicle", &detail.vehicle_description)}
                 {detail_row_view("Confirmation", &detail.confirmation_num)}
@@ -16,9 +16,9 @@ pub(super) fn TransportSection(detail: db::hops::TransportDetail) -> impl IntoVi
         {if detail.notes.is_empty() { ().into_any() } else {
             let notes = detail.notes.clone();
             view! {
-                <section class="hop-detail-section">
+                <section class="journey-detail-section">
                     <h3>"Notes"</h3>
-                    <p class="hop-detail-notes">{notes}</p>
+                    <p class="journey-detail-notes">{notes}</p>
                 </section>
             }.into_any()
         }}

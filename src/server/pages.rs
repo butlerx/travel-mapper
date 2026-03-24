@@ -3,17 +3,17 @@
 // and component props must own their data (String, not &str).
 #![allow(clippy::must_use_candidate, clippy::needless_pass_by_value)]
 
-pub(super) mod add_hop;
+pub(super) mod add_journey;
 pub(crate) mod dashboard;
-pub(super) mod hop_detail;
+pub(crate) mod journey_detail;
 pub(super) mod landing;
 pub(super) mod login;
 pub(super) mod not_found;
 pub(super) mod register;
 pub(super) mod settings;
 pub(crate) mod stats;
-pub(super) mod trip_detail;
-pub(super) mod trips;
+pub(crate) mod trip_detail;
+pub(crate) mod trips;
 pub(super) mod unauthorized;
 
 use super::{AppState, components::ErrorPage};
@@ -33,10 +33,7 @@ pub(super) fn page_routes() -> ApiRouter<AppState> {
         .route("/dashboard", get(dashboard::page))
         .route("/settings", get(settings::page))
         .route("/stats", get(stats::page))
-        .route("/journeys/new", get(add_hop::page))
-        .route("/journey/{id}", get(hop_detail::page))
-        .route("/trips", get(trips::page))
-        .route("/trip/{id}", get(trip_detail::page))
+        .route("/journeys/new", get(add_journey::page))
 }
 
 /// Check whether the request carries a valid, non-expired session cookie.
@@ -61,10 +58,10 @@ async fn has_valid_session(jar: &CookieJar, state: &AppState) -> bool {
     session.expires_at > now
 }
 
-#[derive(Deserialize, Default)]
-pub(super) struct FormFeedback {
-    pub(super) error: Option<String>,
-    pub(super) success: Option<String>,
+#[derive(Deserialize, Default, schemars::JsonSchema)]
+pub(crate) struct FormFeedback {
+    pub(crate) error: Option<String>,
+    pub(crate) success: Option<String>,
 }
 
 fn render_error_page(

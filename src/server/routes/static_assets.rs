@@ -8,6 +8,8 @@ const CSS: &str = include_str!("../../../static/style.css");
 const MAP_JS: &str = include_str!("../../../static/map.js");
 const STATS_MAP_JS: &str = include_str!("../../../static/stats-map.js");
 const NAV_JS: &str = include_str!("../../../static/nav.js");
+const ADD_JOURNEY_JS: &str = include_str!("../../../static/add-journey.js");
+const JOURNEY_MAP_JS: &str = include_str!("../../../static/journey-map.js");
 const LOGO: &str = include_str!("../../../static/logo.svg");
 const SW_JS: &str = include_str!("../../../static/sw.js");
 
@@ -48,6 +50,26 @@ async fn serve_nav_js() -> impl IntoResponse {
             ("cache-control", "public, max-age=86400"),
         ],
         NAV_JS,
+    )
+}
+
+async fn serve_add_journey_js() -> impl IntoResponse {
+    (
+        [
+            ("content-type", "application/javascript; charset=utf-8"),
+            ("cache-control", "public, max-age=86400"),
+        ],
+        ADD_JOURNEY_JS,
+    )
+}
+
+async fn serve_journey_map_js() -> impl IntoResponse {
+    (
+        [
+            ("content-type", "application/javascript; charset=utf-8"),
+            ("cache-control", "public, max-age=86400"),
+        ],
+        JOURNEY_MAP_JS,
     )
 }
 
@@ -127,6 +149,8 @@ pub fn routes() -> ApiRouter<crate::server::AppState> {
         .route("/map.js", get(serve_js))
         .route("/stats-map.js", get(serve_stats_js))
         .route("/nav.js", get(serve_nav_js))
+        .route("/add-journey.js", get(serve_add_journey_js))
+        .route("/journey-map.js", get(serve_journey_map_js))
         .route("/logo.svg", get(serve_logo))
 }
 

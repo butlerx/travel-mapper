@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT EXISTS(\n               SELECT 1 FROM hops\n               WHERE id = ? AND user_id = ? AND user_trip_id = ?\n           ) as \"exists!: i64\"",
+  "query": "SELECT EXISTS(\n                   SELECT 1 FROM hops\n                   WHERE id = ? AND user_id = ? AND user_trip_id = ?\n               ) as \"exists!: i64\"",
   "describe": {
     "columns": [
       {
@@ -16,5 +16,5 @@
       false
     ]
   },
-  "hash": "a9841501c17ca2f8c88a41609635fe63448416fdc39986ec07ed41baffa99aa8"
+  "hash": "e37ff5c1b9d6ca710670dc9205c529a01d9b5e432e0ad08828a5eace56381623"
 }

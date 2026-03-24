@@ -114,30 +114,30 @@ fn TransportEditFields(detail: crate::db::hops::TransportDetail) -> impl IntoVie
 }
 
 #[component]
-pub(super) fn EditForm(hop: DetailRow) -> impl IntoView {
-    let action = format!("/journeys/{}", hop.id);
-    let travel_type_str = hop.travel_type.to_string();
-    let origin_lat = hop.origin_lat.to_string();
-    let origin_lng = hop.origin_lng.to_string();
-    let dest_lat = hop.dest_lat.to_string();
-    let dest_lng = hop.dest_lng.to_string();
-    let origin_country = hop.origin_country.clone().unwrap_or_default();
-    let dest_country = hop.dest_country.clone().unwrap_or_default();
+pub(super) fn EditForm(journey: DetailRow) -> impl IntoView {
+    let action = format!("/journeys/{}", journey.id);
+    let travel_type_str = journey.travel_type.to_string();
+    let origin_lat = journey.origin_lat.to_string();
+    let origin_lng = journey.origin_lng.to_string();
+    let dest_lat = journey.dest_lat.to_string();
+    let dest_lng = journey.dest_lng.to_string();
+    let origin_country = journey.origin_country.clone().unwrap_or_default();
+    let dest_country = journey.dest_country.clone().unwrap_or_default();
 
-    let detail_fields = match hop.travel_type {
-        TravelType::Air => hop.flight_detail.map_or_else(
+    let detail_fields = match journey.travel_type {
+        TravelType::Air => journey.flight_detail.map_or_else(
             || ().into_any(),
             |d| view! { <FlightEditFields detail=d /> }.into_any(),
         ),
-        TravelType::Rail => hop.rail_detail.map_or_else(
+        TravelType::Rail => journey.rail_detail.map_or_else(
             || ().into_any(),
             |d| view! { <RailEditFields detail=d /> }.into_any(),
         ),
-        TravelType::Boat => hop.boat_detail.map_or_else(
+        TravelType::Boat => journey.boat_detail.map_or_else(
             || ().into_any(),
             |d| view! { <BoatEditFields detail=d /> }.into_any(),
         ),
-        TravelType::Transport => hop.transport_detail.map_or_else(
+        TravelType::Transport => journey.transport_detail.map_or_else(
             || ().into_any(),
             |d| view! { <TransportEditFields detail=d /> }.into_any(),
         ),
@@ -147,7 +147,7 @@ pub(super) fn EditForm(hop: DetailRow) -> impl IntoView {
         <div id="edit-backdrop" class="edit-panel-backdrop"
             onclick="document.getElementById('edit-form').classList.remove('open');this.classList.remove('open')">
         </div>
-        <section id="edit-form" class="hop-edit-form">
+        <section id="edit-form" class="journey-edit-form">
             <h3>
                 "Edit Journey"
                 <button class="edit-panel-close" type="button"
@@ -163,10 +163,10 @@ pub(super) fn EditForm(hop: DetailRow) -> impl IntoView {
                 {hidden_field("origin_country", origin_country)}
                 {hidden_field("dest_country", dest_country)}
 
-                {form_field("edit-origin", "origin_name", "Origin", &hop.origin_name, "text")}
-                {form_field("edit-dest", "dest_name", "Destination", &hop.dest_name, "text")}
-                {form_field("edit-start-date", "start_date", "Start Date", &hop.start_date, "date")}
-                {form_field("edit-end-date", "end_date", "End Date", &hop.end_date, "date")}
+                {form_field("edit-origin", "origin_name", "Origin", &journey.origin_name, "text")}
+                {form_field("edit-dest", "dest_name", "Destination", &journey.dest_name, "text")}
+                {form_field("edit-start-date", "start_date", "Start Date", &journey.start_date, "date")}
+                {form_field("edit-end-date", "end_date", "End Date", &journey.end_date, "date")}
 
                 {detail_fields}
 

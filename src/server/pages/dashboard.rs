@@ -1,4 +1,4 @@
-/// Travel statistics computation from hop data.
+/// Travel statistics computation from journey data.
 mod travel_stats;
 
 use crate::{
@@ -7,7 +7,7 @@ use crate::{
         AppState,
         components::{NavBar, Shell},
         extractors::AuthUser,
-        routes::HopResponse,
+        routes::JourneyResponse,
     },
 };
 use axum::{
@@ -29,7 +29,7 @@ pub async fn page(
     auth: AuthUser,
     Query(feedback): Query<DashboardFeedback>,
 ) -> Response {
-    let hops = db::hops::GetAll {
+    let journeys = db::hops::GetAll {
         user_id: auth.user_id,
         travel_type_filter: None,
     }
@@ -37,15 +37,15 @@ pub async fn page(
     .await
     .unwrap_or_default();
 
-    let hop_count = hops.len();
-    let responses: Vec<HopResponse> = hops.into_iter().map(HopResponse::from).collect();
+    let journey_count = journeys.len();
+    let responses: Vec<JourneyResponse> = journeys.into_iter().map(JourneyResponse::from).collect();
     let travel_stats = compute_stats(&responses);
-    let hops_json = serde_json::to_string(&responses).unwrap_or_default();
+    let journeys_json = serde_json::to_string(&responses).unwrap_or_default();
 
     let html = view! {
         <DashboardPage
-            hops_json=hops_json
-            hop_count=hop_count
+            journeys_json=journeys_json
+            journey_count=journey_count
             stats=travel_stats
             error=feedback.error
         />
@@ -55,13 +55,12 @@ pub async fn page(
 
 #[component]
 fn DashboardPage(
-    hops_json: String,
-    hop_count: usize,
+    journeys_json: String,
+    journey_count: usize,
     stats: TravelStats,
     #[prop(optional_no_strip)] error: Option<String>,
 ) -> impl IntoView {
-    let has_hops = hop_count > 0;
-    let hops_script = format!("window.allHops={hops_json};");
+    let has_journeys = journey_count > 0;
 
     let distance = format_distance(stats.total_distance_km);
     let year_range = format_year_range(stats.first_year.as_ref(), stats.last_year.as_ref());
@@ -73,13 +72,13 @@ fn DashboardPage(
                 <div class="alert alert-error" role="alert">{e}</div>
             })}
 
-            {if has_hops {
+            {if has_journeys {
                 view! {
                     <StatsBar stats=stats distance=distance year_range=year_range />
                     <div class="dashboard-main">
                         <div class="dashboard-map-col">
                             <div id="map"></div>
-                            <MapControls hop_count=hop_count />
+                            <MapControls journey_count=journey_count />
                         </div>
                         <aside id="journey-sidebar" class="journey-sidebar"></aside>
                     </div>
@@ -89,8 +88,8 @@ fn DashboardPage(
                     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
                         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
                         crossorigin=""></script>
-                    <script inner_html=hops_script></script>
-                    <script src="/static/map.js"></script>
+                    <script type="application/json" id="initial-journeys" inner_html=journeys_json></script>
+                    <script type="module" src="/static/map.js"></script>
                 }.into_any()
             } else {
                 view! {
@@ -109,7 +108,7 @@ fn DashboardPage(
 }
 
 #[component]
-fn MapControls(hop_count: usize) -> impl IntoView {
+fn MapControls(journey_count: usize) -> impl IntoView {
     view! {
         <div class="map-controls">
             <div class="search-bar">
@@ -185,7 +184,7 @@ fn MapControls(hop_count: usize) -> impl IntoView {
                     <div class="legend-swatch legend-transport"></div>
                     <span>{"\u{1F697} Transport"}</span>
                 </div>
-                <div class="legend-count" id="hop-count">{hop_count}" journeys"</div>
+                <div class="legend-count" id="journey-count">{journey_count}" journeys"</div>
             </div>
         </div>
     }
@@ -239,7 +238,7 @@ mod tests {
     use tower::ServiceExt;
 
     #[tokio::test]
-    async fn dashboard_without_hops_renders_empty_state_and_nav() {
+    async fn dashboard_without_journeys_renders_empty_state_and_nav() {
         let pool = test_pool().await;
         let cookie = auth_cookie_for_user(&pool, "alice").await;
         let app = create_router(test_app_state(pool));
@@ -267,7 +266,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn dashboard_with_hops_renders_map_controls_and_script() {
+    async fn dashboard_with_journeys_renders_map_controls_and_script() {
         let pool = test_pool().await;
         let cookie = auth_cookie_for_user(&pool, "alice").await;
         let user = db::users::GetByUsername { username: "alice" }
@@ -309,7 +308,7 @@ mod tests {
         assert!(body.contains("id=\"filter-type\""));
         assert!(body.contains("id=\"filter-date-from\""));
         assert!(body.contains("map-legend"));
-        assert!(body.contains("window.allHops="));
+        assert!(body.contains("id=\"initial-journeys\""));
         assert!(body.contains("/static/map.js"));
     }
 
@@ -362,7 +361,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn dashboard_hops_json_includes_both_past_and_future_dated_hops() {
+    async fn dashboard_journeys_json_includes_both_past_and_future_dated_journeys() {
         let pool = test_pool().await;
         let cookie = auth_cookie_for_user(&pool, "alice").await;
         let user = db::users::GetByUsername { username: "alice" }
@@ -384,7 +383,7 @@ mod tests {
         }
         .execute(&pool)
         .await
-        .expect("insert past hop failed");
+        .expect("insert past journey failed");
 
         db::hops::Create {
             trip_id: "trip-future",
@@ -399,7 +398,7 @@ mod tests {
         }
         .execute(&pool)
         .await
-        .expect("insert future hop failed");
+        .expect("insert future journey failed");
 
         let app = create_router(test_app_state(pool));
         let response = app
@@ -416,19 +415,22 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
         let body = body_text(response).await;
-        assert!(body.contains("window.allHops="));
+        assert!(body.contains("id=\"initial-journeys\""));
         assert!(
             body.contains("LHR"),
-            "past hop origin should be in hops JSON"
+            "past journey origin should be in journeys JSON"
         );
         assert!(
             body.contains("SFO"),
-            "future hop origin should be in hops JSON"
+            "future journey origin should be in journeys JSON"
         );
-        assert!(body.contains("JFK"), "past hop dest should be in hops JSON");
+        assert!(
+            body.contains("JFK"),
+            "past journey dest should be in journeys JSON"
+        );
         assert!(
             body.contains("NRT"),
-            "future hop dest should be in hops JSON"
+            "future journey dest should be in journeys JSON"
         );
     }
 }
