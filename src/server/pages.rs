@@ -12,13 +12,32 @@ pub(super) mod not_found;
 pub(super) mod register;
 pub(super) mod settings;
 pub(crate) mod stats;
+pub(super) mod trip_detail;
+pub(super) mod trips;
 pub(super) mod unauthorized;
 
 use super::{AppState, components::ErrorPage};
 use crate::db;
+use aide::axum::ApiRouter;
+use axum::routing::get;
 use axum_extra::extract::CookieJar;
 use leptos::prelude::*;
 use serde::Deserialize;
+
+/// Page and static-asset routes that do not need `OpenAPI` metadata.
+pub(super) fn page_routes() -> ApiRouter<AppState> {
+    ApiRouter::new()
+        .route("/", get(landing::page))
+        .route("/register", get(register::page))
+        .route("/login", get(login::page))
+        .route("/dashboard", get(dashboard::page))
+        .route("/settings", get(settings::page))
+        .route("/stats", get(stats::page))
+        .route("/hops/new", get(add_hop::page))
+        .route("/hop/{id}", get(hop_detail::page))
+        .route("/trips", get(trips::page))
+        .route("/trip/{id}", get(trip_detail::page))
+}
 
 /// Check whether the request carries a valid, non-expired session cookie.
 async fn has_valid_session(jar: &CookieJar, state: &AppState) -> bool {
@@ -45,6 +64,7 @@ async fn has_valid_session(jar: &CookieJar, state: &AppState) -> bool {
 #[derive(Deserialize, Default)]
 pub(super) struct FormFeedback {
     pub(super) error: Option<String>,
+    pub(super) success: Option<String>,
 }
 
 fn render_error_page(

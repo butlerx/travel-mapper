@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT\n                   id as \"id!: i64\",\n                   start_date as \"start_date!: String\",\n                   end_date as \"end_date!: String\"\n               FROM hops\n               WHERE user_id = ? AND user_trip_id IS NULL\n               ORDER BY start_date ASC, end_date ASC, id ASC",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!: i64",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "start_date!: String",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "end_date!: String",
+        "ordinal": 2,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "fe59c4db56f6302a18241420447f19fe4ed8fa7663bfb3274662e74e00f29f73"
+}

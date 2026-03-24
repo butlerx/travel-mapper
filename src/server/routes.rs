@@ -1,8 +1,13 @@
 //! HTTP route handlers and response formatting.
 
-use std::fmt::Write;
-
-use aide::openapi::{MediaType, SchemaObject};
+use crate::server::components::{NavBar, Shell};
+use aide::{
+    axum::{
+        ApiRouter,
+        routing::{delete_with, get_with, post_with, put_with},
+    },
+    openapi::{MediaType, SchemaObject},
+};
 use axum::{
     Json,
     http::{HeaderMap, StatusCode, header},
@@ -11,6 +16,7 @@ use axum::{
 use leptos::prelude::*;
 use schemars::JsonSchema;
 use serde::Serialize;
+use std::fmt::Write;
 
 pub(super) mod api_keys;
 /// Generic CSV/delimited import handler (Flighty, myFlightradar24, `OpenFlights`, App in the Air).
@@ -25,6 +31,7 @@ pub(super) mod sync;
 pub(super) mod tripit_callback;
 pub(super) mod tripit_connect;
 pub(super) mod tripit_credentials;
+pub(super) mod trips;
 
 pub(super) use hops::HopResponse;
 pub(super) use login::AuthResponse;
@@ -218,8 +225,6 @@ fn build_csv<T: MultiFormatResponse>(items: &[T]) -> Response {
 }
 
 fn build_html<T: MultiFormatResponse>(items: &[T]) -> Response {
-    use crate::server::components::{NavBar, Shell};
-
     let title = T::HTML_TITLE;
     let cards: String = items.iter().map(T::html_card).collect();
     let count = items.len();
@@ -319,6 +324,102 @@ impl MultiFormatResponse for ErrorResponse {
     fn csv_row(&self) -> Vec<String> {
         vec![self.error.clone()]
     }
+}
+
+/// Authentication API routes, nested under `/auth`.
+pub(super) fn auth_api_routes() -> ApiRouter<super::AppState> {
+    ApiRouter::new()
+        .api_route(
+            "/register",
+            post_with(register::handler, register::handler_docs),
+        )
+        .api_route("/login", post_with(login::handler, login::handler_docs))
+        .api_route("/logout", post_with(logout::handler, logout::handler_docs))
+        .api_route(
+            "/api-keys",
+            post_with(api_keys::handler, api_keys::handler_docs),
+        )
+}
+
+/// Hop API routes, nested under `/hops`.
+pub(super) fn hops_api_routes() -> ApiRouter<super::AppState> {
+    ApiRouter::new()
+        .api_route(
+            "/",
+            get_with(hops::handler, hops::handler_docs)
+                .post_with(hops::create_handler, hops::create_handler_docs),
+        )
+        .api_route(
+            "/{id}",
+            put_with(hops::update_handler, hops::update_handler_docs)
+                .post_with(hops::update_handler, hops::update_handler_docs),
+        )
+}
+
+/// Trip API routes, nested under `/trips`.
+pub(super) fn trip_api_routes() -> ApiRouter<super::AppState> {
+    ApiRouter::new()
+        .api_route(
+            "/",
+            post_with(trips::create_handler, trips::create_handler_docs),
+        )
+        .api_route(
+            "/{id}",
+            put_with(trips::update_handler, trips::update_handler_docs)
+                .delete_with(trips::delete_handler, trips::delete_handler_docs)
+                .post_with(trips::update_handler, trips::update_handler_docs),
+        )
+        .api_route(
+            "/auto-group",
+            post_with(trips::auto_group_handler, trips::auto_group_handler_docs),
+        )
+        .api_route(
+            "/{id}/hops",
+            post_with(trips::assign_hop_handler, trips::assign_hop_handler_docs),
+        )
+        .api_route(
+            "/{id}/hops/{hop_id}",
+            delete_with(
+                trips::unassign_hop_handler,
+                trips::unassign_hop_handler_docs,
+            )
+            .post_with(
+                trips::unassign_hop_handler,
+                trips::unassign_hop_handler_docs,
+            ),
+        )
+}
+
+/// `TripIt` integration routes, nested under `/auth/tripit`.
+pub(super) fn tripit_api_routes() -> ApiRouter<super::AppState> {
+    ApiRouter::new()
+        .api_route(
+            "/",
+            put_with(
+                tripit_credentials::handler,
+                tripit_credentials::handler_docs,
+            ),
+        )
+        .api_route(
+            "/connect",
+            get_with(tripit_connect::handler, tripit_connect::handler_docs),
+        )
+        .api_route(
+            "/callback",
+            get_with(tripit_callback::handler, tripit_callback::handler_docs),
+        )
+}
+
+/// Import API routes, nested under `/import`.
+pub(super) fn import_api_routes() -> ApiRouter<super::AppState> {
+    ApiRouter::new().route("/csv", axum::routing::post(csv_import::handler))
+}
+
+/// Top-level API routes that don't belong to a nested group.
+pub(super) fn toplevel_api_routes() -> ApiRouter<super::AppState> {
+    ApiRouter::new()
+        .api_route("/health", get_with(health::handler, health::handler_docs))
+        .api_route("/sync", post_with(sync::handler, sync::handler_docs))
 }
 
 impl ErrorResponse {

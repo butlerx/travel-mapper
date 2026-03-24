@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT user_trip_id as \"user_trip_id: i64\"\n               FROM hops\n               WHERE id = ? AND user_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "user_trip_id: i64",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "77bee56a79e028257822cae2870228f359a9dfc1815a2936eabacad7cfd1ac21"
+}

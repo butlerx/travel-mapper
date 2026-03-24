@@ -13,6 +13,7 @@ pub fn NavBar(#[prop(into)] current: String) -> impl IntoView {
             <div class="spacer"></div>
             <a class="nav-link" href="/dashboard" aria-current=aria("dashboard")>"Dashboard"</a>
             <a class="nav-link" href="/hops" aria-current=aria("hops")>"Hops"</a>
+            <a class="nav-link" href="/trips" aria-current=aria("trips")>"Trips"</a>
             <a class="nav-link" href="/hops/new" aria-current=aria("add-hop")>"Add Hop"</a>
             <a class="nav-link" href="/stats" aria-current=aria("stats")>"Stats"</a>
             <a class="nav-link" href="/settings" aria-current=aria("settings")>"Settings"</a>

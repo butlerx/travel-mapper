@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE hops\n              SET user_trip_id = NULL, updated_at = datetime('now')\n              WHERE id = ? AND user_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "0ef4154a0dab54588a1bfaeffb6ab3127e7960601aad2bb3787a3337cf939728"
+}

@@ -14,6 +14,8 @@ pub mod sessions;
 pub mod sync_jobs;
 /// Query objects for the `sync_state` table — per-user sync progress and status.
 pub mod sync_state;
+/// Query objects for the `trips` table — named travel trip groups.
+pub mod trips;
 /// Query objects for the `users` table — registration and lookup.
 pub mod users;
 

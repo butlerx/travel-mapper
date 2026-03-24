@@ -1,5 +1,5 @@
-use crate::server::AppState;
-use axum::{Router, response::IntoResponse, routing::get};
+use aide::axum::ApiRouter;
+use axum::{response::IntoResponse, routing::get};
 
 const CSS: &str = include_str!("../../../static/style.css");
 const MAP_JS: &str = include_str!("../../../static/map.js");
@@ -46,8 +46,8 @@ async fn serve_logo() -> impl IntoResponse {
     )
 }
 
-pub fn routes() -> Router<AppState> {
-    Router::new()
+pub fn routes() -> ApiRouter<crate::server::AppState> {
+    ApiRouter::new()
         .route("/style.css", get(serve_css))
         .route("/map.js", get(serve_js))
         .route("/stats-map.js", get(serve_stats_js))
@@ -56,8 +56,7 @@ pub fn routes() -> Router<AppState> {
 
 #[cfg(test)]
 mod tests {
-    use crate::server::create_router;
-    use crate::server::test_helpers::*;
+    use crate::server::{create_router, test_helpers::*};
     use axum::{
         body::Body,
         http::{Request, StatusCode, header},

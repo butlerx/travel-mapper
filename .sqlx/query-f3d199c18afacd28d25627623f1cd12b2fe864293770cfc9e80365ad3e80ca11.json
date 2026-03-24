@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE trips\n          SET start_date = (\n                  SELECT MIN(start_date)\n                  FROM hops\n                  WHERE user_id = ? AND user_trip_id = ?\n              ),\n              end_date = (\n                  SELECT MAX(end_date)\n                  FROM hops\n                  WHERE user_id = ? AND user_trip_id = ?\n              ),\n              updated_at = datetime('now')\n          WHERE id = ? AND user_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "f3d199c18afacd28d25627623f1cd12b2fe864293770cfc9e80365ad3e80ca11"
+}
