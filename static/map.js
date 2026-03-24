@@ -25,11 +25,13 @@
 
   darkTiles.addTo(map);
 
+  var rootStyles = getComputedStyle(document.documentElement);
+  var cssVar = function (name) { return rootStyles.getPropertyValue(name).trim(); };
   var colors = {
-    air: '#38bdf8',
-    rail: '#f59e0b',
-    boat: '#f43f5e',
-    transport: '#10b981',
+    air: cssVar('--color-type-air'),
+    rail: cssVar('--color-type-rail'),
+    boat: cssVar('--color-type-boat'),
+    transport: cssVar('--color-type-transport'),
   };
   var emojis = {
     air: '\u2708\uFE0F',
@@ -283,35 +285,47 @@
     airportsLayer.clearLayers();
     var bounds = [];
 
-    var routeFreq = {};
-    hops.forEach(function (hop) {
-      if (hop.origin_name && hop.dest_name) {
-        var key1 = hop.origin_name + '\u2192' + hop.dest_name;
-        var key2 = hop.dest_name + '\u2192' + hop.origin_name;
-        var key = key1 < key2 ? key1 : key2;
-        routeFreq[key] = (routeFreq[key] || 0) + 1;
-      }
-    });
-
+    var routes = {};
     hops.forEach(function (hop) {
       if ((!hop.origin_lat && !hop.origin_lng) || (!hop.dest_lat && !hop.dest_lng)) return;
 
-      var from = [hop.origin_lat, hop.origin_lng];
-      var to = [hop.dest_lat, hop.dest_lng];
-      var color = colors[hop.travel_type] || '#6b7280';
-      var emoji = emojis[hop.travel_type] || '';
+      var key1 = hop.origin_name + '|' + hop.origin_lat + '|' + hop.origin_lng +
+        '\u2192' + hop.dest_name + '|' + hop.dest_lat + '|' + hop.dest_lng;
+      var key2 = hop.dest_name + '|' + hop.dest_lat + '|' + hop.dest_lng +
+        '\u2192' + hop.origin_name + '|' + hop.origin_lat + '|' + hop.origin_lng;
+      var key = key1 < key2 ? key1 : key2;
+
+      if (!routes[key]) {
+        routes[key] = {
+          from: [hop.origin_lat, hop.origin_lng],
+          to: [hop.dest_lat, hop.dest_lng],
+          origin_name: hop.origin_name,
+          dest_name: hop.dest_name,
+          hops: [],
+        };
+      }
+      routes[key].hops.push(hop);
+    });
+
+    Object.keys(routes).forEach(function (key) {
+      var route = routes[key];
+      var from = route.from;
+      var to = route.to;
+      var routeHops = route.hops;
+      var freq = routeHops.length;
+
+      var typeCounts = {};
+      routeHops.forEach(function (h) {
+        typeCounts[h.travel_type] = (typeCounts[h.travel_type] || 0) + 1;
+      });
+      var dominantType = Object.keys(typeCounts).sort(function (a, b) {
+        return typeCounts[b] - typeCounts[a];
+      })[0];
+      var color = colors[dominantType] || '#6b7280';
+
       var points = arcPoints(from, to, 50);
       var dist = haversineKm(from[0], from[1], to[0], to[1]);
       var distStr = dist < 1 ? '<1' : Math.round(dist).toLocaleString();
-
-      var startD = hop.start_date || '';
-      var endD = hop.end_date || '';
-      var dateStr = startD === endD ? startD : startD + ' \u2192 ' + endD;
-
-      var key1 = hop.origin_name + '\u2192' + hop.dest_name;
-      var key2 = hop.dest_name + '\u2192' + hop.origin_name;
-      var key = key1 < key2 ? key1 : key2;
-      var freq = routeFreq[key] || 1;
 
       var weight = 2;
       var opacity = 0.6;
@@ -329,52 +343,38 @@
       var popup =
         '<div class="hop-popup">' +
         '<div class="hop-popup-header">' +
-        '<span class="hop-popup-emoji">' +
-        emoji +
-        '</span>' +
-        '<span class="hop-popup-type">' +
-        hop.travel_type.charAt(0).toUpperCase() +
-        hop.travel_type.slice(1) +
-        '</span>' +
+        '<strong>' + route.origin_name + ' \u2194 ' + route.dest_name + '</strong>' +
         '</div>' +
-        '<div class="hop-popup-route">' +
-        '<div class="hop-popup-place">' +
-        '<span class="hop-popup-label">\uD83D\uDFE2 From</span>' +
-        '<strong>' +
-        hop.origin_name +
-        '</strong>' +
-        (hop.origin_lat
-          ? '<span class="hop-popup-coords">' +
-            hop.origin_lat.toFixed(3) +
-            ', ' +
-            hop.origin_lng.toFixed(3) +
-            '</span>'
-          : '') +
+        '<div class="hop-popup-summary">' +
+        '<span>' + freq + ' journey' + (freq !== 1 ? 's' : '') + '</span>' +
+        '<span>\uD83D\uDCCF ' + distStr + ' km</span>' +
         '</div>' +
-        '<div class="hop-popup-arrow">\u2192</div>' +
-        '<div class="hop-popup-place">' +
-        '<span class="hop-popup-label">\uD83D\uDD34 To</span>' +
-        '<strong>' +
-        hop.dest_name +
-        '</strong>' +
-        (hop.dest_lat
-          ? '<span class="hop-popup-coords">' +
-            hop.dest_lat.toFixed(3) +
-            ', ' +
-            hop.dest_lng.toFixed(3) +
-            '</span>'
-          : '') +
-        '</div>' +
-        '</div>' +
-        '<div class="hop-popup-details">' +
-        '<div class="hop-popup-detail">\uD83D\uDCC5 ' +
-        dateStr +
-        '</div>' +
-        '<div class="hop-popup-detail">\uD83D\uDCCF ' +
-        distStr +
-        ' km</div>' +
-        '</div>' +
-        '</div>';
+        '<div class="hop-popup-list">';
+
+      var sorted = routeHops.slice().sort(function (a, b) {
+        return (b.start_date || '').localeCompare(a.start_date || '');
+      });
+      var shown = sorted.slice(0, 8);
+      shown.forEach(function (hop) {
+        var emoji = emojis[hop.travel_type] || '';
+        var startD = hop.start_date || '';
+        var endD = hop.end_date || '';
+        var dateStr = startD === endD ? startD : startD + ' \u2192 ' + endD;
+        var direction = hop.origin_name === route.origin_name
+          ? route.origin_name + ' \u2192 ' + route.dest_name
+          : route.dest_name + ' \u2192 ' + route.origin_name;
+
+        popup +=
+          '<a href="/hop/' + hop.id + '" class="hop-popup-item">' +
+          '<span class="hop-popup-item-emoji">' + emoji + '</span>' +
+          '<span class="hop-popup-item-direction">' + direction + '</span>' +
+          '<span class="hop-popup-item-date">' + dateStr + '</span>' +
+          '</a>';
+      });
+      if (sorted.length > 8) {
+        popup += '<div class="hop-popup-more">+' + (sorted.length - 8) + ' more</div>';
+      }
+      popup += '</div></div>';
 
       offsets.forEach(function (offset) {
         var shifted = points.map(function (p) {
@@ -385,7 +385,7 @@
           weight: weight,
           opacity: opacity,
         })
-          .bindPopup(popup, { maxWidth: 320, className: 'hop-popup-container' })
+          .bindPopup(popup, { maxWidth: 360, className: 'hop-popup-container' })
           .addTo(routesLayer);
       });
 
@@ -430,7 +430,7 @@
         radius: r,
         color: '#1e3a5f',
         weight: 1.5,
-        fillColor: '#38bdf8',
+        fillColor: cssVar('--color-type-air'),
         fillOpacity: 0.85,
       };
       var sortedRoutes = Object.keys(c.routes)

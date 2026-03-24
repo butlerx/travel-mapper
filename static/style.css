@@ -37,6 +37,16 @@
   --color-warning-border: #78350f;
   --color-warning-text: #fbbf24;
 
+  /* Travel type colors (Wong palette — colorblind safe) */
+  --color-type-air: #56b4e9;
+  --color-type-air-border: rgba(86, 180, 233, 0.3);
+  --color-type-rail: #e69f00;
+  --color-type-rail-border: rgba(230, 159, 0, 0.3);
+  --color-type-boat: #d55e00;
+  --color-type-boat-border: rgba(213, 94, 0, 0.3);
+  --color-type-transport: #009e73;
+  --color-type-transport-border: rgba(0, 158, 115, 0.3);
+
   /* Spacing */
   --space-xs: 0.25rem;
   --space-sm: 0.5rem;
@@ -568,10 +578,10 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
 }
 
 /* Travel type text colors */
-.hop-item[data-type="air"] .hop-value, .type-air { color: #38bdf8; }
-.hop-item[data-type="rail"] .hop-value, .type-rail { color: #f59e0b; }
-.hop-item[data-type="boat"] .hop-value, .type-boat { color: #ef4444; }
-.hop-item[data-type="transport"] .hop-value, .type-transport { color: #2dd4bf; }
+.hop-item[data-type="air"] .hop-value, .type-air { color: var(--color-type-air); }
+.hop-item[data-type="rail"] .hop-value, .type-rail { color: var(--color-type-rail); }
+.hop-item[data-type="boat"] .hop-value, .type-boat { color: var(--color-type-boat); }
+.hop-item[data-type="transport"] .hop-value, .type-transport { color: var(--color-type-transport); }
 
 @media (max-width: 640px) {
   .hop-item {
@@ -689,10 +699,10 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
   color: var(--color-text-secondary);
 }
 
-.badge-air { color: #38bdf8; border-color: rgba(56, 189, 248, 0.3); }
-.badge-rail { color: #f59e0b; border-color: rgba(245, 158, 11, 0.3); }
-.badge-boat { color: #f43f5e; border-color: rgba(244, 63, 94, 0.3); }
-.badge-transport { color: #10b981; border-color: rgba(16, 185, 129, 0.3); }
+.badge-air { color: var(--color-type-air); border-color: var(--color-type-air-border); }
+.badge-rail { color: var(--color-type-rail); border-color: var(--color-type-rail-border); }
+.badge-boat { color: var(--color-type-boat); border-color: var(--color-type-boat-border); }
+.badge-transport { color: var(--color-type-transport); border-color: var(--color-type-transport-border); }
 
 .journey-date {
   color: var(--color-text-secondary);
@@ -1010,19 +1020,19 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
 }
 
 .legend-air {
-  background: #38bdf8;
+  background: var(--color-type-air);
 }
 
 .legend-rail {
-  background: #f59e0b;
+  background: var(--color-type-rail);
 }
 
 .legend-boat {
-  background: #f43f5e;
+  background: var(--color-type-boat);
 }
 
 .legend-transport {
-  background: #10b981;
+  background: var(--color-type-transport);
 }
 
 .legend-count {
@@ -1289,72 +1299,73 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
 }
 
 .hop-popup-header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
   padding: var(--space-sm) var(--space-md);
   border-bottom: 1px solid var(--color-border-subtle);
-  font-weight: 600;
-  font-size: var(--text-base);
+  font-size: var(--text-sm);
   background: linear-gradient(to right, rgba(56, 189, 248, 0.1), transparent);
 }
 
-.hop-popup-emoji {
-  font-size: var(--text-lg);
+.hop-popup-header strong {
+  font-weight: 600;
 }
 
-.hop-popup-type {
-  text-transform: capitalize;
+.hop-popup-summary {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--space-xs) var(--space-md);
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  border-bottom: 1px solid var(--color-border-subtle);
 }
 
-.hop-popup-route {
+.hop-popup-list {
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.hop-popup-item {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  padding: var(--space-sm) var(--space-md);
+  padding: var(--space-xs) var(--space-md);
+  text-decoration: none;
+  color: var(--color-text);
+  border-bottom: 1px solid var(--color-border-subtle);
+  font-size: var(--text-xs);
+  transition: background 0.15s;
 }
 
-.hop-popup-place {
-  display: flex;
-  flex-direction: column;
+.hop-popup-item:last-child {
+  border-bottom: none;
+}
+
+.hop-popup-item:hover {
+  background: rgba(56, 189, 248, 0.08);
+}
+
+.hop-popup-item-emoji {
+  flex-shrink: 0;
+}
+
+.hop-popup-item-direction {
   flex: 1;
   min-width: 0;
-}
-
-.hop-popup-place strong {
-  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.hop-popup-label {
-  font-size: var(--text-xs);
-  color: var(--color-text-muted);
-}
-
-.hop-popup-coords {
-  font-size: var(--text-xs);
+.hop-popup-item-date {
+  flex-shrink: 0;
   color: var(--color-text-muted);
   font-family: var(--font-mono);
 }
 
-.hop-popup-arrow {
-  font-size: var(--text-lg);
-  color: var(--color-primary);
-  flex-shrink: 0;
-}
-
-.hop-popup-details {
-  display: flex;
-  gap: var(--space-md);
-  padding: var(--space-sm) var(--space-md);
-  border-top: 1px solid var(--color-border-subtle);
+.hop-popup-more {
+  padding: var(--space-xs) var(--space-md);
   font-size: var(--text-xs);
-  color: var(--color-text-secondary);
-}
-
-.hop-popup-detail {
-  white-space: nowrap;
+  color: var(--color-text-muted);
+  text-align: center;
 }
 
 /* ===== City Tooltips ===== */
@@ -1623,6 +1634,11 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
   border: 1px solid var(--color-border);
   color: var(--color-text-secondary);
 }
+
+.hop-card-badge.badge-air { color: var(--color-type-air); border-color: var(--color-type-air-border); }
+.hop-card-badge.badge-rail { color: var(--color-type-rail); border-color: var(--color-type-rail-border); }
+.hop-card-badge.badge-boat { color: var(--color-type-boat); border-color: var(--color-type-boat-border); }
+.hop-card-badge.badge-transport { color: var(--color-type-transport); border-color: var(--color-type-transport-border); }
 
 .hop-card-date {
   color: var(--color-text-secondary);
@@ -1917,10 +1933,10 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
   color: var(--color-text-secondary);
 }
 
-.hop-detail-badge.air { color: #38bdf8; border-color: rgba(56, 189, 248, 0.3); }
-.hop-detail-badge.rail { color: #f59e0b; border-color: rgba(245, 158, 11, 0.3); }
-.hop-detail-badge.boat { color: #f43f5e; border-color: rgba(244, 63, 94, 0.3); }
-.hop-detail-badge.transport { color: #10b981; border-color: rgba(16, 185, 129, 0.3); }
+.hop-detail-badge.air { color: var(--color-type-air); border-color: var(--color-type-air-border); }
+.hop-detail-badge.rail { color: var(--color-type-rail); border-color: var(--color-type-rail-border); }
+.hop-detail-badge.boat { color: var(--color-type-boat); border-color: var(--color-type-boat-border); }
+.hop-detail-badge.transport { color: var(--color-type-transport); border-color: var(--color-type-transport-border); }
 
 .hop-detail-countries {
   font-size: var(--text-sm);

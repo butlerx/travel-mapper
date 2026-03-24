@@ -176,7 +176,7 @@ impl MultiFormatResponse for HopResponse {
              <span class=\"hop-card-place\">{dest}</span>\
              </div>\
              <div class=\"hop-card-meta\">\
-             <span class=\"hop-card-badge\">{emoji} {travel_type}</span>\
+             <span class=\"hop-card-badge badge-{travel_type}\">{emoji} {travel_type}</span>\
              <span class=\"hop-card-date\">{date}</span>\
              </div>\
              </div>\
