@@ -12,6 +12,8 @@ mod get_all;
 mod get_all_for_stats;
 mod get_by_id;
 mod replace_for_trip;
+/// Update an existing hop's core fields and type-specific details by ID.
+mod update_by_id;
 
 pub use create::Create;
 pub use create_from_flighty::CreateFromFlighty;
@@ -22,6 +24,7 @@ pub use get_all::GetAll;
 pub use get_all_for_stats::{GetAllForStats, StatsRow};
 pub use get_by_id::{DetailRow, FullFlightDetail, GetById};
 pub use replace_for_trip::ReplaceForTrip;
+pub use update_by_id::UpdateById;
 
 // ---------------------------------------------------------------------------
 // Shared types — travel type enums, detail structs, and row mappings
@@ -233,6 +236,54 @@ pub(super) async fn insert_flight_detail(
         detail.cabin_class,
         detail.seat,
         detail.pnr,
+    )
+    .execute(&mut **tx)
+    .await?;
+    Ok(())
+}
+
+pub(super) async fn upsert_full_flight_detail(
+    tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+    hop_id: i64,
+    detail: &get_by_id::FullFlightDetail,
+) -> Result<(), sqlx::Error> {
+    let canceled = i32::from(detail.canceled);
+    sqlx::query!(
+        r"INSERT OR REPLACE INTO flight_details (
+           hop_id, airline, flight_number, dep_terminal, dep_gate,
+           arr_terminal, arr_gate, canceled, diverted_to,
+           gate_dep_scheduled, gate_dep_actual,
+           takeoff_scheduled, takeoff_actual,
+           landing_scheduled, landing_actual,
+           gate_arr_scheduled, gate_arr_actual,
+           aircraft_type, tail_number, pnr, seat,
+           seat_type, cabin_class, flight_reason, notes
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        hop_id,
+        detail.airline,
+        detail.flight_number,
+        detail.dep_terminal,
+        detail.dep_gate,
+        detail.arr_terminal,
+        detail.arr_gate,
+        canceled,
+        detail.diverted_to,
+        detail.gate_dep_scheduled,
+        detail.gate_dep_actual,
+        detail.takeoff_scheduled,
+        detail.takeoff_actual,
+        detail.landing_scheduled,
+        detail.landing_actual,
+        detail.gate_arr_scheduled,
+        detail.gate_arr_actual,
+        detail.aircraft_type,
+        detail.tail_number,
+        detail.pnr,
+        detail.seat,
+        detail.seat_type,
+        detail.cabin_class,
+        detail.flight_reason,
+        detail.notes,
     )
     .execute(&mut **tx)
     .await?;

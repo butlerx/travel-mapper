@@ -1,10 +1,12 @@
-use axum::response::IntoResponse;
+use crate::server::AppState;
+use axum::{Router, response::IntoResponse, routing::get};
 
 const CSS: &str = include_str!("../../../static/style.css");
 const MAP_JS: &str = include_str!("../../../static/map.js");
 const STATS_MAP_JS: &str = include_str!("../../../static/stats-map.js");
 const LOGO: &str = include_str!("../../../static/logo.svg");
-pub async fn serve_css() -> impl IntoResponse {
+
+async fn serve_css() -> impl IntoResponse {
     (
         [
             ("content-type", "text/css; charset=utf-8"),
@@ -14,7 +16,7 @@ pub async fn serve_css() -> impl IntoResponse {
     )
 }
 
-pub async fn serve_js() -> impl IntoResponse {
+async fn serve_js() -> impl IntoResponse {
     (
         [
             ("content-type", "application/javascript; charset=utf-8"),
@@ -24,7 +26,7 @@ pub async fn serve_js() -> impl IntoResponse {
     )
 }
 
-pub async fn serve_stats_js() -> impl IntoResponse {
+async fn serve_stats_js() -> impl IntoResponse {
     (
         [
             ("content-type", "application/javascript; charset=utf-8"),
@@ -34,7 +36,7 @@ pub async fn serve_stats_js() -> impl IntoResponse {
     )
 }
 
-pub async fn serve_logo() -> impl IntoResponse {
+async fn serve_logo() -> impl IntoResponse {
     (
         [
             ("content-type", "image/svg+xml"),
@@ -42,6 +44,14 @@ pub async fn serve_logo() -> impl IntoResponse {
         ],
         LOGO,
     )
+}
+
+pub fn routes() -> Router<AppState> {
+    Router::new()
+        .route("/style.css", get(serve_css))
+        .route("/map.js", get(serve_js))
+        .route("/stats-map.js", get(serve_stats_js))
+        .route("/logo.svg", get(serve_logo))
 }
 
 #[cfg(test)]

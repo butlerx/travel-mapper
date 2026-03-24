@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT OR REPLACE INTO flight_details (\n           hop_id, airline, flight_number, dep_terminal, dep_gate,\n           arr_terminal, arr_gate, canceled, diverted_to,\n           gate_dep_scheduled, gate_dep_actual,\n           takeoff_scheduled, takeoff_actual,\n           landing_scheduled, landing_actual,\n           gate_arr_scheduled, gate_arr_actual,\n           aircraft_type, tail_number, pnr, seat,\n           seat_type, cabin_class, flight_reason, notes\n       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 25
+    },
+    "nullable": []
+  },
+  "hash": "999e07cc0c388f8fab9b6bebdb9593a17e5e02b69838945bbd52cf21228768f1"
+}

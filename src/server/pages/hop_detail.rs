@@ -1,5 +1,7 @@
 /// Boat travel detail section component.
 mod boat_section;
+/// Edit form component for modifying hop details.
+mod edit_form;
 /// Flight detail section component.
 mod flight_section;
 /// Rail travel detail section component.
@@ -19,17 +21,30 @@ use crate::{
     },
 };
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
 };
 use boat_section::BoatSection;
+use edit_form::EditForm;
 use flight_section::FlightSection;
 use leptos::prelude::*;
 use rail_section::RailSection;
+use serde::Deserialize;
 use transport_section::TransportSection;
 
-pub async fn page(State(state): State<AppState>, auth: AuthUser, Path(id): Path<i64>) -> Response {
+#[derive(Deserialize, Default)]
+pub struct HopDetailFeedback {
+    pub error: Option<String>,
+    pub success: Option<String>,
+}
+
+pub async fn page(
+    State(state): State<AppState>,
+    auth: AuthUser,
+    Path(id): Path<i64>,
+    Query(feedback): Query<HopDetailFeedback>,
+) -> Response {
     match (db::hops::GetById {
         id,
         user_id: auth.user_id,
@@ -38,7 +53,13 @@ pub async fn page(State(state): State<AppState>, auth: AuthUser, Path(id): Path<
     .await
     {
         Ok(Some(hop)) => {
-            let html = view! { <HopDetailPage hop=hop /> };
+            let html = view! {
+                <HopDetailPage
+                    error_msg=feedback.error
+                    success_msg=feedback.success
+                    hop=hop
+                />
+            };
             (StatusCode::OK, axum::response::Html(html.to_html())).into_response()
         }
         Ok(None) => super::not_found::page().await,
@@ -97,7 +118,13 @@ fn timing_row(phase: &'static str, scheduled: &str, actual: &str) -> Option<impl
 }
 
 #[component]
-fn HopDetailPage(hop: DetailRow) -> impl IntoView {
+fn HopDetailPage(
+    #[prop(optional_no_strip)] error_msg: Option<String>,
+    #[prop(optional_no_strip)] success_msg: Option<String>,
+    hop: DetailRow,
+) -> impl IntoView {
+    let edit_hop = hop.clone();
+
     let emoji = hop.travel_type.emoji();
     let badge_class = format!("hop-detail-badge {}", travel_type_class(&hop.travel_type));
     let type_label = hop.travel_type.to_string();
@@ -173,6 +200,13 @@ fn HopDetailPage(hop: DetailRow) -> impl IntoView {
             <main class="hop-detail-page">
                 <a href="/dashboard" class="hop-detail-back">"\u{2190} Dashboard"</a>
 
+                {error_msg.map(|e| view! {
+                    <div class="alert alert-error" role="alert">{e}</div>
+                })}
+                {success_msg.filter(|v| v == "1").map(|_| view! {
+                    <div class="alert alert-success" role="status">"Hop updated successfully!"</div>
+                })}
+
                 <header class="hop-detail-header">
                     <h1 class="hop-detail-route">
                         <span>{emoji}</span>
@@ -195,6 +229,14 @@ fn HopDetailPage(hop: DetailRow) -> impl IntoView {
                 ></div>
 
                 {detail_section}
+
+                <button
+                    class="btn btn-secondary"
+                    type="button"
+                    onclick="document.getElementById('edit-form').classList.add('open');document.getElementById('edit-backdrop').classList.add('open')"
+                >"Edit"</button>
+
+                <EditForm hop=edit_hop />
 
                 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
                     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="

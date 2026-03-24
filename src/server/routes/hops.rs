@@ -8,7 +8,7 @@ use crate::{
 use aide::transform::TransformOperation;
 use axum::{
     Json,
-    extract::{Query, State},
+    extract::{Path, Query, State},
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Redirect, Response},
 };
@@ -96,6 +96,17 @@ impl From<db::hops::TravelType> for HopTravelType {
             db::hops::TravelType::Rail => Self::Rail,
             db::hops::TravelType::Boat => Self::Boat,
             db::hops::TravelType::Transport => Self::Transport,
+        }
+    }
+}
+
+impl From<HopTravelType> for db::hops::TravelType {
+    fn from(t: HopTravelType) -> Self {
+        match t {
+            HopTravelType::Air => Self::Air,
+            HopTravelType::Rail => Self::Rail,
+            HopTravelType::Boat => Self::Boat,
+            HopTravelType::Transport => Self::Transport,
         }
     }
 }
@@ -368,6 +379,309 @@ pub fn create_handler_docs(op: TransformOperation) -> TransformOperation {
         .response::<201, Json<CreateHopResponse>>()
         .response::<400, Json<ErrorResponse>>()
         .response::<401, Json<ErrorResponse>>()
+        .response::<500, Json<ErrorResponse>>()
+        .tag("hops")
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct UpdateHopRequest {
+    pub travel_type: HopTravelType,
+    pub origin_name: String,
+    pub dest_name: String,
+    pub start_date: String,
+    pub end_date: String,
+    pub origin_lat: f64,
+    pub origin_lng: f64,
+    #[serde(default)]
+    pub origin_country: Option<String>,
+    pub dest_lat: f64,
+    pub dest_lng: f64,
+    #[serde(default)]
+    pub dest_country: Option<String>,
+    #[serde(default)]
+    pub airline: Option<String>,
+    #[serde(default)]
+    pub flight_number: Option<String>,
+    #[serde(default)]
+    pub dep_terminal: Option<String>,
+    #[serde(default)]
+    pub dep_gate: Option<String>,
+    #[serde(default)]
+    pub arr_terminal: Option<String>,
+    #[serde(default)]
+    pub arr_gate: Option<String>,
+    #[serde(default)]
+    pub canceled: Option<bool>,
+    #[serde(default)]
+    pub diverted_to: Option<String>,
+    #[serde(default)]
+    pub gate_dep_scheduled: Option<String>,
+    #[serde(default)]
+    pub gate_dep_actual: Option<String>,
+    #[serde(default)]
+    pub takeoff_scheduled: Option<String>,
+    #[serde(default)]
+    pub takeoff_actual: Option<String>,
+    #[serde(default)]
+    pub landing_scheduled: Option<String>,
+    #[serde(default)]
+    pub landing_actual: Option<String>,
+    #[serde(default)]
+    pub gate_arr_scheduled: Option<String>,
+    #[serde(default)]
+    pub gate_arr_actual: Option<String>,
+    #[serde(default)]
+    pub aircraft_type: Option<String>,
+    #[serde(default)]
+    pub tail_number: Option<String>,
+    #[serde(default)]
+    pub pnr: Option<String>,
+    #[serde(default)]
+    pub seat: Option<String>,
+    #[serde(default)]
+    pub seat_type: Option<String>,
+    #[serde(default)]
+    pub cabin_class: Option<String>,
+    #[serde(default)]
+    pub flight_reason: Option<String>,
+    #[serde(default)]
+    pub flight_notes: Option<String>,
+    #[serde(default)]
+    pub rail_carrier: Option<String>,
+    #[serde(default)]
+    pub train_number: Option<String>,
+    #[serde(default)]
+    pub service_class: Option<String>,
+    #[serde(default)]
+    pub coach_number: Option<String>,
+    #[serde(default)]
+    pub rail_seats: Option<String>,
+    #[serde(default)]
+    pub rail_confirmation: Option<String>,
+    #[serde(default)]
+    pub rail_booking_site: Option<String>,
+    #[serde(default)]
+    pub rail_notes: Option<String>,
+    #[serde(default)]
+    pub ship_name: Option<String>,
+    #[serde(default)]
+    pub cabin_type: Option<String>,
+    #[serde(default)]
+    pub cabin_number: Option<String>,
+    #[serde(default)]
+    pub boat_confirmation: Option<String>,
+    #[serde(default)]
+    pub boat_booking_site: Option<String>,
+    #[serde(default)]
+    pub boat_notes: Option<String>,
+    #[serde(default)]
+    pub transport_carrier: Option<String>,
+    #[serde(default)]
+    pub vehicle_description: Option<String>,
+    #[serde(default)]
+    pub transport_confirmation: Option<String>,
+    #[serde(default)]
+    pub transport_notes: Option<String>,
+}
+
+impl UpdateHopRequest {
+    fn build_flight_detail(&self) -> Option<db::hops::FullFlightDetail> {
+        (self.travel_type == HopTravelType::Air).then(|| db::hops::FullFlightDetail {
+            airline: self.airline.clone().unwrap_or_default(),
+            flight_number: self.flight_number.clone().unwrap_or_default(),
+            dep_terminal: self.dep_terminal.clone().unwrap_or_default(),
+            dep_gate: self.dep_gate.clone().unwrap_or_default(),
+            arr_terminal: self.arr_terminal.clone().unwrap_or_default(),
+            arr_gate: self.arr_gate.clone().unwrap_or_default(),
+            canceled: self.canceled.unwrap_or(false),
+            diverted_to: self.diverted_to.clone().unwrap_or_default(),
+            gate_dep_scheduled: self.gate_dep_scheduled.clone().unwrap_or_default(),
+            gate_dep_actual: self.gate_dep_actual.clone().unwrap_or_default(),
+            takeoff_scheduled: self.takeoff_scheduled.clone().unwrap_or_default(),
+            takeoff_actual: self.takeoff_actual.clone().unwrap_or_default(),
+            landing_scheduled: self.landing_scheduled.clone().unwrap_or_default(),
+            landing_actual: self.landing_actual.clone().unwrap_or_default(),
+            gate_arr_scheduled: self.gate_arr_scheduled.clone().unwrap_or_default(),
+            gate_arr_actual: self.gate_arr_actual.clone().unwrap_or_default(),
+            aircraft_type: self.aircraft_type.clone().unwrap_or_default(),
+            tail_number: self.tail_number.clone().unwrap_or_default(),
+            pnr: self.pnr.clone().unwrap_or_default(),
+            seat: self.seat.clone().unwrap_or_default(),
+            seat_type: self.seat_type.clone().unwrap_or_default(),
+            cabin_class: self.cabin_class.clone().unwrap_or_default(),
+            flight_reason: self.flight_reason.clone().unwrap_or_default(),
+            notes: self.flight_notes.clone().unwrap_or_default(),
+        })
+    }
+
+    fn build_rail_detail(&self) -> Option<db::hops::RailDetail> {
+        (self.travel_type == HopTravelType::Rail).then(|| db::hops::RailDetail {
+            carrier: self.rail_carrier.clone().unwrap_or_default(),
+            train_number: self.train_number.clone().unwrap_or_default(),
+            service_class: self.service_class.clone().unwrap_or_default(),
+            coach_number: self.coach_number.clone().unwrap_or_default(),
+            seats: self.rail_seats.clone().unwrap_or_default(),
+            confirmation_num: self.rail_confirmation.clone().unwrap_or_default(),
+            booking_site: self.rail_booking_site.clone().unwrap_or_default(),
+            notes: self.rail_notes.clone().unwrap_or_default(),
+        })
+    }
+
+    fn build_boat_detail(&self) -> Option<db::hops::BoatDetail> {
+        (self.travel_type == HopTravelType::Boat).then(|| db::hops::BoatDetail {
+            ship_name: self.ship_name.clone().unwrap_or_default(),
+            cabin_type: self.cabin_type.clone().unwrap_or_default(),
+            cabin_number: self.cabin_number.clone().unwrap_or_default(),
+            confirmation_num: self.boat_confirmation.clone().unwrap_or_default(),
+            booking_site: self.boat_booking_site.clone().unwrap_or_default(),
+            notes: self.boat_notes.clone().unwrap_or_default(),
+        })
+    }
+
+    fn build_transport_detail(&self) -> Option<db::hops::TransportDetail> {
+        (self.travel_type == HopTravelType::Transport).then(|| db::hops::TransportDetail {
+            carrier_name: self.transport_carrier.clone().unwrap_or_default(),
+            vehicle_description: self.vehicle_description.clone().unwrap_or_default(),
+            confirmation_num: self.transport_confirmation.clone().unwrap_or_default(),
+            notes: self.transport_notes.clone().unwrap_or_default(),
+        })
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct UpdateHopResponse {
+    pub updated: bool,
+}
+
+pub async fn update_handler(
+    State(state): State<AppState>,
+    auth: AuthUser,
+    Path(id): Path<i64>,
+    headers: HeaderMap,
+    body: axum::body::Bytes,
+) -> Response {
+    let is_form = is_form_request(&headers);
+
+    let parsed: Result<UpdateHopRequest, AppError> = if is_form {
+        serde_urlencoded::from_bytes(&body).map_err(AppError::from)
+    } else {
+        serde_json::from_slice(&body).map_err(AppError::from)
+    };
+
+    let req = match parsed {
+        Ok(r) => r,
+        Err(err) => {
+            return if is_form {
+                Redirect::to(&format!(
+                    "/hop/{id}?error={}",
+                    encode_query_value(&format!("Invalid form data: {err}"))
+                ))
+                .into_response()
+            } else {
+                let format = negotiate_format(&headers);
+                err.into_format_response(format)
+            };
+        }
+    };
+
+    if req.origin_name.is_empty() || req.dest_name.is_empty() || req.start_date.is_empty() {
+        let err = AppError::MissingField("origin_name, dest_name, and start_date are required");
+        return if is_form {
+            Redirect::to(&format!(
+                "/hop/{id}?error={}",
+                encode_query_value(&err.to_string())
+            ))
+            .into_response()
+        } else {
+            let format = negotiate_format(&headers);
+            err.into_format_response(format)
+        };
+    }
+
+    let flight_detail = req.build_flight_detail();
+    let rail_detail = req.build_rail_detail();
+    let boat_detail = req.build_boat_detail();
+    let transport_detail = req.build_transport_detail();
+
+    let result = (db::hops::UpdateById {
+        id,
+        user_id: auth.user_id,
+        origin_name: req.origin_name,
+        dest_name: req.dest_name,
+        start_date: req.start_date,
+        end_date: req.end_date,
+        origin_lat: req.origin_lat,
+        origin_lng: req.origin_lng,
+        origin_country: req.origin_country,
+        dest_lat: req.dest_lat,
+        dest_lng: req.dest_lng,
+        dest_country: req.dest_country,
+        travel_type: req.travel_type.into(),
+        flight_detail,
+        rail_detail,
+        boat_detail,
+        transport_detail,
+    })
+    .execute(&state.db)
+    .await;
+
+    match result {
+        Ok(true) => {
+            if is_form {
+                Redirect::to(&format!("/hop/{id}?success=1")).into_response()
+            } else {
+                (StatusCode::OK, Json(UpdateHopResponse { updated: true })).into_response()
+            }
+        }
+        Ok(false) => {
+            if is_form {
+                Redirect::to(&format!(
+                    "/hop/{id}?error={}",
+                    encode_query_value("Hop not found")
+                ))
+                .into_response()
+            } else {
+                (
+                    StatusCode::NOT_FOUND,
+                    Json(ErrorResponse {
+                        error: "hop not found".to_owned(),
+                    }),
+                )
+                    .into_response()
+            }
+        }
+        Err(err) => {
+            let err = AppError::from(err);
+            if is_form {
+                Redirect::to(&format!(
+                    "/hop/{id}?error={}",
+                    encode_query_value(&err.to_string())
+                ))
+                .into_response()
+            } else {
+                let format = negotiate_format(&headers);
+                err.into_format_response(format)
+            }
+        }
+    }
+}
+
+pub fn update_handler_docs(op: TransformOperation) -> TransformOperation {
+    op.description("Update an existing hop by ID. Accepts JSON or form-encoded body.")
+        .input::<Json<UpdateHopRequest>>()
+        .with(|mut op| {
+            if let Some(aide::openapi::ReferenceOr::Item(body)) = &mut op.inner_mut().request_body
+                && let Some(json_media) = body.content.get("application/json").cloned()
+            {
+                body.content
+                    .insert("application/x-www-form-urlencoded".to_string(), json_media);
+            }
+            op
+        })
+        .response::<200, Json<UpdateHopResponse>>()
+        .response::<400, Json<ErrorResponse>>()
+        .response::<401, Json<ErrorResponse>>()
+        .response::<404, Json<ErrorResponse>>()
         .response::<500, Json<ErrorResponse>>()
         .tag("hops")
 }

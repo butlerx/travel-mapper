@@ -93,6 +93,8 @@ fn api_docs(api: TransformOpenApi) -> TransformOpenApi {
 
 /// Register page and static-asset routes that do not need `OpenAPI` metadata.
 fn page_routes(router: ApiRouter<AppState>) -> ApiRouter<AppState> {
+    let static_assets = routes::static_assets::routes();
+
     router
         .route("/", get(pages::landing::page))
         .route("/register", get(pages::register::page))
@@ -102,13 +104,7 @@ fn page_routes(router: ApiRouter<AppState>) -> ApiRouter<AppState> {
         .route("/stats", get(pages::stats::page))
         .route("/flights/new", get(pages::add_flight::page))
         .route("/hop/{id}", get(pages::hop_detail::page))
-        .route("/static/style.css", get(routes::static_assets::serve_css))
-        .route("/static/map.js", get(routes::static_assets::serve_js))
-        .route(
-            "/static/stats-map.js",
-            get(routes::static_assets::serve_stats_js),
-        )
-        .route("/static/logo.svg", get(routes::static_assets::serve_logo))
+        .nest("/static", static_assets.into())
 }
 
 /// Register API routes that carry `OpenAPI` documentation.
@@ -127,6 +123,17 @@ fn api_routes(router: ApiRouter<AppState>) -> ApiRouter<AppState> {
             get_with(routes::hops::handler, routes::hops::handler_docs).post_with(
                 routes::hops::create_handler,
                 routes::hops::create_handler_docs,
+            ),
+        )
+        .api_route(
+            "/hops/{id}",
+            aide::axum::routing::put_with(
+                routes::hops::update_handler,
+                routes::hops::update_handler_docs,
+            )
+            .post_with(
+                routes::hops::update_handler,
+                routes::hops::update_handler_docs,
             ),
         )
         .route(
