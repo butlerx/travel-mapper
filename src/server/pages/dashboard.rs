@@ -112,20 +112,51 @@ fn DashboardPage(
 fn MapControls(hop_count: usize) -> impl IntoView {
     view! {
         <div class="map-controls">
-            <div class="map-filters">
-                <label for="filter-type">{"\u{1F3F7}\u{FE0F} Type"}</label>
-                <select id="filter-type">
-                    <option value="all">"All Types"</option>
-                    <option value="air">{"\u{2708}\u{FE0F} Air"}</option>
-                    <option value="rail">{"\u{1F686} Rail"}</option>
-                    <option value="boat">{"\u{1F6A2} Boat"}</option>
-                    <option value="transport">{"\u{1F697} Transport"}</option>
-                </select>
-                <label for="filter-year">{"\u{1F4C5} Year"}</label>
-                <select id="filter-year">
-                    <option value="all">"All Years"</option>
-                </select>
+            <div class="search-bar">
+                <input type="text" id="search-q" placeholder="Search destinations, airlines..." />
             </div>
+            <div class="filter-panel" id="filter-panel">
+                <div class="filter-row">
+                    <label for="filter-type">{"\u{1F3F7}\u{FE0F} Type"}</label>
+                    <select id="filter-type">
+                        <option value="">"All Types"</option>
+                        <option value="air">{"\u{2708}\u{FE0F} Air"}</option>
+                        <option value="rail">{"\u{1F686} Rail"}</option>
+                        <option value="boat">{"\u{1F6A2} Boat"}</option>
+                        <option value="transport">{"\u{1F697} Transport"}</option>
+                    </select>
+                    <label for="filter-origin">"Origin"</label>
+                    <input type="text" id="filter-origin" placeholder="e.g. LHR" />
+                    <label for="filter-dest">"Dest"</label>
+                    <input type="text" id="filter-dest" placeholder="e.g. JFK" />
+                </div>
+                <div class="filter-row">
+                    <label for="filter-date-from">"From"</label>
+                    <input type="date" id="filter-date-from" />
+                    <label for="filter-date-to">"To"</label>
+                    <input type="date" id="filter-date-to" />
+                    <label for="filter-airline">"Airline"</label>
+                    <input type="text" id="filter-airline" placeholder="e.g. BA" />
+                </div>
+                <div class="filter-row">
+                    <label for="filter-cabin">"Cabin"</label>
+                    <select id="filter-cabin">
+                        <option value="">"Any"</option>
+                        <option value="economy">"Economy"</option>
+                        <option value="premium_economy">"Premium Economy"</option>
+                        <option value="business">"Business"</option>
+                        <option value="first">"First"</option>
+                    </select>
+                    <label for="filter-reason">"Reason"</label>
+                    <select id="filter-reason">
+                        <option value="">"Any"</option>
+                        <option value="personal">"Personal"</option>
+                        <option value="business">"Business"</option>
+                    </select>
+                    <button type="button" id="filter-clear" class="btn-clear">"Clear"</button>
+                </div>
+            </div>
+            <div id="active-filters" class="active-filters"></div>
             <div class="map-toggles">
                 <label class="map-toggle">
                     <input type="checkbox" id="toggle-routes" checked />
@@ -276,7 +307,7 @@ mod tests {
         let body = body_text(response).await;
         assert!(body.contains("id=\"map\""));
         assert!(body.contains("id=\"filter-type\""));
-        assert!(body.contains("id=\"filter-year\""));
+        assert!(body.contains("id=\"filter-date-from\""));
         assert!(body.contains("map-legend"));
         assert!(body.contains("window.allHops="));
         assert!(body.contains("/static/map.js"));

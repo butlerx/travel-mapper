@@ -1,6 +1,8 @@
 (function () {
-  var allHops = window.allHops || [];
+  var initialHops = window.allHops || [];
+  var currentHops = initialHops;
   var isDark = true;
+  var debounceTimer = null;
 
   var map = L.map('map', {
     zoomControl: true,
@@ -36,19 +38,41 @@
     transport: '\uD83D\uDE97',
   };
 
-  var years = [];
-  allHops.forEach(function (h) {
-    var y = h.start_date.substring(0, 4);
-    if (y && years.indexOf(y) === -1) years.push(y);
-  });
-  years.sort().reverse();
-  var yearSelect = document.getElementById('filter-year');
-  years.forEach(function (y) {
-    var opt = document.createElement('option');
-    opt.value = y;
-    opt.textContent = y;
-    yearSelect.appendChild(opt);
-  });
+  var filterIds = [
+    'search-q',
+    'filter-type',
+    'filter-origin',
+    'filter-dest',
+    'filter-date-from',
+    'filter-date-to',
+    'filter-airline',
+    'filter-cabin',
+    'filter-reason',
+  ];
+
+  var paramMap = {
+    'search-q': 'q',
+    'filter-type': 'type',
+    'filter-origin': 'origin',
+    'filter-dest': 'dest',
+    'filter-date-from': 'date_from',
+    'filter-date-to': 'date_to',
+    'filter-airline': 'airline',
+    'filter-cabin': 'cabin_class',
+    'filter-reason': 'flight_reason',
+  };
+
+  var labelMap = {
+    q: 'Search',
+    type: 'Type',
+    origin: 'Origin',
+    dest: 'Dest',
+    date_from: 'From',
+    date_to: 'To',
+    airline: 'Airline',
+    cabin_class: 'Cabin',
+    flight_reason: 'Reason',
+  };
 
   var routesLayer = L.layerGroup().addTo(map);
   var airportsLayer = L.layerGroup().addTo(map);
@@ -189,11 +213,9 @@
       }
     });
 
-    // Upcoming: soonest first
     upcoming.sort(function (a, b) {
       return a.start_date.localeCompare(b.start_date);
     });
-    // Past: most recent first
     past.sort(function (a, b) {
       return b.start_date.localeCompare(a.start_date);
     });
@@ -264,8 +286,8 @@
     var routeFreq = {};
     hops.forEach(function (hop) {
       if (hop.origin_name && hop.dest_name) {
-        var key1 = hop.origin_name + '→' + hop.dest_name;
-        var key2 = hop.dest_name + '→' + hop.origin_name;
+        var key1 = hop.origin_name + '\u2192' + hop.dest_name;
+        var key2 = hop.dest_name + '\u2192' + hop.origin_name;
         var key = key1 < key2 ? key1 : key2;
         routeFreq[key] = (routeFreq[key] || 0) + 1;
       }
@@ -286,8 +308,8 @@
       var endD = hop.end_date || '';
       var dateStr = startD === endD ? startD : startD + ' \u2192 ' + endD;
 
-      var key1 = hop.origin_name + '→' + hop.dest_name;
-      var key2 = hop.dest_name + '→' + hop.origin_name;
+      var key1 = hop.origin_name + '\u2192' + hop.dest_name;
+      var key2 = hop.dest_name + '\u2192' + hop.origin_name;
       var key = key1 < key2 ? key1 : key2;
       var freq = routeFreq[key] || 1;
 
@@ -466,10 +488,10 @@
       offsets.forEach(function (offset) {
         var marker = L.circleMarker([c.lat, c.lng + offset], markerOpts)
           .bindPopup(popupHtml, { maxWidth: 280, className: 'airport-popup-container' })
-          .on('mouseover', function (e) {
+          .on('mouseover', function () {
             this.openPopup();
           })
-          .on('mouseout', function (e) {
+          .on('mouseout', function () {
             if (!this._popupHandlingClick) {
               this.closePopup();
             }
@@ -497,20 +519,180 @@
     }
   }
 
-  function applyFilters() {
-    var typeVal = document.getElementById('filter-type').value;
-    var yearVal = document.getElementById('filter-year').value;
-    var filtered = allHops.filter(function (h) {
-      if (typeVal !== 'all' && h.travel_type !== typeVal) return false;
-      if (yearVal !== 'all' && !h.start_date.startsWith(yearVal)) return false;
-      return true;
+  function getFilterValues() {
+    var params = {};
+    filterIds.forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el && el.value) {
+        params[paramMap[id]] = el.value;
+      }
     });
-    renderHops(filtered);
-    renderJourneyCards(filtered);
+    return params;
   }
 
-  document.getElementById('filter-type').addEventListener('change', applyFilters);
-  document.getElementById('filter-year').addEventListener('change', applyFilters);
+  function hasActiveFilters(params) {
+    return Object.keys(params).length > 0;
+  }
+
+  function buildQueryString(params) {
+    var parts = [];
+    Object.keys(params).forEach(function (key) {
+      if (params[key]) {
+        parts.push(encodeURIComponent(key) + '=' + encodeURIComponent(params[key]));
+      }
+    });
+    return parts.length > 0 ? '?' + parts.join('&') : '';
+  }
+
+  function syncUrlParams(params) {
+    var qs = buildQueryString(params);
+    var newUrl = window.location.pathname + qs;
+    history.replaceState(null, '', newUrl);
+  }
+
+  function renderActiveFilters(params) {
+    var container = document.getElementById('active-filters');
+    if (!container) return;
+
+    if (!hasActiveFilters(params)) {
+      container.innerHTML = '';
+      return;
+    }
+
+    var html = '';
+    Object.keys(params).forEach(function (key) {
+      if (params[key]) {
+        var label = labelMap[key] || key;
+        html +=
+          '<span class="filter-chip" data-param="' +
+          key +
+          '">' +
+          '<span class="filter-chip-label">' +
+          label +
+          ':</span> ' +
+          params[key] +
+          '<button type="button" class="filter-chip-remove" aria-label="Remove ' +
+          label +
+          '">\u00d7</button>' +
+          '</span>';
+      }
+    });
+    container.innerHTML = html;
+
+    container.querySelectorAll('.filter-chip-remove').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var chip = this.closest('.filter-chip');
+        var paramKey = chip.getAttribute('data-param');
+        var reverseMap = {};
+        Object.keys(paramMap).forEach(function (id) {
+          reverseMap[paramMap[id]] = id;
+        });
+        var inputId = reverseMap[paramKey];
+        if (inputId) {
+          var el = document.getElementById(inputId);
+          if (el) el.value = '';
+        }
+        applyFilters();
+      });
+    });
+  }
+
+  function fetchAndRender(params) {
+    var qs = buildQueryString(params);
+    fetch('/hops' + qs, {
+      headers: { Accept: 'application/json' },
+      credentials: 'same-origin',
+    })
+      .then(function (res) {
+        if (!res.ok) throw new Error('Failed to fetch hops');
+        return res.json();
+      })
+      .then(function (hops) {
+        currentHops = hops;
+        renderHops(hops);
+        renderJourneyCards(hops);
+      })
+      .catch(function () {
+        currentHops = [];
+        renderHops([]);
+        renderJourneyCards([]);
+      });
+  }
+
+  function applyFilters() {
+    var params = getFilterValues();
+    syncUrlParams(params);
+    renderActiveFilters(params);
+
+    if (hasActiveFilters(params)) {
+      fetchAndRender(params);
+    } else {
+      currentHops = initialHops;
+      renderHops(initialHops);
+      renderJourneyCards(initialHops);
+    }
+  }
+
+  function debouncedApply() {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(applyFilters, 300);
+  }
+
+  function populateFromUrl() {
+    var urlParams = new URLSearchParams(window.location.search);
+    var reverseMap = {};
+    Object.keys(paramMap).forEach(function (id) {
+      reverseMap[paramMap[id]] = id;
+    });
+
+    var hasParams = false;
+    urlParams.forEach(function (value, key) {
+      var inputId = reverseMap[key];
+      if (inputId) {
+        var el = document.getElementById(inputId);
+        if (el) {
+          el.value = value;
+          hasParams = true;
+        }
+      }
+    });
+
+    return hasParams;
+  }
+
+  function clearFilters() {
+    filterIds.forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    syncUrlParams({});
+    renderActiveFilters({});
+    currentHops = initialHops;
+    renderHops(initialHops);
+    renderJourneyCards(initialHops);
+  }
+
+  var textInputs = ['search-q', 'filter-origin', 'filter-dest', 'filter-airline'];
+  var selectInputs = ['filter-type', 'filter-cabin', 'filter-reason'];
+  var dateInputs = ['filter-date-from', 'filter-date-to'];
+
+  textInputs.forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('input', debouncedApply);
+  });
+
+  selectInputs.forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('change', applyFilters);
+  });
+
+  dateInputs.forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('change', applyFilters);
+  });
+
+  var clearBtn = document.getElementById('filter-clear');
+  if (clearBtn) clearBtn.addEventListener('click', clearFilters);
 
   var toggleRoutes = document.getElementById('toggle-routes');
   var toggleAirports = document.getElementById('toggle-airports');
@@ -533,6 +715,13 @@
     });
   }
 
-  renderHops(allHops);
-  renderJourneyCards(allHops);
+  var hasUrlFilters = populateFromUrl();
+  if (hasUrlFilters) {
+    var params = getFilterValues();
+    renderActiveFilters(params);
+    fetchAndRender(params);
+  } else {
+    renderHops(initialHops);
+    renderJourneyCards(initialHops);
+  }
 })();

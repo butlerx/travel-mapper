@@ -189,6 +189,15 @@ impl MultiFormatResponse for HopResponse {
 pub struct HopQuery {
     #[serde(rename = "type")]
     travel_type: Option<HopTravelType>,
+    origin: Option<String>,
+    dest: Option<String>,
+    date_from: Option<String>,
+    date_to: Option<String>,
+    airline: Option<String>,
+    flight_number: Option<String>,
+    cabin_class: Option<String>,
+    flight_reason: Option<String>,
+    q: Option<String>,
 }
 
 pub async fn handler(
@@ -198,9 +207,18 @@ pub async fn handler(
     headers: HeaderMap,
 ) -> Response {
     let format = negotiate_format(&headers);
-    let hops = match (db::hops::GetAll {
+    let hops = match (db::hops::Search {
         user_id: auth.user_id,
-        travel_type_filter: query.travel_type.as_ref().map(HopTravelType::as_str),
+        travel_type: query.travel_type.as_ref().map(HopTravelType::as_str),
+        origin: query.origin.as_deref(),
+        dest: query.dest.as_deref(),
+        date_from: query.date_from.as_deref(),
+        date_to: query.date_to.as_deref(),
+        airline: query.airline.as_deref(),
+        flight_number: query.flight_number.as_deref(),
+        cabin_class: query.cabin_class.as_deref(),
+        flight_reason: query.flight_reason.as_deref(),
+        q: query.q.as_deref(),
     })
     .execute(&state.db)
     .await

@@ -12,6 +12,8 @@ mod get_all;
 mod get_all_for_stats;
 mod get_by_id;
 mod replace_for_trip;
+/// Search hops with optional filters across all travel types and detail tables.
+mod search;
 /// Update an existing hop's core fields and type-specific details by ID.
 mod update_by_id;
 
@@ -24,6 +26,7 @@ pub use get_all::GetAll;
 pub use get_all_for_stats::{GetAllForStats, StatsRow};
 pub use get_by_id::{DetailRow, FullFlightDetail, GetById};
 pub use replace_for_trip::ReplaceForTrip;
+pub use search::Search;
 pub use update_by_id::UpdateById;
 
 // ---------------------------------------------------------------------------
