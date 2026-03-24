@@ -10,6 +10,18 @@ mod state;
 
 pub use state::{AppState, create_router};
 
+/// User-facing application name shown in the navbar, HTML titles, and PWA manifest.
+pub(crate) const APP_NAME: &str = "Travel Export";
+
+/// Abbreviated name for PWA home-screen icons and space-constrained UI.
+pub(crate) const APP_SHORT_NAME: &str = "Travel";
+
+/// One-line tagline used in the PWA manifest description.
+pub(crate) const APP_DESCRIPTION: &str = "Track and visualise your travel history";
+
+/// Primary theme colour applied to the PWA chrome and `<meta name="theme-color">`.
+pub(crate) const THEME_COLOR: &str = "#0a0e1a";
+
 #[cfg(test)]
 pub(crate) mod test_helpers {
     use crate::{

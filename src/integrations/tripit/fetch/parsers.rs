@@ -389,12 +389,12 @@ mod tests {
         let hops = parse_air(&obj);
         assert_eq!(hops.len(), 1);
         let hop = &hops[0];
-        let (dub_lat, dub_lng) = airports::lookup("DUB").unwrap();
-        let (jfk_lat, jfk_lng) = airports::lookup("JFK").unwrap();
-        assert!((hop.origin_lat - dub_lat).abs() < f64::EPSILON);
-        assert!((hop.origin_lng - dub_lng).abs() < f64::EPSILON);
-        assert!((hop.dest_lat - jfk_lat).abs() < f64::EPSILON);
-        assert!((hop.dest_lng - jfk_lng).abs() < f64::EPSILON);
+        let dub = airports::lookup_enriched("DUB").unwrap();
+        let jfk = airports::lookup_enriched("JFK").unwrap();
+        assert!((hop.origin_lat - dub.latitude).abs() < f64::EPSILON);
+        assert!((hop.origin_lng - dub.longitude).abs() < f64::EPSILON);
+        assert!((hop.dest_lat - jfk.latitude).abs() < f64::EPSILON);
+        assert!((hop.dest_lng - jfk.longitude).abs() < f64::EPSILON);
     }
 
     #[test]

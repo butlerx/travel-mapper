@@ -35,38 +35,27 @@ pub fn lookup_enriched(iata: &str) -> Option<Airport> {
     })
 }
 
-/// Look up coordinates by IATA code.
-///
-/// TODO: rework this to return a custom error type instead of silently returning `None` for
-/// invalid codes, and to avoid redundant lookups when both coordinates and metadata are needed.
-/// Backward-compatible wrapper around [`lookup_enriched`] that returns only
-/// the latitude/longitude pair.
-#[must_use]
-pub fn lookup(iata: &str) -> Option<(f64, f64)> {
-    lookup_enriched(iata).map(|a| (a.latitude, a.longitude))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn known_airports_resolve() {
-        let dub = lookup("DUB").expect("DUB not found");
-        assert!((dub.0 - 53.4213).abs() < 0.1);
-        assert!((dub.1 - (-6.2701)).abs() < 0.1);
+        let dub = lookup_enriched("DUB").expect("DUB not found");
+        assert!((dub.latitude - 53.4213).abs() < 0.1);
+        assert!((dub.longitude - (-6.2701)).abs() < 0.1);
 
-        let jfk = lookup("JFK").expect("JFK not found");
-        assert!((jfk.0 - 40.6413).abs() < 0.1);
+        let jfk = lookup_enriched("JFK").expect("JFK not found");
+        assert!((jfk.latitude - 40.6413).abs() < 0.1);
 
-        let lhr = lookup("LHR").expect("LHR not found");
-        assert!((lhr.0 - 51.4706).abs() < 0.1);
+        let lhr = lookup_enriched("LHR").expect("LHR not found");
+        assert!((lhr.latitude - 51.4706).abs() < 0.1);
     }
 
     #[test]
     fn unknown_code_returns_none() {
-        assert!(lookup("ZZZ").is_none());
-        assert!(lookup("").is_none());
+        assert!(lookup_enriched("ZZZ").is_none());
+        assert!(lookup_enriched("").is_none());
     }
 
     #[test]

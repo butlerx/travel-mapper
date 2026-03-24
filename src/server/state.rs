@@ -103,6 +103,8 @@ pub fn create_router(state: AppState) -> Router {
     pages::page_routes()
         .merge(routes::toplevel_api_routes())
         .nest("/static", routes::static_assets::routes())
+        .route("/manifest.json", get(routes::static_assets::serve_manifest))
+        .route("/sw.js", get(routes::static_assets::serve_sw))
         .nest("/auth", routes::auth_api_routes())
         .nest("/auth/tripit", routes::tripit_api_routes())
         .nest("/hops", routes::hops_api_routes())
@@ -111,7 +113,7 @@ pub fn create_router(state: AppState) -> Router {
         .route(
             "/docs",
             get(Swagger::new("/openapi.json")
-                .with_title(env!("CARGO_PKG_NAME"))
+                .with_title(super::APP_NAME)
                 .axum_handler()),
         )
         .route("/openapi.json", get(serve_api))

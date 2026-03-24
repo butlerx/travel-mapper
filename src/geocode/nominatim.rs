@@ -56,10 +56,10 @@ impl Geocoder {
         address_query: Option<&str>,
     ) -> Option<(f64, f64)> {
         if let Some(iata) = sanitize::extract_iata_code(name)
-            && let Some(coords) = airports::lookup(iata)
+            && let Some(airport) = airports::lookup_enriched(iata)
         {
             tracing::debug!(name, iata, "resolved via embedded IATA code");
-            return Some(coords);
+            return Some((airport.latitude, airport.longitude));
         }
 
         if let Some(coords) = self.geocode(name).await {
