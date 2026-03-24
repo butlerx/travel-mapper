@@ -39,6 +39,7 @@ csv                = "1"
 hmac               = "0.12"
 indexmap           = "2"
 leptos             = { version = "0.8" }
+nominatim          = "0.3"
 leptos_axum        = { version = "0.8" }
 leptos_meta        = { version = "0.8" }
 leptos_router      = { version = "0.8" }

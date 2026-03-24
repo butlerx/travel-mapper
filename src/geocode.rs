@@ -3,7 +3,7 @@
 
 /// IATA airport code lookup from an embedded dataset.
 pub mod airports;
-/// Nominatim HTTP client and `Geocoder` struct.
+/// Nominatim geocoder via the [`nominatim`] crate and `Geocoder` struct.
 mod nominatim;
 /// Trip coordinate resolution and timezone sanity checks.
 mod resolve;

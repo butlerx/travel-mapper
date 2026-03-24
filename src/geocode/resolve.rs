@@ -65,28 +65,27 @@ impl Geocoder {
 
         apply_tz_sanity_check(&mut hops);
 
-        for i in 0..len {
-            if is_missing(hops[i].origin_lat, hops[i].origin_lng) {
-                let origin_name = hops[i].origin_name.clone();
+        for (i, hop) in hops.iter_mut().enumerate() {
+            if is_missing(hop.origin_lat, hop.origin_lng) {
+                let origin_name = hop.origin_name.clone();
                 if origin_name.is_empty() {
                     tracing::warn!(
                         hop_index = i,
-                        travel_type = ?hops[i].travel_type,
+                        travel_type = ?hop.travel_type,
                         "cannot geocode origin: name is empty"
                     );
                 } else {
-                    let country = self.infer_country_for_origin(&hops, i).await;
-                    let addr = hops[i].origin_address_query.clone();
+                    let addr = hop.origin_address_query.clone();
                     if let Some((lat, lng)) = self
-                        .geocode_with_fallbacks(&origin_name, country.as_deref(), addr.as_deref())
+                        .geocode_with_fallbacks(&origin_name, addr.as_deref())
                         .await
                     {
-                        hops[i].origin_lat = lat;
-                        hops[i].origin_lng = lng;
+                        hop.origin_lat = lat;
+                        hop.origin_lng = lng;
                     } else {
                         tracing::warn!(
                             hop_index = i,
-                            travel_type = ?hops[i].travel_type,
+                            travel_type = ?hop.travel_type,
                             name = origin_name,
                             "failed to resolve origin coordinates after all fallbacks"
                         );
@@ -94,27 +93,26 @@ impl Geocoder {
                 }
             }
 
-            if is_missing(hops[i].dest_lat, hops[i].dest_lng) {
-                let dest_name = hops[i].dest_name.clone();
+            if is_missing(hop.dest_lat, hop.dest_lng) {
+                let dest_name = hop.dest_name.clone();
                 if dest_name.is_empty() {
                     tracing::warn!(
                         hop_index = i,
-                        travel_type = ?hops[i].travel_type,
+                        travel_type = ?hop.travel_type,
                         "cannot geocode destination: name is empty"
                     );
                 } else {
-                    let country = self.infer_country_for_dest(&hops, i).await;
-                    let addr = hops[i].dest_address_query.clone();
+                    let addr = hop.dest_address_query.clone();
                     if let Some((lat, lng)) = self
-                        .geocode_with_fallbacks(&dest_name, country.as_deref(), addr.as_deref())
+                        .geocode_with_fallbacks(&dest_name, addr.as_deref())
                         .await
                     {
-                        hops[i].dest_lat = lat;
-                        hops[i].dest_lng = lng;
+                        hop.dest_lat = lat;
+                        hop.dest_lng = lng;
                     } else {
                         tracing::warn!(
                             hop_index = i,
-                            travel_type = ?hops[i].travel_type,
+                            travel_type = ?hop.travel_type,
                             name = dest_name,
                             "failed to resolve destination coordinates after all fallbacks"
                         );
@@ -147,46 +145,6 @@ impl Geocoder {
         }
 
         hops
-    }
-
-    async fn infer_country_for_origin(&self, hops: &[Row], idx: usize) -> Option<String> {
-        if let Some(cc) = &hops[idx].origin_country {
-            return Some(cc.clone());
-        }
-        if idx > 0 && !is_missing(hops[idx - 1].dest_lat, hops[idx - 1].dest_lng) {
-            let cc = self
-                .reverse_geocode(hops[idx - 1].dest_lat, hops[idx - 1].dest_lng)
-                .await;
-            if cc.is_some() {
-                return cc;
-            }
-        }
-        if !is_missing(hops[idx].dest_lat, hops[idx].dest_lng) {
-            return self
-                .reverse_geocode(hops[idx].dest_lat, hops[idx].dest_lng)
-                .await;
-        }
-        None
-    }
-
-    async fn infer_country_for_dest(&self, hops: &[Row], idx: usize) -> Option<String> {
-        if let Some(cc) = &hops[idx].dest_country {
-            return Some(cc.clone());
-        }
-        if !is_missing(hops[idx].origin_lat, hops[idx].origin_lng) {
-            let cc = self
-                .reverse_geocode(hops[idx].origin_lat, hops[idx].origin_lng)
-                .await;
-            if cc.is_some() {
-                return cc;
-            }
-        }
-        if idx + 1 < hops.len() && !is_missing(hops[idx + 1].origin_lat, hops[idx + 1].origin_lng) {
-            return self
-                .reverse_geocode(hops[idx + 1].origin_lat, hops[idx + 1].origin_lng)
-                .await;
-        }
-        None
     }
 }
 
@@ -336,56 +294,5 @@ mod tests {
         assert!((resolved[0].origin_lng - 126.97).abs() < f64::EPSILON);
         assert!((resolved[0].dest_lat - 35.11).abs() < f64::EPSILON);
         assert!((resolved[0].dest_lng - 129.04).abs() < f64::EPSILON);
-    }
-
-    #[tokio::test]
-    async fn infer_country_for_origin_prefers_hop_hint_over_reverse_geocode() {
-        let geocoder = Geocoder::default();
-        let mut marrakech = hop("Marrakech", 0.0, 0.0, "Essaouira", 0.0, 0.0);
-        marrakech.origin_country = Some("ma".to_string());
-        let hops = vec![
-            hop("Dublin", 53.35, -6.25, "Belfast", 54.6, -5.93),
-            marrakech,
-        ];
-        assert_eq!(
-            geocoder.infer_country_for_origin(&hops, 1).await.as_deref(),
-            Some("ma"),
-            "hop's own origin_country hint should win over reverse geocoding neighbor coords"
-        );
-    }
-
-    #[tokio::test]
-    async fn infer_country_for_dest_prefers_hop_hint_over_reverse_geocode() {
-        let geocoder = Geocoder::default();
-        let mut dublin_to_essaouira = hop("Dublin", 53.35, -6.25, "Essaouira", 0.0, 0.0);
-        dublin_to_essaouira.dest_country = Some("ma".to_string());
-        let hops = vec![dublin_to_essaouira];
-        assert_eq!(
-            geocoder.infer_country_for_dest(&hops, 0).await.as_deref(),
-            Some("ma"),
-            "hop's own dest_country hint should win over reverse geocoding origin coords"
-        );
-    }
-
-    #[tokio::test]
-    async fn infer_country_for_origin_returns_none_without_context() {
-        let geocoder = Geocoder::default();
-        let hops = vec![hop("Mallow", 0.0, 0.0, "Westport", 0.0, 0.0)];
-        assert_eq!(
-            geocoder.infer_country_for_origin(&hops, 0).await,
-            None,
-            "no coords or hints available anywhere"
-        );
-    }
-
-    #[tokio::test]
-    async fn infer_country_for_dest_returns_none_without_context() {
-        let geocoder = Geocoder::default();
-        let hops = vec![hop("Dublin", 0.0, 0.0, "Mallow", 0.0, 0.0)];
-        assert_eq!(
-            geocoder.infer_country_for_dest(&hops, 0).await,
-            None,
-            "no coords or hints available anywhere"
-        );
     }
 }
