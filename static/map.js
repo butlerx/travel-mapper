@@ -26,7 +26,9 @@
   darkTiles.addTo(map);
 
   var rootStyles = getComputedStyle(document.documentElement);
-  var cssVar = function (name) { return rootStyles.getPropertyValue(name).trim(); };
+  var cssVar = function (name) {
+    return rootStyles.getPropertyValue(name).trim();
+  };
   var colors = {
     air: cssVar('--color-type-air'),
     rail: cssVar('--color-type-rail'),
@@ -289,10 +291,30 @@
     hops.forEach(function (hop) {
       if ((!hop.origin_lat && !hop.origin_lng) || (!hop.dest_lat && !hop.dest_lng)) return;
 
-      var key1 = hop.origin_name + '|' + hop.origin_lat + '|' + hop.origin_lng +
-        '\u2192' + hop.dest_name + '|' + hop.dest_lat + '|' + hop.dest_lng;
-      var key2 = hop.dest_name + '|' + hop.dest_lat + '|' + hop.dest_lng +
-        '\u2192' + hop.origin_name + '|' + hop.origin_lat + '|' + hop.origin_lng;
+      var key1 =
+        hop.origin_name +
+        '|' +
+        hop.origin_lat +
+        '|' +
+        hop.origin_lng +
+        '\u2192' +
+        hop.dest_name +
+        '|' +
+        hop.dest_lat +
+        '|' +
+        hop.dest_lng;
+      var key2 =
+        hop.dest_name +
+        '|' +
+        hop.dest_lat +
+        '|' +
+        hop.dest_lng +
+        '\u2192' +
+        hop.origin_name +
+        '|' +
+        hop.origin_lat +
+        '|' +
+        hop.origin_lng;
       var key = key1 < key2 ? key1 : key2;
 
       if (!routes[key]) {
@@ -343,11 +365,21 @@
       var popup =
         '<div class="hop-popup">' +
         '<div class="hop-popup-header">' +
-        '<strong>' + route.origin_name + ' \u2194 ' + route.dest_name + '</strong>' +
+        '<strong>' +
+        route.origin_name +
+        ' \u2194 ' +
+        route.dest_name +
+        '</strong>' +
         '</div>' +
         '<div class="hop-popup-summary">' +
-        '<span>' + freq + ' journey' + (freq !== 1 ? 's' : '') + '</span>' +
-        '<span>\uD83D\uDCCF ' + distStr + ' km</span>' +
+        '<span>' +
+        freq +
+        ' journey' +
+        (freq !== 1 ? 's' : '') +
+        '</span>' +
+        '<span>\uD83D\uDCCF ' +
+        distStr +
+        ' km</span>' +
         '</div>' +
         '<div class="hop-popup-list">';
 
@@ -360,15 +392,24 @@
         var startD = hop.start_date || '';
         var endD = hop.end_date || '';
         var dateStr = startD === endD ? startD : startD + ' \u2192 ' + endD;
-        var direction = hop.origin_name === route.origin_name
-          ? route.origin_name + ' \u2192 ' + route.dest_name
-          : route.dest_name + ' \u2192 ' + route.origin_name;
+        var direction =
+          hop.origin_name === route.origin_name
+            ? route.origin_name + ' \u2192 ' + route.dest_name
+            : route.dest_name + ' \u2192 ' + route.origin_name;
 
         popup +=
-          '<a href="/hop/' + hop.id + '" class="hop-popup-item">' +
-          '<span class="hop-popup-item-emoji">' + emoji + '</span>' +
-          '<span class="hop-popup-item-direction">' + direction + '</span>' +
-          '<span class="hop-popup-item-date">' + dateStr + '</span>' +
+          '<a href="/hop/' +
+          hop.id +
+          '" class="hop-popup-item">' +
+          '<span class="hop-popup-item-emoji">' +
+          emoji +
+          '</span>' +
+          '<span class="hop-popup-item-direction">' +
+          direction +
+          '</span>' +
+          '<span class="hop-popup-item-date">' +
+          dateStr +
+          '</span>' +
           '</a>';
       });
       if (sorted.length > 8) {

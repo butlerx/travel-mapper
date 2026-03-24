@@ -324,7 +324,8 @@ label {
 input[type='text'],
 input[type='password'],
 input[type='date'],
-input[type='number'] {
+input[type='number'],
+textarea {
   width: 100%;
   padding: var(--space-sm) 0.75rem;
   border: 1px solid var(--color-border);
@@ -341,24 +342,31 @@ input[type='number'] {
   color-scheme: dark;
 }
 
+textarea {
+  resize: vertical;
+}
+
 input[type='text']::placeholder,
 input[type='password']::placeholder,
 input[type='date']::placeholder,
-input[type='number']::placeholder {
+input[type='number']::placeholder,
+textarea::placeholder {
   color: var(--color-text-muted);
 }
 
 input[type='text']:hover,
 input[type='password']:hover,
 input[type='date']:hover,
-input[type='number']:hover {
+input[type='number']:hover,
+textarea:hover {
   border-color: var(--color-text-muted);
 }
 
 input[type='text']:focus,
 input[type='password']:focus,
 input[type='date']:focus,
-input[type='number']:focus {
+input[type='number']:focus,
+textarea:focus {
   outline: none;
   border-color: var(--color-focus);
   box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
@@ -542,7 +550,9 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   font-size: var(--text-sm);
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 
 .hop-item:hover {
@@ -578,10 +588,22 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
 }
 
 /* Travel type text colors */
-.hop-item[data-type="air"] .hop-value, .type-air { color: var(--color-type-air); }
-.hop-item[data-type="rail"] .hop-value, .type-rail { color: var(--color-type-rail); }
-.hop-item[data-type="boat"] .hop-value, .type-boat { color: var(--color-type-boat); }
-.hop-item[data-type="transport"] .hop-value, .type-transport { color: var(--color-type-transport); }
+.hop-item[data-type='air'] .hop-value,
+.type-air {
+  color: var(--color-type-air);
+}
+.hop-item[data-type='rail'] .hop-value,
+.type-rail {
+  color: var(--color-type-rail);
+}
+.hop-item[data-type='boat'] .hop-value,
+.type-boat {
+  color: var(--color-type-boat);
+}
+.hop-item[data-type='transport'] .hop-value,
+.type-transport {
+  color: var(--color-type-transport);
+}
 
 @media (max-width: 640px) {
   .hop-item {
@@ -647,7 +669,9 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: var(--space-sm) var(--space-md);
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
   cursor: pointer;
 }
 
@@ -699,10 +723,22 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
   color: var(--color-text-secondary);
 }
 
-.badge-air { color: var(--color-type-air); border-color: var(--color-type-air-border); }
-.badge-rail { color: var(--color-type-rail); border-color: var(--color-type-rail-border); }
-.badge-boat { color: var(--color-type-boat); border-color: var(--color-type-boat-border); }
-.badge-transport { color: var(--color-type-transport); border-color: var(--color-type-transport-border); }
+.badge-air {
+  color: var(--color-type-air);
+  border-color: var(--color-type-air-border);
+}
+.badge-rail {
+  color: var(--color-type-rail);
+  border-color: var(--color-type-rail-border);
+}
+.badge-boat {
+  color: var(--color-type-boat);
+  border-color: var(--color-type-boat-border);
+}
+.badge-transport {
+  color: var(--color-type-transport);
+  border-color: var(--color-type-transport-border);
+}
 
 .journey-date {
   color: var(--color-text-secondary);
@@ -718,12 +754,18 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
 
 .journey-card--upcoming {
   border-color: rgba(56, 189, 248, 0.3);
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.08), var(--color-surface-raised));
+  background: linear-gradient(
+    135deg,
+    rgba(56, 189, 248, 0.08),
+    var(--color-surface-raised)
+  );
 }
 
 .journey-card--upcoming:hover {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 1px var(--color-primary), var(--shadow-glow);
+  box-shadow:
+    0 0 0 1px var(--color-primary),
+    var(--shadow-glow);
 }
 
 .journey-sidebar-heading--upcoming {
@@ -959,7 +1001,11 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
 .auth-card h1 {
   text-align: center;
   margin-bottom: var(--space-lg);
-  background: linear-gradient(to right, var(--color-text), var(--color-primary));
+  background: linear-gradient(
+    to right,
+    var(--color-text),
+    var(--color-primary)
+  );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -1064,7 +1110,7 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
   padding: var(--space-sm);
 }
 
-.search-bar input[type="text"] {
+.search-bar input[type='text'] {
   width: 100%;
   padding: var(--space-xs) var(--space-sm);
   border: 1px solid var(--color-border);
@@ -1077,7 +1123,7 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
   transition: border-color 0.15s;
 }
 
-.search-bar input[type="text"]:focus {
+.search-bar input[type='text']:focus {
   outline: none;
   border-color: var(--color-focus);
   box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
@@ -1136,8 +1182,8 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
   box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
 }
 
-.filter-panel input[type="text"],
-.filter-panel input[type="date"] {
+.filter-panel input[type='text'],
+.filter-panel input[type='date'] {
   width: 100%;
   padding: var(--space-xs) var(--space-sm);
   border: 1px solid var(--color-border);
@@ -1150,8 +1196,8 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
   transition: border-color 0.15s;
 }
 
-.filter-panel input[type="text"]:focus,
-.filter-panel input[type="date"]:focus {
+.filter-panel input[type='text']:focus,
+.filter-panel input[type='date']:focus {
   outline: none;
   border-color: var(--color-focus);
   box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
@@ -1165,7 +1211,10 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
   padding: var(--space-xs) var(--space-sm);
   font-size: var(--text-xs);
   cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
   margin-top: var(--space-xs);
 }
 
@@ -1217,7 +1266,9 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
   cursor: pointer;
   border-radius: 50%;
   line-height: 1;
-  transition: color 0.15s, background 0.15s;
+  transition:
+    color 0.15s,
+    background 0.15s;
 }
 
 .filter-chip-remove:hover {
@@ -1399,7 +1450,7 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
   user-select: none;
 }
 
-.map-toggle input[type="checkbox"] {
+.map-toggle input[type='checkbox'] {
   accent-color: #38bdf8;
   cursor: pointer;
   margin: 0;
@@ -1548,7 +1599,9 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   padding: var(--space-lg);
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 
 .data-card:hover {
@@ -1635,10 +1688,22 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
   color: var(--color-text-secondary);
 }
 
-.hop-card-badge.badge-air { color: var(--color-type-air); border-color: var(--color-type-air-border); }
-.hop-card-badge.badge-rail { color: var(--color-type-rail); border-color: var(--color-type-rail-border); }
-.hop-card-badge.badge-boat { color: var(--color-type-boat); border-color: var(--color-type-boat-border); }
-.hop-card-badge.badge-transport { color: var(--color-type-transport); border-color: var(--color-type-transport-border); }
+.hop-card-badge.badge-air {
+  color: var(--color-type-air);
+  border-color: var(--color-type-air-border);
+}
+.hop-card-badge.badge-rail {
+  color: var(--color-type-rail);
+  border-color: var(--color-type-rail-border);
+}
+.hop-card-badge.badge-boat {
+  color: var(--color-type-boat);
+  border-color: var(--color-type-boat-border);
+}
+.hop-card-badge.badge-transport {
+  color: var(--color-type-transport);
+  border-color: var(--color-type-transport-border);
+}
 
 .hop-card-date {
   color: var(--color-text-secondary);
@@ -1933,10 +1998,22 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
   color: var(--color-text-secondary);
 }
 
-.hop-detail-badge.air { color: var(--color-type-air); border-color: var(--color-type-air-border); }
-.hop-detail-badge.rail { color: var(--color-type-rail); border-color: var(--color-type-rail-border); }
-.hop-detail-badge.boat { color: var(--color-type-boat); border-color: var(--color-type-boat-border); }
-.hop-detail-badge.transport { color: var(--color-type-transport); border-color: var(--color-type-transport-border); }
+.hop-detail-badge.air {
+  color: var(--color-type-air);
+  border-color: var(--color-type-air-border);
+}
+.hop-detail-badge.rail {
+  color: var(--color-type-rail);
+  border-color: var(--color-type-rail-border);
+}
+.hop-detail-badge.boat {
+  color: var(--color-type-boat);
+  border-color: var(--color-type-boat-border);
+}
+.hop-detail-badge.transport {
+  color: var(--color-type-transport);
+  border-color: var(--color-type-transport-border);
+}
 
 .hop-detail-countries {
   font-size: var(--text-sm);
@@ -2064,7 +2141,9 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
   background: rgba(0, 0, 0, 0.5);
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.3s, visibility 0.3s;
+  transition:
+    opacity 0.3s,
+    visibility 0.3s;
   z-index: 1100;
 }
 

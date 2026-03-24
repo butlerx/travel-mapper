@@ -17,6 +17,21 @@ fn form_field(
     }
 }
 
+fn form_textarea(
+    id: &'static str,
+    name: &'static str,
+    label: &'static str,
+    value: &str,
+) -> impl IntoView + use<> {
+    let v = value.to_owned();
+    view! {
+        <div class="form-group">
+            <label for=id>{label}</label>
+            <textarea id=id name=name rows="3">{v}</textarea>
+        </div>
+    }
+}
+
 fn hidden_field(name: &'static str, value: String) -> impl IntoView + use<> {
     view! { <input type="hidden" name=name value=value /> }
 }
@@ -39,7 +54,7 @@ fn FlightEditFields(detail: crate::db::hops::FullFlightDetail) -> impl IntoView 
             {form_field("edit-seat-type", "seat_type", "Seat Type", &detail.seat_type, "text")}
             {form_field("edit-pnr", "pnr", "Booking Reference", &detail.pnr, "text")}
             {form_field("edit-flight-reason", "flight_reason", "Flight Reason", &detail.flight_reason, "text")}
-            {form_field("edit-flight-notes", "flight_notes", "Notes", &detail.notes, "text")}
+            {form_textarea("edit-flight-notes", "flight_notes", "Notes", &detail.notes)}
             {form_field("edit-gate-dep-sched", "gate_dep_scheduled", "Gate Dep. Scheduled", &detail.gate_dep_scheduled, "text")}
             {form_field("edit-gate-dep-actual", "gate_dep_actual", "Gate Dep. Actual", &detail.gate_dep_actual, "text")}
             {form_field("edit-takeoff-sched", "takeoff_scheduled", "Takeoff Scheduled", &detail.takeoff_scheduled, "text")}
@@ -65,7 +80,7 @@ fn RailEditFields(detail: crate::db::hops::RailDetail) -> impl IntoView {
             {form_field("edit-rail-seats", "rail_seats", "Seats", &detail.seats, "text")}
             {form_field("edit-rail-confirmation", "rail_confirmation", "Confirmation", &detail.confirmation_num, "text")}
             {form_field("edit-rail-booking-site", "rail_booking_site", "Booking Site", &detail.booking_site, "text")}
-            {form_field("edit-rail-notes", "rail_notes", "Notes", &detail.notes, "text")}
+            {form_textarea("edit-rail-notes", "rail_notes", "Notes", &detail.notes)}
         </fieldset>
     }
 }
@@ -80,7 +95,7 @@ fn BoatEditFields(detail: crate::db::hops::BoatDetail) -> impl IntoView {
             {form_field("edit-cabin-number", "cabin_number", "Cabin Number", &detail.cabin_number, "text")}
             {form_field("edit-boat-confirmation", "boat_confirmation", "Confirmation", &detail.confirmation_num, "text")}
             {form_field("edit-boat-booking-site", "boat_booking_site", "Booking Site", &detail.booking_site, "text")}
-            {form_field("edit-boat-notes", "boat_notes", "Notes", &detail.notes, "text")}
+            {form_textarea("edit-boat-notes", "boat_notes", "Notes", &detail.notes)}
         </fieldset>
     }
 }
@@ -93,7 +108,7 @@ fn TransportEditFields(detail: crate::db::hops::TransportDetail) -> impl IntoVie
             {form_field("edit-transport-carrier", "transport_carrier", "Carrier", &detail.carrier_name, "text")}
             {form_field("edit-vehicle-desc", "vehicle_description", "Vehicle", &detail.vehicle_description, "text")}
             {form_field("edit-transport-confirmation", "transport_confirmation", "Confirmation", &detail.confirmation_num, "text")}
-            {form_field("edit-transport-notes", "transport_notes", "Notes", &detail.notes, "text")}
+            {form_textarea("edit-transport-notes", "transport_notes", "Notes", &detail.notes)}
         </fieldset>
     }
 }
