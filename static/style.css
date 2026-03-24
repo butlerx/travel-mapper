@@ -325,7 +325,8 @@ input[type='text'],
 input[type='password'],
 input[type='date'],
 input[type='number'],
-textarea {
+textarea,
+select {
   width: 100%;
   padding: var(--space-sm) 0.75rem;
   border: 1px solid var(--color-border);
@@ -346,11 +347,21 @@ textarea {
   resize: vertical;
 }
 
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%2394a3b8' d='M1.41 0L6 4.58 10.59 0 12 1.41l-6 6-6-6z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  padding-right: 2.5rem;
+  cursor: pointer;
+}
+
 input[type='text']::placeholder,
 input[type='password']::placeholder,
 input[type='date']::placeholder,
 input[type='number']::placeholder,
-textarea::placeholder {
+textarea::placeholder,
+select::placeholder {
   color: var(--color-text-muted);
 }
 
@@ -358,7 +369,8 @@ input[type='text']:hover,
 input[type='password']:hover,
 input[type='date']:hover,
 input[type='number']:hover,
-textarea:hover {
+textarea:hover,
+select:hover {
   border-color: var(--color-text-muted);
 }
 
@@ -366,7 +378,8 @@ input[type='text']:focus,
 input[type='password']:focus,
 input[type='date']:focus,
 input[type='number']:focus,
-textarea:focus {
+textarea:focus,
+select:focus {
   outline: none;
   border-color: var(--color-focus);
   box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);

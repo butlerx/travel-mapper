@@ -3,7 +3,7 @@
 // and component props must own their data (String, not &str).
 #![allow(clippy::must_use_candidate, clippy::needless_pass_by_value)]
 
-pub(super) mod add_flight;
+pub(super) mod add_hop;
 pub(crate) mod dashboard;
 pub(super) mod hop_detail;
 pub(super) mod landing;

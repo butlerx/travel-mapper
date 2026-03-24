@@ -255,33 +255,107 @@ fn encode_query_value(s: &str) -> String {
     utf8_percent_encode(s, QUERY_ENCODE_SET).to_string()
 }
 
-/// Request body for manually creating a flight hop.
+/// Request body for manually creating a hop of any travel type.
 #[derive(Deserialize, JsonSchema)]
 pub struct CreateHopRequest {
-    /// IATA airport code for the origin (e.g. "LHR").
+    /// Mode of transport (defaults to `air` when omitted).
+    #[serde(default)]
+    pub travel_type: HopTravelType,
+    /// Origin location — IATA code for flights, station/city name otherwise.
     pub origin: String,
-    /// IATA airport code for the destination (e.g. "JFK").
+    /// Destination location — IATA code for flights, station/city name otherwise.
     pub destination: String,
     /// Departure date in `YYYY-MM-DD` format.
     pub date: String,
-    /// Airline name or IATA code.
     #[serde(default)]
     pub airline: Option<String>,
-    /// Flight number (e.g. "BA117").
     #[serde(default)]
     pub flight_number: Option<String>,
-    /// Aircraft type (e.g. "Boeing 777-300ER").
     #[serde(default)]
     pub aircraft_type: Option<String>,
-    /// Cabin class (e.g. "Economy", "Business").
     #[serde(default)]
     pub cabin_class: Option<String>,
-    /// Seat assignment.
     #[serde(default)]
     pub seat: Option<String>,
-    /// Passenger Name Record / booking reference.
     #[serde(default)]
     pub pnr: Option<String>,
+    #[serde(default)]
+    pub rail_carrier: Option<String>,
+    #[serde(default)]
+    pub train_number: Option<String>,
+    #[serde(default)]
+    pub service_class: Option<String>,
+    #[serde(default)]
+    pub coach_number: Option<String>,
+    #[serde(default)]
+    pub rail_seats: Option<String>,
+    #[serde(default)]
+    pub rail_confirmation: Option<String>,
+    #[serde(default)]
+    pub rail_booking_site: Option<String>,
+    #[serde(default)]
+    pub rail_notes: Option<String>,
+    #[serde(default)]
+    pub ship_name: Option<String>,
+    #[serde(default)]
+    pub cabin_type: Option<String>,
+    #[serde(default)]
+    pub cabin_number: Option<String>,
+    #[serde(default)]
+    pub boat_confirmation: Option<String>,
+    #[serde(default)]
+    pub boat_booking_site: Option<String>,
+    #[serde(default)]
+    pub boat_notes: Option<String>,
+    #[serde(default)]
+    pub transport_carrier: Option<String>,
+    #[serde(default)]
+    pub vehicle_description: Option<String>,
+    #[serde(default)]
+    pub transport_confirmation: Option<String>,
+    #[serde(default)]
+    pub transport_notes: Option<String>,
+}
+
+impl CreateHopRequest {
+    fn build_manual_detail(&self) -> db::hops::ManualDetail {
+        match self.travel_type {
+            HopTravelType::Air => db::hops::ManualDetail::Air(db::hops::FlightDetail {
+                airline: self.airline.clone().unwrap_or_default(),
+                flight_number: self.flight_number.clone().unwrap_or_default(),
+                aircraft_type: self.aircraft_type.clone().unwrap_or_default(),
+                cabin_class: self.cabin_class.clone().unwrap_or_default(),
+                seat: self.seat.clone().unwrap_or_default(),
+                pnr: self.pnr.clone().unwrap_or_default(),
+            }),
+            HopTravelType::Rail => db::hops::ManualDetail::Rail(db::hops::RailDetail {
+                carrier: self.rail_carrier.clone().unwrap_or_default(),
+                train_number: self.train_number.clone().unwrap_or_default(),
+                service_class: self.service_class.clone().unwrap_or_default(),
+                coach_number: self.coach_number.clone().unwrap_or_default(),
+                seats: self.rail_seats.clone().unwrap_or_default(),
+                confirmation_num: self.rail_confirmation.clone().unwrap_or_default(),
+                booking_site: self.rail_booking_site.clone().unwrap_or_default(),
+                notes: self.rail_notes.clone().unwrap_or_default(),
+            }),
+            HopTravelType::Boat => db::hops::ManualDetail::Boat(db::hops::BoatDetail {
+                ship_name: self.ship_name.clone().unwrap_or_default(),
+                cabin_type: self.cabin_type.clone().unwrap_or_default(),
+                cabin_number: self.cabin_number.clone().unwrap_or_default(),
+                confirmation_num: self.boat_confirmation.clone().unwrap_or_default(),
+                booking_site: self.boat_booking_site.clone().unwrap_or_default(),
+                notes: self.boat_notes.clone().unwrap_or_default(),
+            }),
+            HopTravelType::Transport => {
+                db::hops::ManualDetail::Transport(db::hops::TransportDetail {
+                    carrier_name: self.transport_carrier.clone().unwrap_or_default(),
+                    vehicle_description: self.vehicle_description.clone().unwrap_or_default(),
+                    confirmation_num: self.transport_confirmation.clone().unwrap_or_default(),
+                    notes: self.transport_notes.clone().unwrap_or_default(),
+                })
+            }
+        }
+    }
 }
 
 /// Successful response after creating a hop.
@@ -291,10 +365,10 @@ pub struct CreateHopResponse {
     pub created: u64,
 }
 
-/// Create a flight hop manually.
+/// Create a hop manually for any travel type.
 ///
 /// Accepts JSON or form-encoded body. Form submissions redirect to the add
-/// flight page with a success or error query parameter.
+/// hop page with a success or error query parameter.
 pub async fn create_handler(
     State(state): State<AppState>,
     auth: AuthUser,
@@ -314,7 +388,7 @@ pub async fn create_handler(
         Err(err) => {
             return if is_form {
                 Redirect::to(&format!(
-                    "/flights/new?error={}",
+                    "/hops/new?error={}",
                     encode_query_value(&format!("Invalid form data: {err}"))
                 ))
                 .into_response()
@@ -329,7 +403,7 @@ pub async fn create_handler(
         let err = AppError::MissingField("origin, destination, and date are required");
         return if is_form {
             Redirect::to(&format!(
-                "/flights/new?error={}",
+                "/hops/new?error={}",
                 encode_query_value(&err.to_string())
             ))
             .into_response()
@@ -339,21 +413,14 @@ pub async fn create_handler(
         };
     }
 
-    let detail = db::hops::FlightDetail {
-        airline: req.airline.unwrap_or_default(),
-        flight_number: req.flight_number.unwrap_or_default(),
-        aircraft_type: req.aircraft_type.unwrap_or_default(),
-        cabin_class: req.cabin_class.unwrap_or_default(),
-        seat: req.seat.unwrap_or_default(),
-        pnr: req.pnr.unwrap_or_default(),
-    };
+    let detail = req.build_manual_detail();
 
     let result = (db::hops::CreateManual {
         user_id: auth.user_id,
         origin: req.origin,
         destination: req.destination,
         date: req.date,
-        flight_detail: detail,
+        detail,
     })
     .execute(&state.db)
     .await;
@@ -361,7 +428,7 @@ pub async fn create_handler(
     match result {
         Ok(created) => {
             if is_form {
-                Redirect::to("/flights/new?success=1").into_response()
+                Redirect::to("/hops/new?success=1").into_response()
             } else {
                 (StatusCode::CREATED, Json(CreateHopResponse { created })).into_response()
             }
@@ -370,7 +437,7 @@ pub async fn create_handler(
             let err = AppError::from(err);
             if is_form {
                 Redirect::to(&format!(
-                    "/flights/new?error={}",
+                    "/hops/new?error={}",
                     encode_query_value(&err.to_string())
                 ))
                 .into_response()
@@ -383,7 +450,7 @@ pub async fn create_handler(
 }
 
 pub fn create_handler_docs(op: TransformOperation) -> TransformOperation {
-    op.description("Create a flight hop manually. Accepts JSON or form-encoded body.")
+    op.description("Create a hop manually for any travel type. Accepts JSON or form-encoded body.")
         .input::<Json<CreateHopRequest>>()
         .with(|mut op| {
             if let Some(aide::openapi::ReferenceOr::Item(body)) = &mut op.inner_mut().request_body
@@ -1133,7 +1200,7 @@ mod tests {
             .expect("missing Location header")
             .to_str()
             .expect("non-ascii location");
-        assert_eq!(location, "/flights/new?success=1");
+        assert_eq!(location, "/hops/new?success=1");
     }
 
     #[tokio::test]
@@ -1161,7 +1228,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn get_flights_new_page_returns_add_flight_form() {
+    async fn get_hops_new_page_returns_add_hop_form() {
         let pool = test_pool().await;
         let cookie = auth_cookie_for_user(&pool, "alice").await;
         let app = create_router(test_app_state(pool));
@@ -1169,7 +1236,7 @@ mod tests {
         let response = app
             .oneshot(
                 Request::builder()
-                    .uri("/flights/new")
+                    .uri("/hops/new")
                     .header(header::COOKIE, cookie)
                     .body(Body::empty())
                     .expect("failed to build request"),
@@ -1179,9 +1246,51 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
         let body = body_text(response).await;
-        assert!(
-            body.contains("Add Flight"),
-            "page should contain 'Add Flight'"
-        );
+        assert!(body.contains("Add Hop"), "page should contain 'Add Hop'");
+    }
+
+    #[tokio::test]
+    async fn post_hops_json_creates_rail_hop() {
+        let pool = test_pool().await;
+        let cookie = auth_cookie_for_user(&pool, "alice").await;
+        let app = create_router(test_app_state(pool.clone()));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/hops")
+                    .header(header::COOKIE, &cookie)
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(
+                        r#"{"travel_type":"rail","origin":"Paris Gare du Nord","destination":"London St Pancras","date":"2025-07-01","rail_carrier":"Eurostar","train_number":"9024"}"#,
+                    ))
+                    .expect("failed to build request"),
+            )
+            .await
+            .expect("router request failed");
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+        let body = to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("failed to read body");
+        let parsed: CreateHopResponse = serde_json::from_slice(&body).expect("valid json response");
+        assert_eq!(parsed.created, 1);
+
+        let user = db::users::GetByUsername { username: "alice" }
+            .execute(&pool)
+            .await
+            .expect("lookup failed")
+            .expect("missing user");
+        let hops = db::hops::GetAll {
+            user_id: user.id,
+            travel_type_filter: Some("rail"),
+        }
+        .execute(&pool)
+        .await
+        .expect("fetch failed");
+        assert_eq!(hops.len(), 1);
+        assert_eq!(hops[0].origin_name, "Paris Gare du Nord");
+        assert_eq!(hops[0].dest_name, "London St Pancras");
     }
 }

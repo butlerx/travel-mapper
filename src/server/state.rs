@@ -102,7 +102,7 @@ fn page_routes(router: ApiRouter<AppState>) -> ApiRouter<AppState> {
         .route("/dashboard", get(pages::dashboard::page))
         .route("/settings", get(pages::settings::page))
         .route("/stats", get(pages::stats::page))
-        .route("/flights/new", get(pages::add_flight::page))
+        .route("/hops/new", get(pages::add_hop::page))
         .route("/hop/{id}", get(pages::hop_detail::page))
         .nest("/static", static_assets.into())
 }

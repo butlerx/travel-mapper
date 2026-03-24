@@ -1,0 +1,230 @@
+use crate::server::{
+    AppState,
+    components::{NavBar, Shell},
+    middleware::AuthUser,
+};
+use axum::{
+    extract::{Query, State},
+    http::StatusCode,
+    response::{IntoResponse, Response},
+};
+use leptos::prelude::*;
+use serde::Deserialize;
+
+#[derive(Deserialize, Default)]
+pub struct AddHopFeedback {
+    pub error: Option<String>,
+    pub success: Option<String>,
+}
+
+pub async fn page(
+    State(_state): State<AppState>,
+    _auth: AuthUser,
+    Query(feedback): Query<AddHopFeedback>,
+) -> Response {
+    let html = view! {
+        <AddHop error=feedback.error success=feedback.success />
+    };
+    (StatusCode::OK, axum::response::Html(html.to_html())).into_response()
+}
+
+#[component]
+fn AddHop(
+    #[prop(optional_no_strip)] error: Option<String>,
+    #[prop(optional_no_strip)] success: Option<String>,
+) -> impl IntoView {
+    view! {
+        <Shell title="Add Hop".to_owned()>
+            <NavBar current="add-hop" />
+            <main class="container">
+                {error.map(|e| view! {
+                    <div class="alert alert-error" role="alert">{e}</div>
+                })}
+                {success.filter(|v| v == "1").map(|_| view! {
+                    <div class="alert alert-success" role="status">"Hop added successfully!"</div>
+                })}
+
+                <section class="card">
+                    <h2>"Add Hop"</h2>
+                    <form method="post" action="/hops">
+                        <div class="form-group">
+                            <label for="travel_type">"Travel Type"</label>
+                            <select id="travel_type" name="travel_type">
+                                <option value="air" selected>"✈️ Flight"</option>
+                                <option value="rail">"🚆 Rail"</option>
+                                <option value="boat">"🚢 Boat"</option>
+                                <option value="transport">"🚗 Transport"</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="origin" id="origin-label">"Origin"</label>
+                            <input type="text" id="origin" name="origin" required placeholder="LHR" />
+                        </div>
+                        <div class="form-group">
+                            <label for="destination" id="destination-label">"Destination"</label>
+                            <input type="text" id="destination" name="destination" required placeholder="JFK" />
+                        </div>
+                        <div class="form-group">
+                            <label for="date">"Date"</label>
+                            <input type="date" id="date" name="date" required />
+                        </div>
+
+                        <div id="fields-air" class="type-fields">
+                            <div class="form-group">
+                                <label for="airline">"Airline"</label>
+                                <input type="text" id="airline" name="airline" placeholder="British Airways" />
+                            </div>
+                            <div class="form-group">
+                                <label for="flight_number">"Flight Number"</label>
+                                <input type="text" id="flight_number" name="flight_number" placeholder="BA117" />
+                            </div>
+                            <div class="form-group">
+                                <label for="aircraft_type">"Aircraft Type"</label>
+                                <input type="text" id="aircraft_type" name="aircraft_type" placeholder="Boeing 777-300ER" />
+                            </div>
+                            <div class="form-group">
+                                <label for="cabin_class">"Cabin Class"</label>
+                                <input type="text" id="cabin_class" name="cabin_class" placeholder="Economy" />
+                            </div>
+                            <div class="form-group">
+                                <label for="seat">"Seat"</label>
+                                <input type="text" id="seat" name="seat" placeholder="14A" />
+                            </div>
+                            <div class="form-group">
+                                <label for="pnr">"Booking Reference (PNR)"</label>
+                                <input type="text" id="pnr" name="pnr" placeholder="ABC123" />
+                            </div>
+                        </div>
+
+                        <div id="fields-rail" class="type-fields" style="display:none">
+                            <div class="form-group">
+                                <label for="rail_carrier">"Carrier"</label>
+                                <input type="text" id="rail_carrier" name="rail_carrier" placeholder="Eurostar" />
+                            </div>
+                            <div class="form-group">
+                                <label for="train_number">"Train Number"</label>
+                                <input type="text" id="train_number" name="train_number" placeholder="9024" />
+                            </div>
+                            <div class="form-group">
+                                <label for="service_class">"Class"</label>
+                                <input type="text" id="service_class" name="service_class" placeholder="Standard Premier" />
+                            </div>
+                            <div class="form-group">
+                                <label for="coach_number">"Coach"</label>
+                                <input type="text" id="coach_number" name="coach_number" placeholder="6" />
+                            </div>
+                            <div class="form-group">
+                                <label for="rail_seats">"Seats"</label>
+                                <input type="text" id="rail_seats" name="rail_seats" placeholder="23A, 23B" />
+                            </div>
+                            <div class="form-group">
+                                <label for="rail_confirmation">"Confirmation Number"</label>
+                                <input type="text" id="rail_confirmation" name="rail_confirmation" placeholder="ABC123" />
+                            </div>
+                            <div class="form-group">
+                                <label for="rail_booking_site">"Booking Site"</label>
+                                <input type="text" id="rail_booking_site" name="rail_booking_site" placeholder="eurostar.com" />
+                            </div>
+                            <div class="form-group">
+                                <label for="rail_notes">"Notes"</label>
+                                <textarea id="rail_notes" name="rail_notes" rows="3"></textarea>
+                            </div>
+                        </div>
+
+                        <div id="fields-boat" class="type-fields" style="display:none">
+                            <div class="form-group">
+                                <label for="ship_name">"Ship Name"</label>
+                                <input type="text" id="ship_name" name="ship_name" placeholder="MS Nordnorge" />
+                            </div>
+                            <div class="form-group">
+                                <label for="cabin_type">"Cabin Type"</label>
+                                <input type="text" id="cabin_type" name="cabin_type" placeholder="Outside" />
+                            </div>
+                            <div class="form-group">
+                                <label for="cabin_number">"Cabin Number"</label>
+                                <input type="text" id="cabin_number" name="cabin_number" placeholder="412" />
+                            </div>
+                            <div class="form-group">
+                                <label for="boat_confirmation">"Confirmation Number"</label>
+                                <input type="text" id="boat_confirmation" name="boat_confirmation" placeholder="ABC123" />
+                            </div>
+                            <div class="form-group">
+                                <label for="boat_booking_site">"Booking Site"</label>
+                                <input type="text" id="boat_booking_site" name="boat_booking_site" placeholder="hurtigruten.com" />
+                            </div>
+                            <div class="form-group">
+                                <label for="boat_notes">"Notes"</label>
+                                <textarea id="boat_notes" name="boat_notes" rows="3"></textarea>
+                            </div>
+                        </div>
+
+                        <div id="fields-transport" class="type-fields" style="display:none">
+                            <div class="form-group">
+                                <label for="transport_carrier">"Carrier"</label>
+                                <input type="text" id="transport_carrier" name="transport_carrier" placeholder="Greyhound" />
+                            </div>
+                            <div class="form-group">
+                                <label for="vehicle_description">"Vehicle Description"</label>
+                                <input type="text" id="vehicle_description" name="vehicle_description" placeholder="Coach bus" />
+                            </div>
+                            <div class="form-group">
+                                <label for="transport_confirmation">"Confirmation Number"</label>
+                                <input type="text" id="transport_confirmation" name="transport_confirmation" placeholder="ABC123" />
+                            </div>
+                            <div class="form-group">
+                                <label for="transport_notes">"Notes"</label>
+                                <textarea id="transport_notes" name="transport_notes" rows="3"></textarea>
+                            </div>
+                        </div>
+
+                        <button class="btn btn-primary btn-full" type="submit">"Add Hop"</button>
+                    </form>
+                </section>
+
+                <script type="text/javascript">
+                    r#"
+                    (function() {
+                        var sel = document.getElementById('travel_type');
+                        var origin = document.getElementById('origin');
+                        var dest = document.getElementById('destination');
+                        var originLabel = document.getElementById('origin-label');
+                        var destLabel = document.getElementById('destination-label');
+                        var sections = document.querySelectorAll('.type-fields');
+
+                        function update() {
+                            var t = sel.value;
+                            sections.forEach(function(s) { s.style.display = 'none'; });
+                            var active = document.getElementById('fields-' + t);
+                            if (active) active.style.display = '';
+
+                            if (t === 'air') {
+                                originLabel.textContent = 'Origin (IATA code)';
+                                destLabel.textContent = 'Destination (IATA code)';
+                                origin.placeholder = 'LHR';
+                                origin.maxLength = 4;
+                                origin.style.textTransform = 'uppercase';
+                                dest.placeholder = 'JFK';
+                                dest.maxLength = 4;
+                                dest.style.textTransform = 'uppercase';
+                            } else {
+                                originLabel.textContent = 'Origin';
+                                destLabel.textContent = 'Destination';
+                                origin.placeholder = 'Paris Gare du Nord';
+                                origin.removeAttribute('maxlength');
+                                origin.style.textTransform = '';
+                                dest.placeholder = 'London St Pancras';
+                                dest.removeAttribute('maxlength');
+                                dest.style.textTransform = '';
+                            }
+                        }
+
+                        sel.addEventListener('change', update);
+                        update();
+                    })();
+                    "#
+                </script>
+            </main>
+        </Shell>
+    }
+}

@@ -29,6 +29,15 @@ pub use replace_for_trip::ReplaceForTrip;
 pub use search::Search;
 pub use update_by_id::UpdateById;
 
+/// Type-specific detail payload for manually-created hops.
+#[derive(Debug, Clone)]
+pub enum ManualDetail {
+    Air(FlightDetail),
+    Rail(RailDetail),
+    Boat(BoatDetail),
+    Transport(TransportDetail),
+}
+
 // ---------------------------------------------------------------------------
 // Shared types — travel type enums, detail structs, and row mappings
 // ---------------------------------------------------------------------------
