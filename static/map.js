@@ -50,7 +50,8 @@
     yearSelect.appendChild(opt);
   });
 
-  var routeLayer = L.layerGroup().addTo(map);
+  var routesLayer = L.layerGroup().addTo(map);
+  var airportsLayer = L.layerGroup().addTo(map);
   var offsets = [-360, 0, 360];
 
   function haversineKm(lat1, lng1, lat2, lng2) {
@@ -256,7 +257,8 @@
   }
 
   function renderHops(hops) {
-    routeLayer.clearLayers();
+    routesLayer.clearLayers();
+    airportsLayer.clearLayers();
     var bounds = [];
 
     var routeFreq = {};
@@ -362,7 +364,7 @@
           opacity: opacity,
         })
           .bindPopup(popup, { maxWidth: 320, className: 'hop-popup-container' })
-          .addTo(routeLayer);
+          .addTo(routesLayer);
       });
 
       bounds.push(from);
@@ -379,30 +381,107 @@
             lat: hop.origin_lat,
             lng: hop.origin_lng,
             count: 0,
+            routes: {},
           };
         cities[oKey].count++;
+        cities[oKey].routes[hop.dest_name] = (cities[oKey].routes[hop.dest_name] || 0) + 1;
       }
       if (hop.dest_lat != null && hop.dest_lng != null) {
         var dKey = hop.dest_name + '|' + hop.dest_lat + '|' + hop.dest_lng;
         if (!cities[dKey])
-          cities[dKey] = { name: hop.dest_name, lat: hop.dest_lat, lng: hop.dest_lng, count: 0 };
+          cities[dKey] = {
+            name: hop.dest_name,
+            lat: hop.dest_lat,
+            lng: hop.dest_lng,
+            count: 0,
+            routes: {},
+          };
         cities[dKey].count++;
+        cities[dKey].routes[hop.origin_name] = (cities[dKey].routes[hop.origin_name] || 0) + 1;
       }
     });
 
     Object.keys(cities).forEach(function (key) {
       var c = cities[key];
       var r = Math.max(4, Math.min(8, 3 + Math.sqrt(c.count)));
-      offsets.forEach(function (offset) {
-        L.circleMarker([c.lat, c.lng + offset], {
-          radius: r,
-          color: '#1e3a5f',
-          weight: 1.5,
-          fillColor: '#38bdf8',
-          fillOpacity: 0.85,
+      var markerOpts = {
+        radius: r,
+        color: '#1e3a5f',
+        weight: 1.5,
+        fillColor: '#38bdf8',
+        fillOpacity: 0.85,
+      };
+      var sortedRoutes = Object.keys(c.routes)
+        .map(function (dest) {
+          return { name: dest, count: c.routes[dest] };
         })
-          .bindTooltip(c.name, { direction: 'top', offset: [0, -r], className: 'city-tooltip' })
-          .addTo(routeLayer);
+        .sort(function (a, b) {
+          return b.count - a.count;
+        });
+      var routeListHtml = sortedRoutes
+        .slice(0, 5)
+        .map(function (rt) {
+          return (
+            '<div class="airport-popup-route">' +
+            '<span class="airport-popup-dest">' +
+            rt.name +
+            '</span>' +
+            '<span class="airport-popup-freq">' +
+            rt.count +
+            '\u00d7</span>' +
+            '</div>'
+          );
+        })
+        .join('');
+      if (sortedRoutes.length > 5) {
+        routeListHtml +=
+          '<div class="airport-popup-more">+' +
+          (sortedRoutes.length - 5) +
+          ' more destinations</div>';
+      }
+      var popupHtml =
+        '<div class="airport-popup">' +
+        '<div class="airport-popup-header">' +
+        '<strong>' +
+        c.name +
+        '</strong>' +
+        '</div>' +
+        '<div class="airport-popup-stats">' +
+        '<span class="airport-popup-visits">' +
+        c.count +
+        ' visit' +
+        (c.count !== 1 ? 's' : '') +
+        '</span>' +
+        '<span class="airport-popup-connections">' +
+        sortedRoutes.length +
+        ' connection' +
+        (sortedRoutes.length !== 1 ? 's' : '') +
+        '</span>' +
+        '</div>' +
+        '<div class="airport-popup-routes">' +
+        routeListHtml +
+        '</div>' +
+        '</div>';
+
+      offsets.forEach(function (offset) {
+        var marker = L.circleMarker([c.lat, c.lng + offset], markerOpts)
+          .bindPopup(popupHtml, { maxWidth: 280, className: 'airport-popup-container' })
+          .on('mouseover', function (e) {
+            this.openPopup();
+          })
+          .on('mouseout', function (e) {
+            if (!this._popupHandlingClick) {
+              this.closePopup();
+            }
+          })
+          .on('click', function () {
+            this._popupHandlingClick = true;
+            this.openPopup();
+          })
+          .on('popupclose', function () {
+            this._popupHandlingClick = false;
+          });
+        marker.addTo(airportsLayer);
       });
     });
 
@@ -432,6 +511,27 @@
 
   document.getElementById('filter-type').addEventListener('change', applyFilters);
   document.getElementById('filter-year').addEventListener('change', applyFilters);
+
+  var toggleRoutes = document.getElementById('toggle-routes');
+  var toggleAirports = document.getElementById('toggle-airports');
+  if (toggleRoutes) {
+    toggleRoutes.addEventListener('change', function () {
+      if (this.checked) {
+        map.addLayer(routesLayer);
+      } else {
+        map.removeLayer(routesLayer);
+      }
+    });
+  }
+  if (toggleAirports) {
+    toggleAirports.addEventListener('change', function () {
+      if (this.checked) {
+        map.addLayer(airportsLayer);
+      } else {
+        map.removeLayer(airportsLayer);
+      }
+    });
+  }
 
   renderHops(allHops);
   renderJourneyCards(allHops);

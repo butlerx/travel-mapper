@@ -126,6 +126,16 @@ fn MapControls(hop_count: usize) -> impl IntoView {
                     <option value="all">"All Years"</option>
                 </select>
             </div>
+            <div class="map-toggles">
+                <label class="map-toggle">
+                    <input type="checkbox" id="toggle-routes" checked />
+                    <span>{"\u{1F5FA}\u{FE0F} Routes"}</span>
+                </label>
+                <label class="map-toggle">
+                    <input type="checkbox" id="toggle-airports" checked />
+                    <span>{"\u{1F4CD} Airports"}</span>
+                </label>
+            </div>
             <div class="map-legend">
                 <h3>{"\u{1F5FA}\u{FE0F} Routes"}</h3>
                 <div class="legend-item">

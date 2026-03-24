@@ -1198,6 +1198,111 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
   box-shadow: var(--shadow-sm);
 }
 
+/* ===== Map Layer Toggles ===== */
+.map-toggles {
+  background: rgba(17, 24, 39, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-sm) var(--space-md);
+  display: flex;
+  gap: var(--space-md);
+}
+
+.map-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.map-toggle input[type="checkbox"] {
+  accent-color: #38bdf8;
+  cursor: pointer;
+  margin: 0;
+}
+
+/* ===== Airport Popups ===== */
+.airport-popup-container .leaflet-popup-content-wrapper {
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+.airport-popup-container .leaflet-popup-tip {
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+}
+
+.airport-popup-container .leaflet-popup-content {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.airport-popup {
+  padding: var(--space-sm) var(--space-md);
+  font-family: var(--font-sans);
+  min-width: 160px;
+}
+
+.airport-popup-header {
+  font-size: var(--text-base);
+  color: var(--color-text);
+  margin-bottom: var(--space-xs);
+}
+
+.airport-popup-stats {
+  display: flex;
+  gap: var(--space-md);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-sm);
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.airport-popup-visits,
+.airport-popup-connections {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.airport-popup-routes {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.airport-popup-route {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: var(--text-xs);
+  padding: 2px 0;
+}
+
+.airport-popup-dest {
+  color: var(--color-text-secondary);
+}
+
+.airport-popup-freq {
+  color: #38bdf8;
+  font-weight: 600;
+  font-size: var(--text-xs);
+}
+
+.airport-popup-more {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  font-style: italic;
+  margin-top: 2px;
+}
+
 /* ===== Responsive ===== */
 @media (max-width: 640px) {
   .container-wide {
