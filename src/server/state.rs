@@ -137,8 +137,8 @@ fn api_routes(router: ApiRouter<AppState>) -> ApiRouter<AppState> {
             ),
         )
         .route(
-            "/import/flighty",
-            axum::routing::post(routes::flighty::handler),
+            "/import/csv",
+            axum::routing::post(routes::csv_import::handler),
         )
         .api_route(
             "/auth/register",

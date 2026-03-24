@@ -4,7 +4,8 @@
 //! so that callers continue to use `db::hops::Create`, `db::hops::Row`, etc.
 
 mod create;
-mod create_from_flighty;
+/// Insert or replace hops from a generic CSV/delimited flight history import.
+mod create_from_csv;
 mod create_manual;
 mod delete_for_trip;
 mod delete_stale;
@@ -18,7 +19,7 @@ mod search;
 mod update_by_id;
 
 pub use create::Create;
-pub use create_from_flighty::CreateFromFlighty;
+pub use create_from_csv::CreateFromCsv;
 pub use create_manual::CreateManual;
 pub use delete_for_trip::DeleteForTrip;
 pub use delete_stale::DeleteStaleTripItTrips;

@@ -13,7 +13,8 @@ use schemars::JsonSchema;
 use serde::Serialize;
 
 pub(super) mod api_keys;
-pub(super) mod flighty;
+/// Generic CSV/delimited import handler (Flighty, myFlightradar24, `OpenFlights`, App in the Air).
+pub(super) mod csv_import;
 pub(super) mod health;
 pub(super) mod hops;
 pub(super) mod login;

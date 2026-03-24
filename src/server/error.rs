@@ -20,7 +20,7 @@ pub enum AppError {
     MissingField(&'static str),
 
     #[error(transparent)]
-    InvalidCsv(#[from] crate::integrations::flighty::ImportError),
+    InvalidGenericCsv(#[from] crate::integrations::generic_csv::ImportError),
 
     #[error("failed to read request body: {0}")]
     BodyRead(#[from] axum::Error),
@@ -61,7 +61,7 @@ impl AppError {
             Self::InvalidJson(_)
             | Self::InvalidForm(_)
             | Self::MissingField(_)
-            | Self::InvalidCsv(_)
+            | Self::InvalidGenericCsv(_)
             | Self::BodyRead(_) => StatusCode::BAD_REQUEST,
             Self::InvalidCredentials => StatusCode::UNAUTHORIZED,
             Self::Forbidden(_) => StatusCode::FORBIDDEN,

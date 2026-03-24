@@ -1,7 +1,7 @@
 /// API keys management section.
 mod api_keys_section;
-/// Flighty CSV import section.
-mod flighty_section;
+/// Generic CSV/delimited import section.
+mod csv_import_section;
 /// Sync status and trigger section.
 mod sync_section;
 /// `TripIt` connection section.
@@ -21,7 +21,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use flighty_section::FlightySection;
+use csv_import_section::CsvImportSection;
 use leptos::prelude::*;
 use serde::Deserialize;
 use sync_section::SyncSection;
@@ -31,7 +31,7 @@ use tripit_section::TripitSection;
 pub struct SettingsFeedback {
     pub error: Option<String>,
     pub tripit: Option<String>,
-    pub flighty: Option<String>,
+    pub csv: Option<String>,
 }
 
 pub async fn page(
@@ -61,7 +61,7 @@ pub async fn page(
             hops_fetched=sync_state.as_ref().map(|s| s.hops_fetched)
             error=feedback.error
             tripit_connected=feedback.tripit
-            flighty_imported=feedback.flighty
+            csv_imported=feedback.csv
         />
     };
     (StatusCode::OK, axum::response::Html(html.to_html())).into_response()
@@ -76,7 +76,7 @@ fn Settings(
     hops_fetched: Option<i64>,
     #[prop(optional_no_strip)] error: Option<String>,
     #[prop(optional_no_strip)] tripit_connected: Option<String>,
-    #[prop(optional_no_strip)] flighty_imported: Option<String>,
+    #[prop(optional_no_strip)] csv_imported: Option<String>,
 ) -> impl IntoView {
     view! {
         <Shell title="Settings".to_owned()>
@@ -88,9 +88,9 @@ fn Settings(
                 {tripit_connected.filter(|v| v == "connected").map(|_| view! {
                     <div class="alert alert-success" role="status">"TripIt account connected successfully!"</div>
                 })}
-                {flighty_imported.map(|count| view! {
+                {csv_imported.map(|count| view! {
                     <div class="alert alert-success" role="status">
-                        {format!("Successfully imported {count} flights from Flighty!")}
+                        {format!("Successfully imported {count} flights!")}
                     </div>
                 })}
 
@@ -104,7 +104,7 @@ fn Settings(
                     hops_fetched=hops_fetched
                 />
 
-                <FlightySection />
+                <CsvImportSection />
 
                 <ApiKeysSection />
             </main>
@@ -288,7 +288,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn settings_page_renders_flighty_import_section() {
+    async fn settings_page_renders_csv_import_section() {
         let pool = test_pool().await;
         let cookie = auth_cookie_for_user(&pool, "alice").await;
         let app = create_router(test_app_state(pool));
@@ -307,14 +307,14 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
         let body = body_text(response).await;
-        assert!(body.contains("Flighty Import"));
-        assert!(body.contains("/import/flighty"));
+        assert!(body.contains("CSV Import"));
+        assert!(body.contains("/import/csv"));
         assert!(body.contains("multipart/form-data"));
         assert!(body.contains("Import Flights"));
     }
 
     #[tokio::test]
-    async fn settings_page_flighty_imported_feedback_renders_success_alert() {
+    async fn settings_page_csv_imported_feedback_renders_success_alert() {
         let pool = test_pool().await;
         let cookie = auth_cookie_for_user(&pool, "alice").await;
         let app = create_router(test_app_state(pool));
@@ -323,7 +323,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method("GET")
-                    .uri("/settings?flighty=42")
+                    .uri("/settings?csv=42")
                     .header(header::COOKIE, cookie)
                     .body(Body::empty())
                     .expect("failed to build request"),
@@ -333,7 +333,7 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
         let body = body_text(response).await;
-        assert!(body.contains("42 flights from Flighty"));
+        assert!(body.contains("42 flights"));
         assert!(body.contains("alert-success"));
     }
 }
