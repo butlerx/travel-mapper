@@ -484,6 +484,82 @@ fn parse_app_in_the_air(content: &[u8]) -> Vec<GenericRow> {
 // Flighty
 // ---------------------------------------------------------------------------
 
+/// Resolve a Flighty airline column (ICAO 3-letter code) to a human-readable
+/// carrier name.  Falls back to the original value when the code is unknown.
+fn resolve_airline_name(icao: &str) -> String {
+    // Flighty exports ICAO airline designators (3-letter codes).
+    // This table maps the most common ones to their marketing name so that
+    // carrier names displayed in the UI match the other import formats which
+    // provide full names directly.
+    match icao {
+        "AAL" => "American Airlines",
+        "AAR" => "Asiana Airlines",
+        "ACA" => "Air Canada",
+        "AFR" => "Air France",
+        "AIC" => "Air India",
+        "AMX" => "Aeroméxico",
+        "ANA" => "ANA",
+        "ANZ" => "Air New Zealand",
+        "ASA" => "Alaska Airlines",
+        "AVA" => "Avianca",
+        "AZA" => "Alitalia",
+        "BAW" => "British Airways",
+        "BEE" => "Flybe",
+        "CAL" => "China Airlines",
+        "CCA" => "Air China",
+        "CES" => "China Eastern Airlines",
+        "CLH" => "Lufthansa CityLine",
+        "CPA" => "Cathay Pacific",
+        "CSN" => "China Southern Airlines",
+        "DAL" => "Delta Air Lines",
+        "DLH" => "Lufthansa",
+        "EIN" => "Aer Lingus",
+        "ETD" => "Etihad Airways",
+        "ETH" => "Ethiopian Airlines",
+        "EVA" => "EVA Air",
+        "EWG" => "Eurowings",
+        "EZY" => "easyJet",
+        "FIN" => "Finnair",
+        "GIA" => "Garuda Indonesia",
+        "HAL" => "Hawaiian Airlines",
+        "IBE" => "Iberia",
+        "ICE" => "Icelandair",
+        "JAL" => "Japan Airlines",
+        "JBU" => "JetBlue",
+        "KAL" => "Korean Air",
+        "KLM" => "KLM",
+        "KQA" => "Kenya Airways",
+        "LAN" => "LATAM Airlines",
+        "LOT" => "LOT Polish Airlines",
+        "MAS" => "Malaysia Airlines",
+        "NAX" => "Norwegian Air Shuttle",
+        "NWS" => "Nordwind Airlines",
+        "QFA" => "Qantas",
+        "QTR" => "Qatar Airways",
+        "RAM" => "Royal Air Maroc",
+        "RYR" => "Ryanair",
+        "SAS" => "SAS",
+        "SAA" => "South African Airways",
+        "SIA" => "Singapore Airlines",
+        "SKW" => "SkyWest Airlines",
+        "SWA" => "Southwest Airlines",
+        "SWR" => "Swiss International Air Lines",
+        "TAP" => "TAP Air Portugal",
+        "THA" => "Thai Airways",
+        "THY" => "Turkish Airlines",
+        "TOM" => "TUI Airways",
+        "UAE" => "Emirates",
+        "UAL" => "United Airlines",
+        "VIR" => "Virgin Atlantic",
+        "VOZ" => "Virgin Australia",
+        "VLG" => "Vueling",
+        "WJA" => "WestJet",
+        "WZZ" => "Wizz Air",
+        _ => return icao.to_string(),
+    }
+    .to_string()
+}
+
 #[derive(Debug, Deserialize)]
 struct FlightyCsvRow {
     #[serde(rename = "Date")]
@@ -572,7 +648,7 @@ fn parse_flighty(content: &[u8]) -> Result<Vec<GenericRow>, ImportError> {
             from_iata: r.from,
             to_iata: r.to,
             flight_number: r.flight,
-            airline: r.airline,
+            airline: resolve_airline_name(&r.airline),
             aircraft_type: r.aircraft_type,
             registration: r.tail_number.clone(),
             seat: r.seat,
@@ -809,7 +885,7 @@ Date,Airline,Flight,From,To,Dep Terminal,Dep Gate,Arr Terminal,Arr Gate,Canceled
         assert_eq!(first.from_iata, "RAK");
         assert_eq!(first.to_iata, "DUB");
         assert_eq!(first.flight_number, "709");
-        assert_eq!(first.airline, "EIN");
+        assert_eq!(first.airline, "Aer Lingus");
         assert_eq!(first.aircraft_type, "Airbus A320");
         assert_eq!(first.registration, "EIGAL");
         assert_eq!(first.seat, "");
@@ -870,5 +946,24 @@ Date,Airline,Flight,From,To,Dep Terminal,Dep Gate,Arr Terminal,Arr Gate,Canceled
         let csv = "Date,Airline,Flight,From,To,Dep Terminal,Dep Gate,Arr Terminal,Arr Gate,Canceled,Diverted To,Gate Departure (Scheduled),Gate Departure (Actual),Take off (Scheduled),Take off (Actual),Landing (Scheduled),Landing (Actual),Gate Arrival (Scheduled),Gate Arrival (Actual),Aircraft Type Name,Tail Number,PNR,Seat,Seat Type,Cabin Class,Flight Reason,Notes,Flight Flighty ID,Airline Flighty ID,Departure Airport Flighty ID,Arrival Airport Flighty ID,Diverted To Airport Flighty ID,Aircraft Type Flighty ID\n";
         let rows = parse_csv(csv.as_bytes(), Some(ImportFormat::Flighty)).expect("parse failed");
         assert!(rows.is_empty());
+    }
+
+    #[test]
+    fn resolve_airline_name_known_codes() {
+        assert_eq!(resolve_airline_name("EIN"), "Aer Lingus");
+        assert_eq!(resolve_airline_name("RYR"), "Ryanair");
+        assert_eq!(resolve_airline_name("BAW"), "British Airways");
+        assert_eq!(resolve_airline_name("DAL"), "Delta Air Lines");
+        assert_eq!(resolve_airline_name("UAE"), "Emirates");
+    }
+
+    #[test]
+    fn resolve_airline_name_unknown_passes_through() {
+        assert_eq!(resolve_airline_name("XYZ"), "XYZ");
+        assert_eq!(resolve_airline_name(""), "");
+        assert_eq!(
+            resolve_airline_name("Some Custom Airline"),
+            "Some Custom Airline"
+        );
     }
 }
