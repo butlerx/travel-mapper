@@ -114,6 +114,7 @@ pub(crate) mod test_helpers {
             tripit_consumer_secret: "consumer-secret".to_string(),
             tripit_override: None,
             registration_enabled: true,
+            aviationstack_api_key: None,
         }
     }
 

@@ -1,0 +1,80 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT\n                   id as \"id!: i64\",\n                   hop_id as \"hop_id!: i64\",\n                   provider as \"provider!: String\",\n                   status as \"status!: String\",\n                   delay_minutes,\n                   dep_gate as \"dep_gate!: String\",\n                   dep_terminal as \"dep_terminal!: String\",\n                   arr_gate as \"arr_gate!: String\",\n                   arr_terminal as \"arr_terminal!: String\",\n                   raw_json as \"raw_json!: String\",\n                   fetched_at as \"fetched_at!: String\"\n               FROM status_enrichments\n               WHERE hop_id = ?\n               ORDER BY fetched_at DESC\n               LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!: i64",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "hop_id!: i64",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "provider!: String",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "status!: String",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "delay_minutes",
+        "ordinal": 4,
+        "type_info": "Integer"
+      },
+      {
+        "name": "dep_gate!: String",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "dep_terminal!: String",
+        "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "arr_gate!: String",
+        "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "arr_terminal!: String",
+        "ordinal": 8,
+        "type_info": "Text"
+      },
+      {
+        "name": "raw_json!: String",
+        "ordinal": 9,
+        "type_info": "Text"
+      },
+      {
+        "name": "fetched_at!: String",
+        "ordinal": 10,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "7b7e52421cbb0bb19d4e16d75bcee99eec18aaef0066fe904bdaf67c8f2c8f87"
+}

@@ -48,6 +48,24 @@ pub struct JourneyResponse {
     pub end_date: String,
     /// Carrier name or IATA code (e.g. `"BA"`, `"Irish Rail"`).
     pub carrier: Option<String>,
+    /// Live flight status (e.g. `"scheduled"`, `"active"`, `"landed"`, `"cancelled"`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<String>,
+    /// Delay in minutes (positive = late, negative = early).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub delay_minutes: Option<i64>,
+    /// Departure gate from status enrichment.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dep_gate: Option<String>,
+    /// Departure terminal from status enrichment.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dep_terminal: Option<String>,
+    /// Arrival gate from status enrichment.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub arr_gate: Option<String>,
+    /// Arrival terminal from status enrichment.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub arr_terminal: Option<String>,
 }
 
 /// Mode of transport for a travel journey.
@@ -120,6 +138,25 @@ impl From<JourneyTravelType> for db::hops::TravelType {
     }
 }
 
+fn non_empty(s: &str) -> Option<String> {
+    if s.is_empty() {
+        None
+    } else {
+        Some(s.to_owned())
+    }
+}
+
+impl JourneyResponse {
+    fn apply_enrichment(&mut self, enrichment: &db::status_enrichments::Row) {
+        self.status = non_empty(&enrichment.status);
+        self.delay_minutes = enrichment.delay_minutes;
+        self.dep_gate = non_empty(&enrichment.dep_gate);
+        self.dep_terminal = non_empty(&enrichment.dep_terminal);
+        self.arr_gate = non_empty(&enrichment.arr_gate);
+        self.arr_terminal = non_empty(&enrichment.arr_terminal);
+    }
+}
+
 impl From<db::hops::Row> for JourneyResponse {
     fn from(hop: db::hops::Row) -> Self {
         let carrier = hop.carrier().map(str::to_owned);
@@ -135,6 +172,12 @@ impl From<db::hops::Row> for JourneyResponse {
             start_date: hop.start_date,
             end_date: hop.end_date,
             carrier,
+            status: None,
+            delay_minutes: None,
+            dep_gate: None,
+            dep_terminal: None,
+            arr_gate: None,
+            arr_terminal: None,
         }
     }
 }
@@ -162,6 +205,12 @@ impl From<db::hops::DetailRow> for JourneyResponse {
             start_date: hop.start_date,
             end_date: hop.end_date,
             carrier,
+            status: None,
+            delay_minutes: None,
+            dep_gate: None,
+            dep_terminal: None,
+            arr_gate: None,
+            arr_terminal: None,
         }
     }
 }
@@ -181,6 +230,12 @@ impl MultiFormatResponse for JourneyResponse {
         "start_date",
         "end_date",
         "carrier",
+        "status",
+        "delay_minutes",
+        "dep_gate",
+        "dep_terminal",
+        "arr_gate",
+        "arr_terminal",
     ];
 
     fn csv_row(&self) -> Vec<String> {
@@ -196,6 +251,13 @@ impl MultiFormatResponse for JourneyResponse {
             self.start_date.clone(),
             self.end_date.clone(),
             self.carrier.clone().unwrap_or_default(),
+            self.status.clone().unwrap_or_default(),
+            self.delay_minutes
+                .map_or_else(String::new, |d| d.to_string()),
+            self.dep_gate.clone().unwrap_or_default(),
+            self.dep_terminal.clone().unwrap_or_default(),
+            self.arr_gate.clone().unwrap_or_default(),
+            self.arr_terminal.clone().unwrap_or_default(),
         ]
     }
 
@@ -211,6 +273,16 @@ impl MultiFormatResponse for JourneyResponse {
         let carrier = self.carrier.clone().unwrap_or_default();
         let travel_type_str = travel_type.to_owned();
 
+        let status_badge = self.status.as_ref().map(|s| {
+            let css_class = format!("status-badge status-{}", s.to_lowercase().replace(' ', "-"));
+            let label = match self.delay_minutes {
+                Some(mins) if mins > 0 => format!("{s} (+{mins}m)"),
+                Some(mins) if mins < 0 => format!("{s} ({mins}m)"),
+                _ => s.clone(),
+            };
+            (css_class, label)
+        });
+
         view! {
             <a href=href class="journey-card-link">
                 <div class="data-card journey-card">
@@ -222,6 +294,9 @@ impl MultiFormatResponse for JourneyResponse {
                     </div>
                     <div class="journey-card-meta">
                         <span class=badge_class>{badge_text}</span>
+                        {status_badge.map(|(css_class, label)| view! {
+                            <span class=css_class>{label}</span>
+                        })}
                         <span class="journey-card-date">{date}</span>
                     </div>
                 </div>
@@ -275,7 +350,22 @@ pub async fn handler(
         }
     };
 
-    let responses: Vec<JourneyResponse> = hops.into_iter().map(JourneyResponse::from).collect();
+    let mut responses: Vec<JourneyResponse> = hops.into_iter().map(JourneyResponse::from).collect();
+
+    let hop_ids: Vec<i64> = responses.iter().map(|r| r.id).collect();
+    if let Ok(enrichments) = (db::status_enrichments::GetByHopIds { hop_ids })
+        .execute(&state.db)
+        .await
+    {
+        let enrichment_map: std::collections::HashMap<i64, db::status_enrichments::Row> =
+            enrichments.into_iter().map(|e| (e.hop_id, e)).collect();
+        for response in &mut responses {
+            if let Some(enrichment) = enrichment_map.get(&response.id) {
+                response.apply_enrichment(enrichment);
+            }
+        }
+    }
+
     JourneyResponse::into_format_response(&responses, format, StatusCode::OK)
 }
 
@@ -326,10 +416,19 @@ pub async fn get_journey_handler(
         }
     };
 
+    let enrichment = (db::status_enrichments::GetByHopId { hop_id: detail.id })
+        .execute(&state.db)
+        .await
+        .ok()
+        .flatten();
+
     if format == super::ResponseFormat::Html {
-        crate::server::pages::journey_detail::render_page(detail, feedback)
+        crate::server::pages::journey_detail::render_page(detail, feedback, enrichment)
     } else {
-        let response: JourneyResponse = detail.into();
+        let mut response: JourneyResponse = detail.into();
+        if let Some(ref e) = enrichment {
+            response.apply_enrichment(e);
+        }
         JourneyResponse::single_format_response(&response, format, StatusCode::OK)
     }
 }

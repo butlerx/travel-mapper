@@ -10,7 +10,10 @@ mod rail_section;
 mod transport_section;
 
 use crate::{
-    db::hops::{DetailRow, TravelType},
+    db::{
+        hops::{DetailRow, TravelType},
+        status_enrichments,
+    },
     server::components::{CarrierIcon, NavBar, Shell},
 };
 use axum::{
@@ -35,12 +38,17 @@ pub struct JourneyDetailFeedback {
 }
 
 /// Render the journey detail HTML page from a [`DetailRow`] and optional feedback.
-pub fn render_page(journey: DetailRow, feedback: JourneyDetailFeedback) -> Response {
+pub fn render_page(
+    journey: DetailRow,
+    feedback: JourneyDetailFeedback,
+    enrichment: Option<status_enrichments::Row>,
+) -> Response {
     let html = view! {
         <JourneyDetailPage
             error_msg=feedback.error
             success_msg=feedback.success
             journey=journey
+            enrichment=enrichment
         />
     };
     (StatusCode::OK, axum::response::Html(html.to_html())).into_response()
@@ -88,6 +96,7 @@ fn JourneyDetailPage(
     #[prop(optional_no_strip)] error_msg: Option<String>,
     #[prop(optional_no_strip)] success_msg: Option<String>,
     journey: DetailRow,
+    #[prop(optional_no_strip)] enrichment: Option<status_enrichments::Row>,
 ) -> impl IntoView {
     let edit_journey = journey.clone();
 
@@ -152,6 +161,22 @@ fn JourneyDetailPage(
         ),
     };
 
+    let status_badge_view = enrichment
+        .as_ref()
+        .filter(|e| !e.status.is_empty())
+        .map(|e| {
+            let css = format!(
+                "status-badge status-{}",
+                e.status.to_lowercase().replace(' ', "-")
+            );
+            let label = match e.delay_minutes {
+                Some(mins) if mins > 0 => format!("{} (+{}m)", e.status, mins),
+                Some(mins) if mins < 0 => format!("{} ({}m)", e.status, mins),
+                _ => e.status.clone(),
+            };
+            (css, label)
+        });
+
     view! {
         <Shell title="Journey Detail".to_owned() body_class="journey-detail-layout">
             <NavBar current="" />
@@ -176,6 +201,9 @@ fn JourneyDetailPage(
                     </h1>
                     <p class="journey-detail-dates">{dates}</p>
                     <span class=badge_class>{type_label}</span>
+                    {status_badge_view.map(|(css, label)| view! {
+                        <span class=css>{label}</span>
+                    })}
                     {countries_view}
                 </header>
 

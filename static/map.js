@@ -339,6 +339,20 @@ function arcPoints(from, to, numPoints) {
  * @param {HopResponse} journey
  * @returns {string}
  */
+function statusBadgeHtml(journey) {
+  if (!journey.status) return '';
+  const cssClass = `status-badge status-${escapeHtml(journey.status.toLowerCase().replace(/ /g, '-'))}`;
+  const delay = journey.delay_minutes;
+  let label = escapeHtml(journey.status);
+  if (delay != null && delay > 0) label = `${escapeHtml(journey.status)} (+${delay}m)`;
+  else if (delay != null && delay < 0) label = `${escapeHtml(journey.status)} (${delay}m)`;
+  return `<span class="${cssClass}">${label}</span>`;
+}
+
+/**
+ * @param {HopResponse} journey
+ * @returns {string}
+ */
 function journeyCardHtml(journey) {
   const travelTypeKey = journey.travel_type || '';
   const emoji = emojis[travelTypeKey] || '';
@@ -363,7 +377,7 @@ function journeyCardHtml(journey) {
     dist = km < 1 ? '<1 km' : `${Math.round(km).toLocaleString()} km`;
   }
 
-  return `<a href="/journeys/${journey.id}" class="journey-card-link"><div class="journey-card"><div class="journey-route">${carrierIconHtml(journey, 20)} <span class="journey-origin">${originName}</span><span class="journey-arrow">\u2192</span><span class="journey-dest">${destName}</span></div><div class="journey-meta"><span class="journey-badge badge-${travelType}">${emoji} ${typeLabel}</span><span class="journey-date">${startDate}</span>${dist ? `<span class="journey-distance">${dist}</span>` : ''}</div></div></a>`;
+  return `<a href="/journeys/${journey.id}" class="journey-card-link"><div class="journey-card"><div class="journey-route">${carrierIconHtml(journey, 20)} <span class="journey-origin">${originName}</span><span class="journey-arrow">\u2192</span><span class="journey-dest">${destName}</span></div><div class="journey-meta"><span class="journey-badge badge-${travelType}">${emoji} ${typeLabel}</span>${statusBadgeHtml(journey)}<span class="journey-date">${startDate}</span>${dist ? `<span class="journey-distance">${dist}</span>` : ''}</div></div></a>`;
 }
 
 /**
@@ -416,7 +430,7 @@ function renderJourneyCards(journeys) {
   if (upcoming.length > 0) {
     html += `<h3 class="journey-sidebar-heading journey-sidebar-heading--upcoming">Upcoming (${upcoming.length})</h3>`;
     upcoming.forEach((journey) => {
-      html += `<a href="/journeys/${journey.id}" class="journey-card-link"><div class="journey-card journey-card--upcoming"><div class="journey-route">${carrierIconHtml(journey, 20)} <span class="journey-origin">${escapeHtml(journey.origin_name || '')}</span><span class="journey-arrow">\u2192</span><span class="journey-dest">${escapeHtml(journey.dest_name || '')}</span></div><div class="journey-meta"><span class="journey-badge badge-${escapeHtml(journey.travel_type || '')}">${emojis[journey.travel_type] || ''} ${escapeHtml((journey.travel_type || '').charAt(0).toUpperCase() + (journey.travel_type || '').slice(1))}</span><span class="journey-countdown">${countdownText(journey.start_date)}</span><span class="journey-date">${escapeHtml(journey.start_date || '')}</span></div></div></a>`;
+      html += `<a href="/journeys/${journey.id}" class="journey-card-link"><div class="journey-card journey-card--upcoming"><div class="journey-route">${carrierIconHtml(journey, 20)} <span class="journey-origin">${escapeHtml(journey.origin_name || '')}</span><span class="journey-arrow">\u2192</span><span class="journey-dest">${escapeHtml(journey.dest_name || '')}</span></div><div class="journey-meta"><span class="journey-badge badge-${escapeHtml(journey.travel_type || '')}">${emojis[journey.travel_type] || ''} ${escapeHtml((journey.travel_type || '').charAt(0).toUpperCase() + (journey.travel_type || '').slice(1))}</span>${statusBadgeHtml(journey)}<span class="journey-countdown">${countdownText(journey.start_date)}</span><span class="journey-date">${escapeHtml(journey.start_date || '')}</span></div></div></a>`;
     });
   }
 

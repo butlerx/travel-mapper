@@ -4,7 +4,10 @@ use crate::{
     auth::decrypt_token,
     db,
     geocode::Geocoder,
-    integrations::tripit::{self, FetchError, TripItApi, TripItAuth, TripItClient},
+    integrations::{
+        flight_status::{AviationStackClient, FlightStatusApi},
+        tripit::{self, FetchError, TripItApi, TripItAuth, TripItClient},
+    },
 };
 use sqlx::SqlitePool;
 use std::time::Instant;
@@ -152,6 +155,7 @@ pub struct SyncWorkerConfig {
     pub consumer_key: String,
     pub consumer_secret: String,
     pub poll_interval: std::time::Duration,
+    pub aviationstack_api_key: Option<String>,
 }
 
 /// Run the sync worker loop, polling for pending jobs until shutdown.
@@ -212,6 +216,7 @@ async fn process_sync_job(config: &SyncWorkerConfig, job: &db::sync_jobs::Row) {
                 duration_ms = sync_result.duration_ms,
                 "sync job completed",
             );
+            enrich_flight_statuses(config, job.user_id).await;
             if let Err(err) = (db::sync_jobs::Complete { job_id: job.id })
                 .execute(&config.pool)
                 .await
@@ -280,4 +285,111 @@ async fn build_client_and_sync(
 
     let geocoder = Geocoder::default();
     Ok(sync_all(&client, &geocoder, &config.pool, job.user_id).await?)
+}
+
+/// Enrich air-type hops with flight status data from `AviationStack`.
+///
+/// Failures are logged and never propagated — enrichment is optional and must
+/// not block sync completion.
+async fn enrich_flight_statuses(config: &SyncWorkerConfig, user_id: i64) {
+    let Some(ref api_key) = config.aviationstack_api_key else {
+        return;
+    };
+
+    let hops = match (db::hops::GetAll {
+        user_id,
+        travel_type_filter: Some("air"),
+    })
+    .execute(&config.pool)
+    .await
+    {
+        Ok(hops) => hops,
+        Err(err) => {
+            tracing::warn!(user_id, error = %err, "failed to fetch air hops for enrichment");
+            return;
+        }
+    };
+
+    if hops.is_empty() {
+        return;
+    }
+
+    let client = AviationStackClient::new(api_key.clone());
+    let mut enriched = 0_u64;
+
+    for hop in &hops {
+        let detail = match (db::hops::GetById {
+            id: hop.id,
+            user_id,
+        })
+        .execute(&config.pool)
+        .await
+        {
+            Ok(Some(d)) => d,
+            Ok(None) => continue,
+            Err(err) => {
+                tracing::warn!(hop_id = hop.id, error = %err, "failed to fetch hop detail for enrichment");
+                continue;
+            }
+        };
+
+        let flight_number = detail
+            .flight_detail
+            .as_ref()
+            .map(|d| d.flight_number.as_str())
+            .unwrap_or_default();
+        if flight_number.is_empty() || hop.start_date.is_empty() {
+            continue;
+        }
+
+        match client
+            .get_flight_status(flight_number, &hop.start_date)
+            .await
+        {
+            Ok(Some(status)) => {
+                let delay = status.dep_delay_minutes.or(status.arr_delay_minutes);
+                if let Err(err) = (db::status_enrichments::Upsert {
+                    hop_id: hop.id,
+                    provider: "aviationstack",
+                    status: &status.flight_status,
+                    delay_minutes: delay,
+                    dep_gate: &status.dep_gate,
+                    dep_terminal: &status.dep_terminal,
+                    arr_gate: &status.arr_gate,
+                    arr_terminal: &status.arr_terminal,
+                    raw_json: &status.raw_json,
+                })
+                .execute(&config.pool)
+                .await
+                {
+                    tracing::warn!(
+                        hop_id = hop.id,
+                        error = %err,
+                        "failed to upsert flight status enrichment",
+                    );
+                } else {
+                    enriched += 1;
+                }
+            }
+            Ok(None) => {
+                tracing::debug!(
+                    hop_id = hop.id,
+                    flight_number,
+                    "no flight status data returned",
+                );
+            }
+            Err(err) => {
+                tracing::warn!(
+                    hop_id = hop.id,
+                    flight_number,
+                    error = %err,
+                    "flight status API request failed",
+                );
+            }
+        }
+    }
+
+    if enriched > 0 {
+        tracing::info!(user_id, enriched, "flight status enrichment complete");
+    }
 }

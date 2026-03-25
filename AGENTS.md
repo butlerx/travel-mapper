@@ -36,27 +36,6 @@ mise run format:check     # cargo fmt --check
 mise run check            # lint + format:check together
 ```
 
-### Running a single test
-
-```bash
-# By exact name
-mise run test -- -E 'test(=insert_and_get_all_hops_roundtrip)'
-# By substring
-mise run test -- -E 'test(/hops/)'
-# Or with cargo directly
-cargo nextest run --all-targets --all-features -E 'test(/my_test_name/)'
-```
-
-### After changing SQL queries
-
-Regenerate the offline query cache so compile-time checking works:
-
-```bash
-mise run db:prepare
-```
-
-This updates `.sqlx/*.json`. **Commit these files** alongside your query changes.
-
 ## Project Structure
 
 ```
@@ -71,13 +50,17 @@ src/
     api_keys.rs
     credentials.rs
     hops.rs + hops/                 # one file per query command
-      create.rs, create_manual.rs, create_from_flighty.rs
-      get_all.rs, get_all_for_stats.rs, get_by_id.rs
-      delete_for_trip.rs, delete_stale.rs, replace_for_trip.rs
+      create.rs, create_from_csv.rs, create_manual.rs
+      delete_for_trip.rs, delete_stale.rs
+      exists_in_trip.rs, get_all.rs, get_all_for_stats.rs
+      get_by_id.rs, get_for_trip.rs, get_unassigned.rs
+      replace_for_trip.rs, search.rs, update_by_id.rs
     oauth_tokens.rs
     sessions.rs
+    status_enrichments.rs           # live/historical flight status data
     sync_jobs.rs
     sync_state.rs
+    trips.rs                        # named travel trip groups
     users.rs
   geocode.rs + geocode/             # Nominatim geocoding + IATA airport lookup
     airports.rs                     # IATA code → coordinates
@@ -85,7 +68,8 @@ src/
     resolve.rs                      # coordinate resolution orchestration
     sanitize.rs                     # address string cleanup
   integrations.rs + integrations/   # third-party travel data sources
-    flighty.rs                      # Flighty import
+    flight_status.rs                # AviationStack flight status API client
+    generic_csv.rs                  # auto-detects Flighty, myFlightradar24, OpenFlights, App in the Air
     tripit.rs + tripit/             # TripIt integration
       auth.rs                       # OAuth 1.0a signing
       fetch.rs + fetch/             # TripIt API data fetching
@@ -94,23 +78,27 @@ src/
         trips.rs                    # trip list + detail fetching
   server.rs + server/               # Axum web server
     components.rs + components/     # shared Leptos UI components
-      auth_page.rs, error_page.rs, navbar.rs, shell.rs
+      auth_page.rs, carrier_icon.rs, error_page.rs, navbar.rs, shell.rs
     error.rs                        # error response types
-    extractors.rs                   # AuthUser extractor (FromRequestParts)
+    extractors.rs + extractors/     # Axum extractors
+      auth_user.rs                  # AuthUser (FromRequestParts)
+      form_or_json.rs               # FormOrJson content-type-aware body extractor
     middleware.rs                   # Tower tracing middleware (request spans, response logging)
     pages.rs + pages/               # Leptos SSR page components
-      add_flight.rs, landing.rs, login.rs, register.rs
+      add_journey.rs, landing.rs, login.rs, register.rs
       not_found.rs, unauthorized.rs, stats.rs
+      trips.rs, trip_detail.rs      # trip list and detail pages
       dashboard.rs + dashboard/
         travel_stats.rs             # travel statistics sub-component
-      hop_detail.rs + hop_detail/   # per-travel-type detail sections
-        boat_section.rs, flight_section.rs
+      journey_detail.rs + journey_detail/  # per-travel-type detail sections
+        boat_section.rs, edit_form.rs, flight_section.rs
         rail_section.rs, transport_section.rs
       settings.rs + settings/       # settings page sections
-        api_keys_section.rs, flighty_section.rs
+        api_keys_section.rs, csv_import_section.rs
         sync_section.rs, tripit_section.rs
     routes.rs + routes/             # one file per route handler
-      api_keys.rs, flighty.rs, health.rs, hops.rs
+      api_keys.rs, csv_import.rs, health.rs
+      journeys.rs, trips.rs        # journey and trip CRUD
       login.rs, logout.rs, register.rs
       static_assets.rs, sync.rs
       tripit_callback.rs, tripit_connect.rs, tripit_credentials.rs
@@ -119,7 +107,7 @@ src/
   worker.rs                         # background sync orchestration
   telemetry.rs                      # tracing/logging setup
 migrations/                         # SQLite migrations (sqlx migrate)
-static/                             # JS, CSS served at runtime
+static/                             # JS, CSS, icons served at runtime
 ```
 
 ## Module Conventions
@@ -135,34 +123,24 @@ static/                             # JS, CSS served at runtime
 
 ## Import Ordering
 
-Three groups separated by blank lines:
+All imports in a single group — no blank-line separation between local and external.
 
 ```rust
-// 1. Local imports (super, crate)
 use super::{ErrorResponse, MultiFormatResponse};
-use crate::{
-    db,
-    server::{AppState, extractors::AuthUser},
-};
-
-// 2. External crates (grouped by crate, nested braces)
+use crate::{db, server::{AppState, extractors::AuthUser}};
 use aide::transform::TransformOperation;
-use axum::{
-    extract::State,
-    http::{HeaderMap, StatusCode},
-    response::{IntoResponse, Response},
-};
+use axum::{extract::State, http::StatusCode, response::IntoResponse};
 ```
 
 ## Error Handling
 
 **No `anyhow`.** Error strategy varies by layer:
 
-| Layer | Pattern |
-|-------|---------|
-| DB | Return `Result<T, sqlx::Error>`. Propagate with `?`. |
-| Domain | `#[derive(Debug, thiserror::Error)]` enums/structs. Wrap into `sqlx::Error::Decode(Box::new(...))` when needed. |
-| Web helpers | Return `Result<T, (StatusCode, String)>` for direct HTTP mapping. |
+| Layer          | Pattern                                                                                                                      |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| DB             | Return `Result<T, sqlx::Error>`. Propagate with `?`.                                                                         |
+| Domain         | `#[derive(Debug, thiserror::Error)]` enums/structs. Wrap into `sqlx::Error::Decode(Box::new(...))` when needed.              |
+| Web helpers    | Return `Result<T, (StatusCode, String)>` for direct HTTP mapping.                                                            |
 | Route handlers | Return `Response` or `(CookieJar, Response)`. Convert errors via `ErrorResponse::into_format_response(msg, format, status)`. |
 
 ## DB / sqlx Patterns
@@ -186,15 +164,13 @@ use axum::{
 
 ## Axum Route Handler Patterns
 
-- Extractors: `State<AppState>`, `AuthUser` (custom `FromRequestParts`), `CookieJar`, `HeaderMap`, `Bytes`.
+- Extractors: `State<AppState>`, `AuthUser` (custom `FromRequestParts`), `FormOrJson` (content-type-aware body), `CookieJar`, `HeaderMap`, `Bytes`.
 - Content negotiation: `negotiate_format(&headers)` → `MultiFormatResponse` trait for JSON/CSV/HTML.
-- Form + JSON: parse body based on `is_form_request(&headers)`, redirect on form success.
+- Form + JSON: `FormOrJson<T>` extractor parses body based on Content-Type; redirect on form success.
 - OpenAPI: `aide` integration — each handler has a `*_docs` function for operation metadata.
 
 ## Type & Naming Conventions
 
-- Types: `CamelCase` — `Row`, `TravelType`, `AuthUser`, `Geocoder`
-- Functions: `snake_case` — `create_user_session`, `resolve_trip_coords`
 - DB structs: short verb nouns — `Create`, `GetAll`, `GetByUserId`
 - Error types: suffix with `Error` — `ParseTravelTypeError`, `AuthError`
 - Enums: derive `Debug`, `Clone`, `PartialEq`, `Serialize`, `JsonSchema` as needed
@@ -204,31 +180,29 @@ use axum::{
 
 - **Inline tests**: `#[cfg(test)] mod tests { ... }` in the same file — no separate test files.
 - **Async**: all tests use `#[tokio::test]`.
-- **Helpers** (in `src/db.rs` test module): `test_pool()` (in-memory SQLite), `test_user(&pool, name)`.
-- **Server helpers** (in `src/server/test_helpers.rs`): `test_app_state`, `auth_cookie_for_user`, `body_text`, `sample_hop`.
-- Tests run against in-memory SQLite — no external DB needed.
+- **DB helpers** (in `src/db.rs` `#[cfg(test)]` module): `test_pool()` (in-memory SQLite), `test_user(&pool, name)`.
+- **Server helpers** (in `src/server.rs` `#[cfg(test)] pub(crate) mod test_helpers`): `test_app_state`, `auth_cookie_for_user`, `api_key_for_user`, `body_text`, `sample_hop`, `MockTripItApiWithData`.
+- Tests run against in-memory SQLite (`sqlite:file:{UUID}?mode=memory&cache=shared`) — no external DB needed.
 
 ## Clippy & Formatting
 
 - `#![warn(clippy::pedantic)]` is set in `lib.rs`. All pedantic lints are active.
 - **Never use `#[allow(...)]`** to suppress clippy warnings. Fix the underlying code.
-- **Never use `as any`, `@ts-ignore`-equivalents** — no type error suppression.
+  - Exception: Leptos component modules (`pages.rs`, `components.rs`) allow `clippy::must_use_candidate` and `clippy::needless_pass_by_value` because the `#[component]` macro generates code that triggers these.
 - No `rustfmt.toml` — default `cargo fmt` settings apply.
 - Lint command treats warnings as errors: `-- -D warnings`.
 
 ## Logging
 
-Use `tracing` with structured fields:
-
-```rust
-tracing::info!(user_id = auth.user_id, job_id, "sync job enqueued");
-```
+`tracing` with structured fields: `tracing::info!(user_id = auth.user_id, job_id, "sync job enqueued");`
 
 ## Key Constraints
 
 1. **Never modify committed migrations** — only safe to edit uncommitted ones.
 2. **No `mod.rs` files** — use `foo.rs` + `foo/` pattern.
-3. **No `#[allow(...)]`** — fix all clippy warnings at source.
+3. **No `#[allow(...)]`** — fix all clippy warnings at source (Leptos component modules exempted, see above).
 4. **Coordinates are non-nullable** — `f64` everywhere, resolve via airport lookup or geocoding.
 5. **Regenerate `.sqlx/`** after any SQL query change: `mise run db:prepare`.
 6. **Feature flag `ssr`** gates Leptos server-side rendering — don't break SSR compilation.
+7. **No `unsafe`** — the codebase has zero unsafe blocks; keep it that way.
+8. **No `anyhow`** — use `thiserror` for domain errors, `sqlx::Error` for DB layer.

@@ -19,6 +19,9 @@ struct Cli {
 
     #[arg(long, env = "SYNC_POLL_INTERVAL_SECS", default_value_t = 5)]
     poll_interval_secs: u64,
+
+    #[arg(long, env = "AVIATIONSTACK_API_KEY")]
+    aviationstack_api_key: Option<String>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -57,6 +60,7 @@ async fn run() -> Result<(), WorkerError> {
         consumer_key: cli.consumer_key,
         consumer_secret: cli.consumer_secret,
         poll_interval: Duration::from_secs(cli.poll_interval_secs),
+        aviationstack_api_key: cli.aviationstack_api_key,
     };
 
     tracing::info!(

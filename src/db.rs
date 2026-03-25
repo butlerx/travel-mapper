@@ -10,6 +10,8 @@ pub mod hops;
 pub mod oauth_tokens;
 /// Query objects for the `sessions` table — cookie-based browser sessions.
 pub mod sessions;
+/// Query objects for the `status_enrichments` table — live/historical flight status data.
+pub mod status_enrichments;
 /// Query objects for the `sync_jobs` table — background sync job queue.
 pub mod sync_jobs;
 /// Query objects for the `sync_state` table — per-user sync progress and status.

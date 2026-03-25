@@ -29,6 +29,18 @@ interface HopResponse {
   end_date: string;
   /** Carrier name or IATA code (e.g. "BA", "Amtrak"). */
   carrier?: string;
+  /** Live flight status (e.g. "scheduled", "active", "landed", "cancelled"). */
+  status?: string;
+  /** Delay in minutes (positive = late, negative = early). */
+  delay_minutes?: number;
+  /** Departure gate from status enrichment. */
+  dep_gate?: string;
+  /** Departure terminal from status enrichment. */
+  dep_terminal?: string;
+  /** Arrival gate from status enrichment. */
+  arr_gate?: string;
+  /** Arrival terminal from status enrichment. */
+  arr_terminal?: string;
 }
 
 /** An aggregated route between two cities, used for map rendering. */

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM status_enrichments WHERE hop_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "3124ff044281c11a8905500c989147bdd2b18e4966da2f25cb3c6c17fdb8ac33"
+}

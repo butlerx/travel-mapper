@@ -917,6 +917,71 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
   background: var(--color-danger);
 }
 
+/* Flight status variants */
+.status-scheduled {
+  background: var(--color-info-bg);
+  color: var(--color-info-text);
+  border: 1px solid var(--color-info-border);
+}
+
+.status-scheduled::before {
+  background: var(--color-info-text);
+}
+
+.status-active {
+  background: var(--color-info-bg);
+  color: var(--color-info-text);
+  border: 1px solid var(--color-info-border);
+}
+
+.status-active::before {
+  background: var(--color-info-text);
+}
+
+.status-on-time,
+.status-landed {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+  border: 1px solid var(--color-success-border);
+}
+
+.status-on-time::before,
+.status-landed::before {
+  background: var(--color-success);
+}
+
+.status-delayed {
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  border: 1px solid var(--color-warning-border);
+}
+
+.status-delayed::before {
+  background: var(--color-warning);
+}
+
+.status-cancelled,
+.status-diverted {
+  background: var(--color-danger-bg);
+  color: var(--color-danger-text);
+  border: 1px solid var(--color-danger-border);
+}
+
+.status-cancelled::before,
+.status-diverted::before {
+  background: var(--color-danger);
+}
+
+.status-unknown {
+  background: var(--color-info-bg);
+  color: var(--color-info-text);
+  border: 1px solid var(--color-info-border);
+}
+
+.status-unknown::before {
+  background: var(--color-info-text);
+}
+
 /* ===== Empty States ===== */
 .empty-state {
   text-align: center;

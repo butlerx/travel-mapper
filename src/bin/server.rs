@@ -22,6 +22,9 @@ struct Cli {
 
     #[arg(long, env = "REGISTRATION_ENABLED", default_value_t = true)]
     registration_enabled: bool,
+
+    #[arg(long, env = "AVIATIONSTACK_API_KEY")]
+    aviationstack_api_key: Option<String>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -65,6 +68,7 @@ async fn run() -> Result<(), ServerError> {
         tripit_consumer_secret: cli.consumer_secret,
         tripit_override: None,
         registration_enabled: cli.registration_enabled,
+        aviationstack_api_key: cli.aviationstack_api_key,
     };
     let app = travel_mapper::server::create_router(state);
 

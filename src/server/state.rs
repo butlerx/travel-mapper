@@ -28,6 +28,8 @@ pub struct AppState {
     pub tripit_override: Option<Arc<dyn TripItApi>>,
     /// Whether new user registration is allowed (`REGISTRATION_ENABLED` env var).
     pub registration_enabled: bool,
+    /// Optional `AviationStack` API key for flight status enrichment.
+    pub aviationstack_api_key: Option<String>,
 }
 
 impl FromRef<AppState> for LeptosOptions {

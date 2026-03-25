@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO status_enrichments\n                   (hop_id, provider, status, delay_minutes,\n                    dep_gate, dep_terminal, arr_gate, arr_terminal, raw_json)\n               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)\n               ON CONFLICT(hop_id, provider) DO UPDATE SET\n                   status = excluded.status,\n                   delay_minutes = excluded.delay_minutes,\n                   dep_gate = excluded.dep_gate,\n                   dep_terminal = excluded.dep_terminal,\n                   arr_gate = excluded.arr_gate,\n                   arr_terminal = excluded.arr_terminal,\n                   raw_json = excluded.raw_json,\n                   fetched_at = datetime('now')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 9
+    },
+    "nullable": []
+  },
+  "hash": "3370b2722e15e3a74883dcf472801b4e7b56a52fb7a667f2b391df52239f0647"
+}
