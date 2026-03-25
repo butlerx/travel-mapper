@@ -11,7 +11,7 @@ mod transport_section;
 
 use crate::{
     db::hops::{DetailRow, TravelType},
-    server::components::{NavBar, Shell},
+    server::components::{CarrierIcon, NavBar, Shell},
 };
 use axum::{
     http::StatusCode,
@@ -91,12 +91,24 @@ fn JourneyDetailPage(
 ) -> impl IntoView {
     let edit_journey = journey.clone();
 
+    let carrier = journey
+        .flight_detail
+        .as_ref()
+        .map(|d| &d.airline)
+        .or_else(|| journey.rail_detail.as_ref().map(|d| &d.carrier))
+        .or_else(|| journey.boat_detail.as_ref().map(|d| &d.ship_name))
+        .or_else(|| journey.transport_detail.as_ref().map(|d| &d.carrier_name))
+        .filter(|s| !s.is_empty())
+        .cloned()
+        .unwrap_or_default();
+
+    let travel_type_str = journey.travel_type.to_string();
     let emoji = journey.travel_type.emoji();
     let badge_class = format!(
         "journey-detail-badge {}",
         travel_type_class(&journey.travel_type)
     );
-    let type_label = journey.travel_type.to_string();
+    let type_label = travel_type_str.clone();
 
     let dates = if journey.start_date == journey.end_date {
         journey.start_date.clone()
@@ -156,6 +168,7 @@ fn JourneyDetailPage(
                 <header class="journey-detail-header">
                     <h1 class="journey-detail-route">
                         <span>{emoji}</span>
+                        <CarrierIcon carrier=carrier travel_type=travel_type_str size=24 />
                         " "
                         {journey.origin_name}
                         " \u{2192} "

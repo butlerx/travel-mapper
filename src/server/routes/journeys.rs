@@ -5,6 +5,7 @@ use crate::{
     db,
     server::{
         AppState,
+        components::CarrierIcon,
         error::AppError,
         extractors::{AuthUser, FormOrJson},
         session::is_form_request,
@@ -45,6 +46,8 @@ pub struct JourneyResponse {
     pub start_date: String,
     /// Arrival date in `YYYY-MM-DD` format.
     pub end_date: String,
+    /// Carrier name or IATA code (e.g. `"BA"`, `"Irish Rail"`).
+    pub carrier: Option<String>,
 }
 
 /// Mode of transport for a travel journey.
@@ -119,6 +122,7 @@ impl From<JourneyTravelType> for db::hops::TravelType {
 
 impl From<db::hops::Row> for JourneyResponse {
     fn from(hop: db::hops::Row) -> Self {
+        let carrier = hop.carrier().map(str::to_owned);
         Self {
             id: hop.id,
             travel_type: hop.travel_type.into(),
@@ -130,12 +134,22 @@ impl From<db::hops::Row> for JourneyResponse {
             dest_lng: hop.dest_lng,
             start_date: hop.start_date,
             end_date: hop.end_date,
+            carrier,
         }
     }
 }
 
 impl From<db::hops::DetailRow> for JourneyResponse {
     fn from(hop: db::hops::DetailRow) -> Self {
+        let carrier = hop
+            .flight_detail
+            .as_ref()
+            .map(|d| &d.airline)
+            .or_else(|| hop.rail_detail.as_ref().map(|d| &d.carrier))
+            .or_else(|| hop.boat_detail.as_ref().map(|d| &d.ship_name))
+            .or_else(|| hop.transport_detail.as_ref().map(|d| &d.carrier_name))
+            .filter(|s| !s.is_empty())
+            .cloned();
         Self {
             id: hop.id,
             travel_type: hop.travel_type.into(),
@@ -147,6 +161,7 @@ impl From<db::hops::DetailRow> for JourneyResponse {
             dest_lng: hop.dest_lng,
             start_date: hop.start_date,
             end_date: hop.end_date,
+            carrier,
         }
     }
 }
@@ -165,6 +180,7 @@ impl MultiFormatResponse for JourneyResponse {
         "dest_lng",
         "start_date",
         "end_date",
+        "carrier",
     ];
 
     fn csv_row(&self) -> Vec<String> {
@@ -179,6 +195,7 @@ impl MultiFormatResponse for JourneyResponse {
             self.dest_lng.to_string(),
             self.start_date.clone(),
             self.end_date.clone(),
+            self.carrier.clone().unwrap_or_default(),
         ]
     }
 
@@ -191,11 +208,14 @@ impl MultiFormatResponse for JourneyResponse {
         let origin = self.origin_name.clone();
         let dest = self.dest_name.clone();
         let date = self.start_date.clone();
+        let carrier = self.carrier.clone().unwrap_or_default();
+        let travel_type_str = travel_type.to_owned();
 
         view! {
             <a href=href class="journey-card-link">
                 <div class="data-card journey-card">
                     <div class="journey-card-route">
+                        <CarrierIcon carrier=carrier travel_type=travel_type_str size=20 />
                         <span class="journey-card-place">{origin}</span>
                         <span class="journey-card-arrow">"→"</span>
                         <span class="journey-card-place">{dest}</span>

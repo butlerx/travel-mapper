@@ -71,6 +71,7 @@ pub(super) fn parse_air(obj: &Value) -> Vec<Hop> {
                 rail_detail: None,
                 boat_detail: None,
                 transport_detail: None,
+                cached_carrier: None,
             })
         })
         .collect()
@@ -137,6 +138,7 @@ pub(super) fn parse_rail(obj: &Value) -> Vec<Hop> {
                 }),
                 boat_detail: None,
                 transport_detail: None,
+                cached_carrier: None,
             })
         })
         .collect()
@@ -194,6 +196,7 @@ pub(super) fn parse_cruise(obj: &Value) -> Vec<Hop> {
             notes: get_str(obj, "notes"),
         }),
         transport_detail: None,
+        cached_carrier: None,
     }]
 }
 
@@ -296,6 +299,7 @@ pub(super) fn parse_transport(obj: &Value) -> Vec<Hop> {
                 rail_detail: None,
                 boat_detail,
                 transport_detail,
+                cached_carrier: None,
             }
         })
         .collect()

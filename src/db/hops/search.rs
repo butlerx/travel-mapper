@@ -38,7 +38,8 @@ impl Search<'_> {
                    h.dest_lng,
                    h.dest_country,
                    h.start_date,
-                   h.end_date
+                   h.end_date,
+                   COALESCE(fd.airline, rd.carrier, bd.ship_name, td.carrier_name) as "carrier: String"
                FROM hops h
                LEFT JOIN flight_details fd ON fd.hop_id = h.id
                LEFT JOIN rail_details rd ON rd.hop_id = h.id

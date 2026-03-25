@@ -27,6 +27,8 @@ interface HopResponse {
   start_date: string;
   /** Arrival date (YYYY-MM-DD). */
   end_date: string;
+  /** Carrier name or IATA code (e.g. "BA", "Amtrak"). */
+  carrier?: string;
 }
 
 /** An aggregated route between two cities, used for map rendering. */

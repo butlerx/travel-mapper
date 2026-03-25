@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT\n                           id as \"id!: i64\",\n                           travel_type,\n                           origin_name,\n                           origin_lat,\n                           origin_lng,\n                           origin_country,\n                           dest_name,\n                           dest_lat,\n                           dest_lng,\n                           dest_country,\n                           start_date,\n                           end_date\n                       FROM hops\n                       WHERE user_id = ?\n                       ORDER BY start_date ASC",
+  "query": "SELECT\n                           h.id as \"id!: i64\",\n                           h.travel_type,\n                           h.origin_name,\n                           h.origin_lat,\n                           h.origin_lng,\n                           h.origin_country,\n                           h.dest_name,\n                           h.dest_lat,\n                           h.dest_lng,\n                           h.dest_country,\n                           h.start_date,\n                           h.end_date,\n                           COALESCE(fd.airline, rd.carrier, bd.ship_name, td.carrier_name) as \"carrier: String\"\n                       FROM hops h\n                       LEFT JOIN flight_details fd ON fd.hop_id = h.id\n                       LEFT JOIN rail_details rd ON rd.hop_id = h.id\n                       LEFT JOIN boat_details bd ON bd.hop_id = h.id\n                       LEFT JOIN transport_details td ON td.hop_id = h.id\n                       WHERE h.user_id = ?\n                       ORDER BY h.start_date ASC",
   "describe": {
     "columns": [
       {
@@ -62,6 +62,11 @@
         "name": "end_date",
         "ordinal": 11,
         "type_info": "Text"
+      },
+      {
+        "name": "carrier: String",
+        "ordinal": 12,
+        "type_info": "Null"
       }
     ],
     "parameters": {
@@ -79,8 +84,9 @@
       false,
       true,
       false,
-      false
+      false,
+      null
     ]
   },
-  "hash": "bd5903d1fa7330e501b0f252d0a397cf7ea55cda93aea59d285b0439e6447124"
+  "hash": "98d271d662788d6f9e5594e0cfed1b3f5b1638313a4c20a261a42c20e41b0cc1"
 }

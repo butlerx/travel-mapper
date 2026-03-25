@@ -466,6 +466,7 @@ mod tests {
             rail_detail: None,
             boat_detail: None,
             transport_detail: None,
+            cached_carrier: None,
         }
     }
 

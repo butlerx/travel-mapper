@@ -154,6 +154,28 @@ pub struct Row {
     pub rail_detail: Option<RailDetail>,
     pub boat_detail: Option<BoatDetail>,
     pub transport_detail: Option<TransportDetail>,
+    /// Carrier name from SQL COALESCE — used as fallback when detail structs
+    /// are not loaded (e.g. listing queries).  Not a domain field; populated
+    /// only by `TryFrom<HopRow>`.
+    pub(crate) cached_carrier: Option<String>,
+}
+
+impl Row {
+    #[must_use]
+    pub fn carrier(&self) -> Option<&str> {
+        self.flight_detail
+            .as_ref()
+            .map(|d| d.airline.as_str())
+            .or_else(|| self.rail_detail.as_ref().map(|d| d.carrier.as_str()))
+            .or_else(|| self.boat_detail.as_ref().map(|d| d.ship_name.as_str()))
+            .or_else(|| {
+                self.transport_detail
+                    .as_ref()
+                    .map(|d| d.carrier_name.as_str())
+            })
+            .or(self.cached_carrier.as_deref())
+            .filter(|s| !s.is_empty())
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -174,6 +196,7 @@ pub(super) struct HopRow {
     pub dest_country: Option<String>,
     pub start_date: String,
     pub end_date: String,
+    pub carrier: Option<String>,
 }
 
 /// Lightweight summary of a hop — used for trip detail listings and
@@ -184,6 +207,7 @@ pub struct SummaryRow {
     pub origin_name: String,
     pub dest_name: String,
     pub start_date: String,
+    pub carrier: Option<String>,
 }
 
 impl TryFrom<HopRow> for Row {
@@ -212,6 +236,7 @@ impl TryFrom<HopRow> for Row {
             rail_detail: None,
             boat_detail: None,
             transport_detail: None,
+            cached_carrier: row.carrier,
         })
     }
 }
@@ -433,5 +458,6 @@ pub(super) fn sample_hop(
         rail_detail: None,
         boat_detail: None,
         transport_detail: None,
+        cached_carrier: None,
     }
 }

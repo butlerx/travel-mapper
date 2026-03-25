@@ -17,21 +17,26 @@ impl GetAll<'_> {
                 sqlx::query_as!(
                     HopRow,
                     r#"SELECT
-                           id as "id!: i64",
-                           travel_type,
-                           origin_name,
-                           origin_lat,
-                           origin_lng,
-                           origin_country,
-                           dest_name,
-                           dest_lat,
-                           dest_lng,
-                           dest_country,
-                           start_date,
-                           end_date
-                       FROM hops
-                       WHERE user_id = ? AND travel_type = ?
-                       ORDER BY start_date ASC"#,
+                           h.id as "id!: i64",
+                           h.travel_type,
+                           h.origin_name,
+                           h.origin_lat,
+                           h.origin_lng,
+                           h.origin_country,
+                           h.dest_name,
+                           h.dest_lat,
+                           h.dest_lng,
+                           h.dest_country,
+                           h.start_date,
+                           h.end_date,
+                           COALESCE(fd.airline, rd.carrier, bd.ship_name, td.carrier_name) as "carrier: String"
+                       FROM hops h
+                       LEFT JOIN flight_details fd ON fd.hop_id = h.id
+                       LEFT JOIN rail_details rd ON rd.hop_id = h.id
+                       LEFT JOIN boat_details bd ON bd.hop_id = h.id
+                       LEFT JOIN transport_details td ON td.hop_id = h.id
+                       WHERE h.user_id = ? AND h.travel_type = ?
+                       ORDER BY h.start_date ASC"#,
                     self.user_id,
                     filter,
                 )
@@ -42,21 +47,26 @@ impl GetAll<'_> {
                 sqlx::query_as!(
                     HopRow,
                     r#"SELECT
-                           id as "id!: i64",
-                           travel_type,
-                           origin_name,
-                           origin_lat,
-                           origin_lng,
-                           origin_country,
-                           dest_name,
-                           dest_lat,
-                           dest_lng,
-                           dest_country,
-                           start_date,
-                           end_date
-                       FROM hops
-                       WHERE user_id = ?
-                       ORDER BY start_date ASC"#,
+                           h.id as "id!: i64",
+                           h.travel_type,
+                           h.origin_name,
+                           h.origin_lat,
+                           h.origin_lng,
+                           h.origin_country,
+                           h.dest_name,
+                           h.dest_lat,
+                           h.dest_lng,
+                           h.dest_country,
+                           h.start_date,
+                           h.end_date,
+                           COALESCE(fd.airline, rd.carrier, bd.ship_name, td.carrier_name) as "carrier: String"
+                       FROM hops h
+                       LEFT JOIN flight_details fd ON fd.hop_id = h.id
+                       LEFT JOIN rail_details rd ON rd.hop_id = h.id
+                       LEFT JOIN boat_details bd ON bd.hop_id = h.id
+                       LEFT JOIN transport_details td ON td.hop_id = h.id
+                       WHERE h.user_id = ?
+                       ORDER BY h.start_date ASC"#,
                     self.user_id,
                 )
                 .fetch_all(pool)

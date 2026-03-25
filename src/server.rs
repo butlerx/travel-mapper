@@ -186,6 +186,7 @@ pub(crate) mod test_helpers {
             rail_detail: None,
             boat_detail: None,
             transport_detail: None,
+            cached_carrier: None,
         }
     }
 

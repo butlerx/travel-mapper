@@ -14,14 +14,19 @@ impl GetForTrip {
         sqlx::query_as!(
             SummaryRow,
             r#"SELECT
-                   id as "id!: i64",
-                   travel_type as "travel_type!: String",
-                   origin_name as "origin_name!: String",
-                   dest_name as "dest_name!: String",
-                   start_date as "start_date!: String"
-               FROM hops
-               WHERE user_id = ? AND user_trip_id = ?
-               ORDER BY start_date ASC, id ASC"#,
+                   h.id as "id!: i64",
+                   h.travel_type as "travel_type!: String",
+                   h.origin_name as "origin_name!: String",
+                   h.dest_name as "dest_name!: String",
+                   h.start_date as "start_date!: String",
+                   COALESCE(fd.airline, rd.carrier, bd.ship_name, td.carrier_name) AS "carrier: String"
+               FROM hops h
+               LEFT JOIN flight_details fd ON fd.hop_id = h.id
+               LEFT JOIN rail_details rd ON rd.hop_id = h.id
+               LEFT JOIN boat_details bd ON bd.hop_id = h.id
+               LEFT JOIN transport_details td ON td.hop_id = h.id
+               WHERE h.user_id = ? AND h.user_trip_id = ?
+               ORDER BY h.start_date ASC, h.id ASC"#,
             self.user_id,
             self.trip_id,
         )

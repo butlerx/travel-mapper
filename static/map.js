@@ -58,6 +58,173 @@ const emojis = {
   transport: '\uD83D\uDE97',
 };
 
+/** @type {Record<string, string>} */
+const fallbackIcons = {
+  air: '/static/icons/plane.svg',
+  rail: '/static/icons/train.svg',
+  boat: '/static/icons/boat.svg',
+  transport: '/static/icons/transport.svg',
+};
+
+/** @type {Record<string, string>} */
+const carrierDomains = {
+  // Airlines
+  'aer lingus': 'aerlingus.com',
+  aeroflot: 'aeroflot.ru',
+  'air france': 'airfrance.com',
+  'air canada': 'aircanada.com',
+  'alaska airlines': 'alaskaair.com',
+  'american airlines': 'aa.com',
+  'asiana airlines': 'flyasiana.com',
+  asiana: 'flyasiana.com',
+  'british airways': 'britishairways.com',
+  'cathay pacific': 'cathaypacific.com',
+  delta: 'delta.com',
+  'delta air lines': 'delta.com',
+  easyjet: 'easyjet.com',
+  emirates: 'emirates.com',
+  etihad: 'etihad.com',
+  'etihad airways': 'etihad.com',
+  finnair: 'finnair.com',
+  iberia: 'iberia.com',
+  'ita airways': 'ita-airways.com',
+  ita: 'ita-airways.com',
+  'japan airlines': 'jal.com',
+  jal: 'jal.com',
+  jetblue: 'jetblue.com',
+  'kenmore air': 'kenmoreair.com',
+  klm: 'klm.com',
+  'korean air': 'koreanair.com',
+  lufthansa: 'lufthansa.com',
+  norwegian: 'norwegian.com',
+  'norwegian air': 'norwegian.com',
+  'qatar airways': 'qatarairways.com',
+  qatar: 'qatarairways.com',
+  ryanair: 'ryanair.com',
+  sas: 'flysas.com',
+  'scandinavian airlines': 'flysas.com',
+  'singapore airlines': 'singaporeair.com',
+  southwest: 'southwest.com',
+  'southwest airlines': 'southwest.com',
+  swiss: 'swiss.com',
+  'swiss international': 'swiss.com',
+  tap: 'flytap.com',
+  'tap portugal': 'flytap.com',
+  'tap air portugal': 'flytap.com',
+  'turkish airlines': 'turkishairlines.com',
+  united: 'united.com',
+  'united airlines': 'united.com',
+  'virgin atlantic': 'virginatlantic.com',
+  vueling: 'vueling.com',
+  'wizz air': 'wizzair.com',
+  wizzair: 'wizzair.com',
+  // Rail
+  eurostar: 'eurostar.com',
+  thalys: 'thalys.com',
+  sncf: 'sncf.com',
+  trenitalia: 'trenitalia.com',
+  italo: 'italotreno.it',
+  db: 'bahn.de',
+  'deutsche bahn': 'bahn.de',
+  'intercity express': 'bahn.de',
+  obb: 'oebb.at',
+  öbb: 'oebb.at',
+  sbb: 'sbb.ch',
+  cff: 'sbb.ch',
+  ffs: 'sbb.ch',
+  ns: 'ns.nl',
+  'nederlandse spoorwegen': 'ns.nl',
+  sj: 'sj.se',
+  renfe: 'renfe.com',
+  cp: 'cp.pt',
+  'comboios de portugal': 'cp.pt',
+  'irish rail': 'irishrail.ie',
+  'iarnród éireann': 'irishrail.ie',
+  'iarnrod eireann': 'irishrail.ie',
+  avanti: 'avantiwestcoast.co.uk',
+  'avanti west coast': 'avantiwestcoast.co.uk',
+  lner: 'lner.co.uk',
+  gwr: 'gwr.com',
+  'great western railway': 'gwr.com',
+  scotrail: 'scotrail.co.uk',
+  southeastern: 'southeasternrailway.co.uk',
+  northern: 'northernrailway.co.uk',
+  'northern trains': 'northernrailway.co.uk',
+  crosscountry: 'crosscountrytrains.co.uk',
+  transpennine: 'tpexpress.co.uk',
+  'transpennine express': 'tpexpress.co.uk',
+  'east midlands railway': 'eastmidlandsrailway.co.uk',
+  emr: 'eastmidlandsrailway.co.uk',
+  amtrak: 'amtrak.com',
+  'via rail': 'viarail.ca',
+  via: 'viarail.ca',
+  korail: 'letskorail.com',
+  jr: 'jrpass.com',
+  'japan rail': 'jrpass.com',
+  dart: 'irishrail.ie',
+  regiojet: 'regiojet.com',
+  'regiojet train': 'regiojet.com',
+  'glacier express': 'glacierexpress.ch',
+  // Ferry / Boat
+  'stena line': 'stenaline.com',
+  stena: 'stenaline.com',
+  'irish ferries': 'irishferries.com',
+  'brittany ferries': 'brittany-ferries.co.uk',
+  'p&o ferries': 'poferries.com',
+  'p&o': 'poferries.com',
+  dfds: 'dfds.com',
+  'viking line': 'vikingline.com',
+  tallink: 'tallink.com',
+  'tallink silja': 'tallink.com',
+  'color line': 'colorline.com',
+  'fjord line': 'fjordline.com',
+  'corsica ferries': 'corsica-ferries.co.uk',
+  moby: 'moby.it',
+  'moby lines': 'moby.it',
+  tirrenia: 'tirrenia.it',
+  'grimaldi lines': 'grimaldi-lines.com',
+  grimaldi: 'grimaldi-lines.com',
+  'condor ferries': 'condorferries.co.uk',
+  condor: 'condorferries.co.uk',
+  wightlink: 'wightlink.co.uk',
+  'caledonian macbrayne': 'calmac.co.uk',
+  calmac: 'calmac.co.uk',
+  // Bus / Transport
+  flixbus: 'flixbus.com',
+  flix: 'flixbus.com',
+  greyhound: 'greyhound.com',
+  'national express': 'nationalexpress.com',
+  megabus: 'megabus.com',
+  'bus eireann': 'buseireann.ie',
+  'bus éireann': 'buseireann.ie',
+  eurolines: 'eurolines.eu',
+  ouigo: 'ouigo.com',
+};
+
+/**
+ * @param {HopResponse} journey
+ * @param {number} [size]
+ * @returns {string}
+ */
+function carrierIconHtml(journey, size) {
+  const s = size || 20;
+  const tt = journey.travel_type || '';
+  const fallback = fallbackIcons[tt] || '/static/icons/transport.svg';
+  const carrier = journey.carrier || '';
+
+  if (!carrier) {
+    return `<img src="${fallback}" alt="${escapeHtml(tt)}" width="${s}" height="${s}" style="vertical-align:middle;border-radius:50%;">`;
+  }
+
+  const domain = carrierDomains[carrier.toLowerCase().trim()];
+  if (domain) {
+    const src = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+    return `<img src="${src}" alt="${escapeHtml(carrier)}" width="${s}" height="${s}" style="vertical-align:middle;border-radius:50%;" onerror="this.onerror=null;this.src='${fallback}';">`;
+  }
+
+  return `<img src="${fallback}" alt="${escapeHtml(tt)}" width="${s}" height="${s}" style="vertical-align:middle;border-radius:50%;">`;
+}
+
 const filterIds = [
   'search-q',
   'filter-type',
@@ -196,7 +363,7 @@ function journeyCardHtml(journey) {
     dist = km < 1 ? '<1 km' : `${Math.round(km).toLocaleString()} km`;
   }
 
-  return `<a href="/journeys/${journey.id}" class="journey-card-link"><div class="journey-card"><div class="journey-route"><span class="journey-origin">${originName}</span><span class="journey-arrow">\u2192</span><span class="journey-dest">${destName}</span></div><div class="journey-meta"><span class="journey-badge badge-${travelType}">${emoji} ${typeLabel}</span><span class="journey-date">${startDate}</span>${dist ? `<span class="journey-distance">${dist}</span>` : ''}</div></div></a>`;
+  return `<a href="/journeys/${journey.id}" class="journey-card-link"><div class="journey-card"><div class="journey-route">${carrierIconHtml(journey, 20)} <span class="journey-origin">${originName}</span><span class="journey-arrow">\u2192</span><span class="journey-dest">${destName}</span></div><div class="journey-meta"><span class="journey-badge badge-${travelType}">${emoji} ${typeLabel}</span><span class="journey-date">${startDate}</span>${dist ? `<span class="journey-distance">${dist}</span>` : ''}</div></div></a>`;
 }
 
 /**
@@ -249,7 +416,7 @@ function renderJourneyCards(journeys) {
   if (upcoming.length > 0) {
     html += `<h3 class="journey-sidebar-heading journey-sidebar-heading--upcoming">Upcoming (${upcoming.length})</h3>`;
     upcoming.forEach((journey) => {
-      html += `<a href="/journeys/${journey.id}" class="journey-card-link"><div class="journey-card journey-card--upcoming"><div class="journey-route"><span class="journey-origin">${escapeHtml(journey.origin_name || '')}</span><span class="journey-arrow">\u2192</span><span class="journey-dest">${escapeHtml(journey.dest_name || '')}</span></div><div class="journey-meta"><span class="journey-badge badge-${escapeHtml(journey.travel_type || '')}">${emojis[journey.travel_type] || ''} ${escapeHtml((journey.travel_type || '').charAt(0).toUpperCase() + (journey.travel_type || '').slice(1))}</span><span class="journey-countdown">${countdownText(journey.start_date)}</span><span class="journey-date">${escapeHtml(journey.start_date || '')}</span></div></div></a>`;
+      html += `<a href="/journeys/${journey.id}" class="journey-card-link"><div class="journey-card journey-card--upcoming"><div class="journey-route">${carrierIconHtml(journey, 20)} <span class="journey-origin">${escapeHtml(journey.origin_name || '')}</span><span class="journey-arrow">\u2192</span><span class="journey-dest">${escapeHtml(journey.dest_name || '')}</span></div><div class="journey-meta"><span class="journey-badge badge-${escapeHtml(journey.travel_type || '')}">${emojis[journey.travel_type] || ''} ${escapeHtml((journey.travel_type || '').charAt(0).toUpperCase() + (journey.travel_type || '').slice(1))}</span><span class="journey-countdown">${countdownText(journey.start_date)}</span><span class="journey-date">${escapeHtml(journey.start_date || '')}</span></div></div></a>`;
     });
   }
 

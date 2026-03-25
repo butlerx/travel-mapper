@@ -4,84 +4,77 @@ use serde::Serialize;
 
 use crate::server::{APP_DESCRIPTION, APP_NAME, APP_SHORT_NAME, THEME_COLOR};
 
-const CSS: &str = include_str!("../../../static/style.css");
-const MAP_JS: &str = include_str!("../../../static/map.js");
-const STATS_MAP_JS: &str = include_str!("../../../static/stats-map.js");
-const NAV_JS: &str = include_str!("../../../static/nav.js");
-const ADD_JOURNEY_JS: &str = include_str!("../../../static/add-journey.js");
-const JOURNEY_MAP_JS: &str = include_str!("../../../static/journey-map.js");
-const LOGO: &str = include_str!("../../../static/logo.svg");
-const SW_JS: &str = include_str!("../../../static/sw.js");
-
-async fn serve_css() -> impl IntoResponse {
-    (
-        [
-            ("content-type", "text/css; charset=utf-8"),
-            ("cache-control", "public, max-age=86400"),
-        ],
-        CSS,
-    )
+/// Generate an async handler that serves a static asset with the given
+/// content-type and a one-day public cache header.
+macro_rules! static_handler {
+    ($name:ident, $content:expr, $content_type:expr) => {
+        async fn $name() -> impl IntoResponse {
+            (
+                [
+                    ("content-type", $content_type),
+                    ("cache-control", "public, max-age=86400"),
+                ],
+                $content,
+            )
+        }
+    };
 }
 
-async fn serve_js() -> impl IntoResponse {
-    (
-        [
-            ("content-type", "application/javascript; charset=utf-8"),
-            ("cache-control", "public, max-age=86400"),
-        ],
-        MAP_JS,
-    )
-}
-
-async fn serve_stats_js() -> impl IntoResponse {
-    (
-        [
-            ("content-type", "application/javascript; charset=utf-8"),
-            ("cache-control", "public, max-age=86400"),
-        ],
-        STATS_MAP_JS,
-    )
-}
-
-async fn serve_nav_js() -> impl IntoResponse {
-    (
-        [
-            ("content-type", "application/javascript; charset=utf-8"),
-            ("cache-control", "public, max-age=86400"),
-        ],
-        NAV_JS,
-    )
-}
-
-async fn serve_add_journey_js() -> impl IntoResponse {
-    (
-        [
-            ("content-type", "application/javascript; charset=utf-8"),
-            ("cache-control", "public, max-age=86400"),
-        ],
-        ADD_JOURNEY_JS,
-    )
-}
-
-async fn serve_journey_map_js() -> impl IntoResponse {
-    (
-        [
-            ("content-type", "application/javascript; charset=utf-8"),
-            ("cache-control", "public, max-age=86400"),
-        ],
-        JOURNEY_MAP_JS,
-    )
-}
-
-async fn serve_logo() -> impl IntoResponse {
-    (
-        [
-            ("content-type", "image/svg+xml"),
-            ("cache-control", "public, max-age=86400"),
-        ],
-        LOGO,
-    )
-}
+static_handler!(
+    serve_css,
+    include_str!("../../../static/style.css"),
+    "text/css; charset=utf-8"
+);
+static_handler!(
+    serve_js,
+    include_str!("../../../static/map.js"),
+    "application/javascript; charset=utf-8"
+);
+static_handler!(
+    serve_stats_js,
+    include_str!("../../../static/stats-map.js"),
+    "application/javascript; charset=utf-8"
+);
+static_handler!(
+    serve_nav_js,
+    include_str!("../../../static/nav.js"),
+    "application/javascript; charset=utf-8"
+);
+static_handler!(
+    serve_add_journey_js,
+    include_str!("../../../static/add-journey.js"),
+    "application/javascript; charset=utf-8"
+);
+static_handler!(
+    serve_journey_map_js,
+    include_str!("../../../static/journey-map.js"),
+    "application/javascript; charset=utf-8"
+);
+static_handler!(
+    serve_logo,
+    include_str!("../../../static/logo.svg"),
+    "image/svg+xml"
+);
+static_handler!(
+    serve_icon_plane,
+    include_str!("../../../static/icons/plane.svg"),
+    "image/svg+xml"
+);
+static_handler!(
+    serve_icon_train,
+    include_str!("../../../static/icons/train.svg"),
+    "image/svg+xml"
+);
+static_handler!(
+    serve_icon_boat,
+    include_str!("../../../static/icons/boat.svg"),
+    "image/svg+xml"
+);
+static_handler!(
+    serve_icon_transport,
+    include_str!("../../../static/icons/transport.svg"),
+    "image/svg+xml"
+);
 
 #[derive(Serialize)]
 struct ManifestIcon {
@@ -139,7 +132,7 @@ pub async fn serve_sw() -> impl IntoResponse {
             ("cache-control", "no-cache"),
             ("service-worker-allowed", "/"),
         ],
-        SW_JS,
+        include_str!("../../../static/sw.js"),
     )
 }
 
@@ -152,6 +145,10 @@ pub fn routes() -> ApiRouter<crate::server::AppState> {
         .route("/add-journey.js", get(serve_add_journey_js))
         .route("/journey-map.js", get(serve_journey_map_js))
         .route("/logo.svg", get(serve_logo))
+        .route("/icons/plane.svg", get(serve_icon_plane))
+        .route("/icons/train.svg", get(serve_icon_train))
+        .route("/icons/boat.svg", get(serve_icon_boat))
+        .route("/icons/transport.svg", get(serve_icon_transport))
 }
 
 #[cfg(test)]

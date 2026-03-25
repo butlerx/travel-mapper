@@ -2,7 +2,7 @@ use super::FormFeedback;
 use crate::{
     db,
     server::{
-        components::{NavBar, Shell},
+        components::{CarrierIcon, NavBar, Shell},
         routes::journeys::JourneyTravelType,
     },
 };
@@ -18,6 +18,7 @@ pub(crate) struct TripHopRow {
     pub(crate) origin_name: String,
     pub(crate) dest_name: String,
     pub(crate) start_date: String,
+    pub(crate) carrier: Option<String>,
 }
 
 impl From<db::hops::SummaryRow> for TripHopRow {
@@ -28,6 +29,7 @@ impl From<db::hops::SummaryRow> for TripHopRow {
             origin_name: row.origin_name,
             dest_name: row.dest_name,
             start_date: row.start_date,
+            carrier: row.carrier,
         }
     }
 }
@@ -38,6 +40,7 @@ pub(crate) struct UnassignedHopRow {
     pub(crate) origin_name: String,
     pub(crate) dest_name: String,
     pub(crate) start_date: String,
+    pub(crate) carrier: Option<String>,
 }
 
 impl From<db::hops::SummaryRow> for UnassignedHopRow {
@@ -48,6 +51,7 @@ impl From<db::hops::SummaryRow> for UnassignedHopRow {
             origin_name: row.origin_name,
             dest_name: row.dest_name,
             start_date: row.start_date,
+            carrier: row.carrier,
         }
     }
 }
@@ -145,10 +149,13 @@ fn TripDetailPage(
                                 {trip_journeys.into_iter().map(|row| {
                                     let journey_id = row.id;
                                     let emoji = travel_type_emoji(&row.travel_type);
+                                    let carrier = row.carrier.unwrap_or_default();
+                                    let travel_type = row.travel_type.clone();
                                     view! {
                                         <li class="stats-top-item" style="display:flex;justify-content:space-between;align-items:center;gap:1rem;">
                                             <div>
                                                 <span>{emoji}</span>
+                                                <CarrierIcon carrier=carrier travel_type=travel_type size=20 />
                                                 " "
                                                 <a href={format!("/journeys/{journey_id}")}>{format!("{} → {}", row.origin_name, row.dest_name)}</a>
                                                 " "
@@ -178,7 +185,13 @@ fn TripDetailPage(
                                 {unassigned_journeys.into_iter().map(|row| {
                                     let journey_id = row.id;
                                     let emoji = travel_type_emoji(&row.travel_type);
-                                    let label = format!("{emoji} {} — {} → {} (#{journey_id})", row.start_date, row.origin_name, row.dest_name);
+                                    let carrier_str = row.carrier.as_deref().unwrap_or("");
+                                    let carrier_suffix = if carrier_str.is_empty() {
+                                        String::new()
+                                    } else {
+                                        format!(" [{carrier_str}]")
+                                    };
+                                    let label = format!("{emoji} {} — {} → {} (#{journey_id}){carrier_suffix}", row.start_date, row.origin_name, row.dest_name);
                                     view! {
                                         <option value={journey_id.to_string()}>{label}</option>
                                     }
