@@ -51,6 +51,18 @@ pub enum AppError {
 
     #[error(transparent)]
     Db(#[from] sqlx::Error),
+
+    #[error("file too large: {0}")]
+    PayloadTooLarge(String),
+
+    #[error("unsupported media type: {0}")]
+    UnsupportedMediaType(String),
+
+    #[error("attachment storage is not configured")]
+    StorageDisabled,
+
+    #[error("storage I/O error: {0}")]
+    StorageIo(#[from] std::io::Error),
 }
 
 impl AppError {
@@ -66,11 +78,15 @@ impl AppError {
             Self::InvalidCredentials => StatusCode::UNAUTHORIZED,
             Self::Forbidden(_) => StatusCode::FORBIDDEN,
             Self::UsernameExists | Self::Conflict(_) => StatusCode::CONFLICT,
+            Self::PayloadTooLarge(_) => StatusCode::PAYLOAD_TOO_LARGE,
+            Self::UnsupportedMediaType(_) => StatusCode::UNSUPPORTED_MEDIA_TYPE,
+            Self::StorageDisabled => StatusCode::NOT_IMPLEMENTED,
             Self::PasswordHash(_)
             | Self::Crypto(_)
             | Self::Sync(_)
             | Self::TripItAuth(_)
-            | Self::Db(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            | Self::Db(_)
+            | Self::StorageIo(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 
@@ -83,7 +99,8 @@ impl AppError {
             | Self::PasswordHash(_)
             | Self::Crypto(_)
             | Self::Sync(_)
-            | Self::TripItAuth(_) => {
+            | Self::TripItAuth(_)
+            | Self::StorageIo(_) => {
                 tracing::error!(error = %self, "internal error");
                 "internal server error".to_owned()
             }

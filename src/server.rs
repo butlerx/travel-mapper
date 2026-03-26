@@ -115,6 +115,7 @@ pub(crate) mod test_helpers {
             tripit_override: None,
             registration_enabled: true,
             aviationstack_api_key: None,
+            storage_path: None,
         }
     }
 

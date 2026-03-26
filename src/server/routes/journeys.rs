@@ -443,8 +443,16 @@ pub async fn get_journey_handler(
         .ok()
         .flatten();
 
+    let attachments = (db::attachments::GetByHopId {
+        hop_id: detail.id,
+        user_id: auth.user_id,
+    })
+    .execute(&state.db)
+    .await
+    .unwrap_or_default();
+
     if format == super::ResponseFormat::Html {
-        crate::server::pages::journey_detail::render_page(detail, feedback, enrichment)
+        crate::server::pages::journey_detail::render_page(detail, feedback, enrichment, attachments)
     } else {
         let mut response: JourneyResponse = detail.into();
         if let Some(ref e) = enrichment {

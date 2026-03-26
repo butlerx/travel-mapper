@@ -11,6 +11,7 @@ mod transport_section;
 
 use crate::{
     db::{
+        self,
         hops::{DetailRow, TravelType},
         status_enrichments,
     },
@@ -42,6 +43,7 @@ pub fn render_page(
     journey: DetailRow,
     feedback: JourneyDetailFeedback,
     enrichment: Option<status_enrichments::Row>,
+    attachments: Vec<db::attachments::Row>,
 ) -> Response {
     let html = view! {
         <JourneyDetailPage
@@ -49,6 +51,7 @@ pub fn render_page(
             success_msg=feedback.success
             journey=journey
             enrichment=enrichment
+            attachments=attachments
         />
     };
     (StatusCode::OK, axum::response::Html(html.to_html())).into_response()
@@ -113,6 +116,7 @@ fn JourneyDetailPage(
     #[prop(optional_no_strip)] success_msg: Option<String>,
     journey: DetailRow,
     #[prop(optional_no_strip)] enrichment: Option<status_enrichments::Row>,
+    attachments: Vec<db::attachments::Row>,
 ) -> impl IntoView {
     let edit_journey = journey.clone();
 
@@ -253,6 +257,8 @@ fn JourneyDetailPage(
 
                 {detail_section}
 
+                <AttachmentGallery journey_id=journey.id attachments=attachments />
+
                 <button
                     class="btn btn-secondary"
                     type="button"
@@ -270,6 +276,59 @@ fn JourneyDetailPage(
                 <script type="module" src="/static/journey-map.js"></script>
             </main>
         </Shell>
+    }
+}
+
+#[component]
+fn AttachmentGallery(journey_id: i64, attachments: Vec<db::attachments::Row>) -> impl IntoView {
+    let upload_action = format!("/journeys/{journey_id}/attachments");
+
+    view! {
+        <section class="attachment-gallery">
+            <h2>"Photos"</h2>
+            {if attachments.is_empty() {
+                view! { <p class="attachment-empty">"No photos attached yet."</p> }.into_any()
+            } else {
+                let items: Vec<AnyView> = attachments
+                    .iter()
+                    .map(|att| {
+                        let src = format!("/journeys/{journey_id}/attachments/{}", att.id);
+                        let delete_action = format!("/journeys/{journey_id}/attachments/{}", att.id);
+                        let alt = att.filename.clone();
+                        let filename = att.filename.clone();
+                        let href = src.clone();
+                        let img_src = src;
+                        view! {
+                            <div class="attachment-card">
+                                <a href=href target="_blank">
+                                    <img src=img_src alt=alt class="attachment-thumb" loading="lazy" />
+                                </a>
+                                <div class="attachment-info">
+                                    <span class="attachment-name">{filename}</span>
+                                    <form method="post" action=delete_action class="attachment-delete-form">
+                                        <input type="hidden" name="_method" value="DELETE" />
+                                        <button type="submit" class="btn btn-danger btn-sm">"Remove"</button>
+                                    </form>
+                                </div>
+                            </div>
+                        }
+                        .into_any()
+                    })
+                    .collect();
+                view! { <div class="attachment-grid">{items}</div> }.into_any()
+            }}
+            <form
+                method="post"
+                action=upload_action
+                enctype="multipart/form-data"
+                class="attachment-upload-form"
+            >
+                <label class="btn btn-secondary">
+                    "Add Photos"
+                    <input type="file" name="file" accept="image/*" multiple=true hidden=true />
+                </label>
+            </form>
+        </section>
     }
 }
 

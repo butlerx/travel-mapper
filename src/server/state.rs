@@ -14,7 +14,7 @@ use axum::{Extension, Json, Router, extract::FromRef, routing::get};
 use indexmap::IndexMap;
 use leptos::prelude::LeptosOptions;
 use sqlx::SqlitePool;
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 use tower_http::trace::TraceLayer;
 
 /// Shared application state passed to every Axum handler.
@@ -30,6 +30,8 @@ pub struct AppState {
     pub registration_enabled: bool,
     /// Optional `AviationStack` API key for flight status enrichment.
     pub aviationstack_api_key: Option<String>,
+    /// Filesystem directory for attachment storage. `None` disables uploads.
+    pub storage_path: Option<PathBuf>,
 }
 
 impl FromRef<AppState> for LeptosOptions {
@@ -96,6 +98,11 @@ fn api_docs(api: TransformOpenApi) -> TransformOpenApi {
             description: Some("Public shareable stats pages".into()),
             ..Default::default()
         })
+        .tag(Tag {
+            name: "attachments".into(),
+            description: Some("Photo and document attachments for journeys".into()),
+            ..Default::default()
+        })
         .security_scheme(
             "bearer",
             SecurityScheme::Http {
@@ -128,6 +135,10 @@ pub fn create_router(state: AppState) -> Router {
         .nest("/auth", routes::auth_api_routes())
         .nest("/auth/tripit", routes::tripit_api_routes())
         .nest("/journeys", routes::journeys_api_routes())
+        .nest(
+            "/journeys/{id}/attachments",
+            routes::attachments_api_routes(),
+        )
         .nest("/trips", routes::trip_api_routes())
         .nest("/import", routes::import_api_routes())
         .route("/feed/{token}", get(routes::feed::handler))

@@ -2,6 +2,8 @@
 
 /// CRUD operations on the `api_keys` table — programmatic access tokens.
 pub mod api_keys;
+/// CRUD operations on the `attachments` table — photo/file attachments on journeys.
+pub mod attachments;
 /// Query objects for the `user_tripit_credentials` table — encrypted OAuth tokens.
 pub mod credentials;
 /// Query objects for the `feed_tokens` table — per-user calendar feed access tokens.

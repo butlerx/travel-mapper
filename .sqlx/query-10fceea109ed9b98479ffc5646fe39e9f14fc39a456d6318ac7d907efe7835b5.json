@@ -1,0 +1,62 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT\n                 id as \"id!\",\n                 hop_id as \"hop_id!\",\n                 user_id as \"user_id!\",\n                 filename as \"filename!\",\n                 content_type as \"content_type!\",\n                 size_bytes as \"size_bytes!\",\n                 storage_path as \"storage_path!\",\n                 created_at as \"created_at!\"\n             FROM attachments\n             WHERE hop_id = ? AND user_id = ?\n             ORDER BY created_at DESC",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "hop_id!",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "user_id!",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "filename!",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "content_type!",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "size_bytes!",
+        "ordinal": 5,
+        "type_info": "Integer"
+      },
+      {
+        "name": "storage_path!",
+        "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at!",
+        "ordinal": 7,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "10fceea109ed9b98479ffc5646fe39e9f14fc39a456d6318ac7d907efe7835b5"
+}

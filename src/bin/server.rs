@@ -1,6 +1,6 @@
 use clap::Parser;
 use leptos::prelude::LeptosOptions;
-use std::time::Duration;
+use std::{path::PathBuf, time::Duration};
 
 #[derive(Parser)]
 #[command(about = "Run the travel-export Axum server")]
@@ -25,6 +25,9 @@ struct Cli {
 
     #[arg(long, env = "AVIATIONSTACK_API_KEY")]
     aviationstack_api_key: Option<String>,
+
+    #[arg(long, env = "ATTACHMENTS_PATH")]
+    storage_path: Option<PathBuf>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -69,6 +72,7 @@ async fn run() -> Result<(), ServerError> {
         tripit_override: None,
         registration_enabled: cli.registration_enabled,
         aviationstack_api_key: cli.aviationstack_api_key,
+        storage_path: cli.storage_path,
     };
     let app = travel_mapper::server::create_router(state);
 

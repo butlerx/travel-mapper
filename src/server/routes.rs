@@ -19,6 +19,8 @@ use serde::Serialize;
 use std::fmt::Write;
 
 pub(super) mod api_keys;
+/// Photo and document attachments for journeys.
+pub(super) mod attachments;
 /// Generic CSV/delimited import handler (Flighty, myFlightradar24, `OpenFlights`, App in the Air).
 pub(super) mod csv_import;
 /// Public ICS calendar feed served by token.
@@ -463,6 +465,24 @@ pub(super) fn tripit_api_routes() -> ApiRouter<super::AppState> {
 /// Import API routes, nested under `/import`.
 pub(super) fn import_api_routes() -> ApiRouter<super::AppState> {
     ApiRouter::new().route("/csv", axum::routing::post(csv_import::handler))
+}
+
+/// Attachment API routes, nested under `/journeys/{id}/attachments`.
+pub(super) fn attachments_api_routes() -> ApiRouter<super::AppState> {
+    ApiRouter::new()
+        .api_route_with(
+            "/",
+            get_with(attachments::list_handler, attachments::list_handler_docs),
+            |p| p.tag("attachments"),
+        )
+        .route("/", axum::routing::post(attachments::upload_handler))
+        .api_route(
+            "/{attachment_id}",
+            get_with(attachments::serve_handler, attachments::serve_handler_docs).delete_with(
+                attachments::delete_handler,
+                attachments::delete_handler_docs,
+            ),
+        )
 }
 
 /// Top-level API routes that don't belong to a nested group.
