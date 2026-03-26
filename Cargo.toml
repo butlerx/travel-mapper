@@ -34,9 +34,11 @@ async-trait        = "0.1"
 axum               = "0.8"
 axum-extra         = { version = "0.10", features = ["cookie"] }
 base64             = "0.22"
+chrono             = { version = "0.4", default-features = false }
 clap               = { version = "4", features = ["derive", "env"] }
 csv                = "1"
 hmac               = "0.12"
+icalendar          = "0.17"
 indexmap           = "2"
 leptos             = { version = "0.8" }
 nominatim          = "0.3"

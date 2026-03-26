@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO feed_tokens (user_id, token_hash, label) VALUES (?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "bbc8edd68c250b16b3d83d86b80b87b15a8b425fe98a2aa915ec1a355bb9bc60"
+}

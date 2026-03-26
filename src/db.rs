@@ -4,6 +4,8 @@
 pub mod api_keys;
 /// Query objects for the `user_tripit_credentials` table — encrypted OAuth tokens.
 pub mod credentials;
+/// Query objects for the `feed_tokens` table — per-user calendar feed access tokens.
+pub mod feed_tokens;
 /// Query objects for the `hops` table — individual travel legs.
 pub mod hops;
 /// Query objects for the `oauth_request_tokens` table — temporary OAuth flow tokens.

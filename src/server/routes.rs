@@ -21,6 +21,10 @@ use std::fmt::Write;
 pub(super) mod api_keys;
 /// Generic CSV/delimited import handler (Flighty, myFlightradar24, `OpenFlights`, App in the Air).
 pub(super) mod csv_import;
+/// Public ICS calendar feed served by token.
+pub(super) mod feed;
+/// Authenticated feed token create/revoke handlers.
+pub(super) mod feed_tokens;
 pub(super) mod health;
 pub(super) mod journeys;
 pub(super) mod login;
@@ -348,6 +352,20 @@ pub(super) fn auth_api_routes() -> ApiRouter<super::AppState> {
         .api_route(
             "/api-keys",
             post_with(api_keys::handler, api_keys::handler_docs),
+        )
+        .api_route(
+            "/feed-tokens",
+            post_with(
+                feed_tokens::create_handler,
+                feed_tokens::create_handler_docs,
+            ),
+        )
+        .api_route(
+            "/feed-tokens/{id}",
+            delete_with(
+                feed_tokens::delete_handler,
+                feed_tokens::delete_handler_docs,
+            ),
         )
 }
 

@@ -86,6 +86,11 @@ fn api_docs(api: TransformOpenApi) -> TransformOpenApi {
             description: Some("Account settings".into()),
             ..Default::default()
         })
+        .tag(Tag {
+            name: "feed".into(),
+            description: Some("Calendar ICS feed".into()),
+            ..Default::default()
+        })
         .security_scheme(
             "bearer",
             SecurityScheme::Http {
@@ -120,6 +125,7 @@ pub fn create_router(state: AppState) -> Router {
         .nest("/journeys", routes::journeys_api_routes())
         .nest("/trips", routes::trip_api_routes())
         .nest("/import", routes::import_api_routes())
+        .route("/feed/{token}", get(routes::feed::handler))
         .route(
             "/docs",
             get(Swagger::new("/openapi.json")

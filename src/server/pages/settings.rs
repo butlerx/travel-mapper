@@ -2,6 +2,8 @@
 mod api_keys_section;
 /// Generic CSV/delimited import section.
 mod csv_import_section;
+/// Calendar feed subscription section.
+mod feed_section;
 /// Sync status and trigger section.
 mod sync_section;
 /// `TripIt` connection section.
@@ -17,6 +19,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use csv_import_section::CsvImportSection;
+use feed_section::FeedSection;
 use leptos::prelude::*;
 use serde::Deserialize;
 use sync_section::SyncSection;
@@ -93,6 +96,8 @@ fn Settings(
                 <CsvImportSection />
 
                 <ApiKeysSection />
+
+                <FeedSection />
             </main>
         </Shell>
     }
