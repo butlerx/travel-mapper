@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id as \"id!: i64\", username, password_hash FROM users WHERE username = ?",
+  "query": "SELECT\n                id as \"id!: i64\",\n                user_id as \"user_id!: i64\",\n                expires_at\n            FROM email_verifications\n            WHERE token_hash = ?",
   "describe": {
     "columns": [
       {
@@ -9,12 +9,12 @@
         "type_info": "Integer"
       },
       {
-        "name": "username",
+        "name": "user_id!: i64",
         "ordinal": 1,
-        "type_info": "Text"
+        "type_info": "Integer"
       },
       {
-        "name": "password_hash",
+        "name": "expires_at",
         "ordinal": 2,
         "type_info": "Text"
       }
@@ -28,5 +28,5 @@
       false
     ]
   },
-  "hash": "237eb09e56a07ccb0919767dfa7dc91880ffa1173444824d824473d4f9ae186c"
+  "hash": "da32e4d77fa3ee1bdad0351bbfbef7fdbc0a203a429322be158e517df5081cda"
 }

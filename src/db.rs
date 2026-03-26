@@ -6,6 +6,8 @@ pub mod api_keys;
 pub mod attachments;
 /// Query objects for the `user_tripit_credentials` table — encrypted OAuth tokens.
 pub mod credentials;
+/// Query objects for the `email_verifications` table — pending email verification tokens.
+pub mod email_verifications;
 /// Query objects for the `feed_tokens` table — per-user calendar feed access tokens.
 pub mod feed_tokens;
 /// Query objects for the `hops` table — individual travel legs.
@@ -66,6 +68,9 @@ pub(crate) mod tests {
         users::Create {
             username,
             password_hash: "hash",
+            email: "",
+            first_name: "",
+            last_name: "",
         }
         .execute(pool)
         .await

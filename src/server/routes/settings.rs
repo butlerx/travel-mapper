@@ -20,6 +20,11 @@ pub struct SettingsResponse {
     pub tripit_connected: bool,
     /// Current sync state, if available.
     pub sync: Option<SyncStatus>,
+    pub email: String,
+    /// Whether the user's email address has been verified.
+    pub email_verified: bool,
+    pub first_name: String,
+    pub last_name: String,
 }
 
 /// Snapshot of the user's `TripIt` sync progress.
@@ -57,10 +62,26 @@ pub async fn handler(
     .await
     .ok();
 
+    let user = db::users::GetById { id: auth.user_id }
+        .execute(&state.db)
+        .await
+        .ok()
+        .flatten();
+
+    let (email, email_verified, first_name, last_name) = user
+        .map(|u| (u.email, u.email_verified, u.first_name, u.last_name))
+        .unwrap_or_default();
+
     match format {
-        ResponseFormat::Html => {
-            pages::settings::render_page(has_tripit, sync_state.as_ref(), feedback)
-        }
+        ResponseFormat::Html => pages::settings::render_page(
+            has_tripit,
+            sync_state.as_ref(),
+            feedback,
+            &email,
+            email_verified,
+            &first_name,
+            &last_name,
+        ),
         ResponseFormat::Json => {
             let response = SettingsResponse {
                 tripit_connected: has_tripit,
@@ -70,6 +91,10 @@ pub async fn handler(
                     trips_fetched: s.trips_fetched,
                     journeys_fetched: s.hops_fetched,
                 }),
+                email,
+                email_verified,
+                first_name,
+                last_name,
             };
             (StatusCode::OK, Json(response)).into_response()
         }
@@ -130,6 +155,9 @@ mod tests {
             .expect("failed to read body");
         let json: serde_json::Value = serde_json::from_slice(&body).expect("valid json response");
         assert_eq!(json["tripit_connected"], false);
+        assert_eq!(json["email"], "");
+        assert_eq!(json["first_name"], "");
+        assert_eq!(json["last_name"], "");
         assert!(json["sync"].is_object());
         assert_eq!(json["sync"]["status"], "idle");
     }

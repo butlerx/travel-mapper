@@ -1,6 +1,8 @@
 //! Application state, router setup, and request handling.
 
 pub(crate) mod components;
+/// Email delivery for verification and notification messages.
+pub(crate) mod email;
 pub(crate) mod error;
 /// Axum extractors for request authentication and authorization.
 pub(crate) mod extractors;
@@ -11,7 +13,7 @@ pub(crate) mod routes;
 pub(crate) mod session;
 mod state;
 
-pub use state::{AppState, create_router};
+pub use state::{AppState, SmtpConfig, create_router};
 
 /// User-facing application name shown in the navbar, HTML titles, and PWA manifest.
 pub(crate) const APP_NAME: &str = "Travel Mapper";
@@ -114,8 +116,9 @@ pub(crate) mod test_helpers {
             tripit_consumer_secret: "consumer-secret".to_string(),
             tripit_override: None,
             registration_enabled: true,
-            aviationstack_api_key: None,
+            airlabs_api_key: None,
             storage_path: None,
+            smtp_config: None,
         }
     }
 
@@ -123,6 +126,9 @@ pub(crate) mod test_helpers {
         let user_id = db::users::Create {
             username,
             password_hash: "hash",
+            email: "",
+            first_name: "",
+            last_name: "",
         }
         .execute(pool)
         .await

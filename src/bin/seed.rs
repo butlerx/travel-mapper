@@ -111,6 +111,9 @@ async fn run() -> Result<(), SeedError> {
     let user_id = match (travel_mapper::db::users::Create {
         username,
         password_hash: &hash,
+        email: "",
+        first_name: "",
+        last_name: "",
     })
     .execute(&pool)
     .await

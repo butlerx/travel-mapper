@@ -23,6 +23,8 @@ pub(super) mod api_keys;
 pub(super) mod attachments;
 /// Generic CSV/delimited import handler (Flighty, myFlightradar24, `OpenFlights`, App in the Air).
 pub(super) mod csv_import;
+/// Email address update and verification resend handlers.
+pub(super) mod email;
 /// Public ICS calendar feed served by token.
 pub(super) mod feed;
 /// Authenticated feed token create/revoke handlers.
@@ -31,6 +33,7 @@ pub(super) mod health;
 pub(super) mod journeys;
 pub(super) mod login;
 pub(super) mod logout;
+pub(super) mod profile;
 pub(super) mod register;
 /// Account settings (JSON + HTML via content negotiation).
 pub(super) mod settings;
@@ -45,6 +48,8 @@ pub(super) mod tripit_callback;
 pub(super) mod tripit_connect;
 pub(super) mod tripit_credentials;
 pub(super) mod trips;
+/// Email verification link handler (`GET /auth/verify-email`).
+pub(super) mod verify_email;
 
 pub(super) use journeys::JourneyResponse;
 pub(super) use login::AuthResponse;
@@ -359,6 +364,19 @@ pub(super) fn auth_api_routes() -> ApiRouter<super::AppState> {
             "/api-keys",
             post_with(api_keys::handler, api_keys::handler_docs),
         )
+        .api_route(
+            "/email",
+            post_with(email::update_handler, email::update_handler_docs),
+        )
+        .api_route(
+            "/resend-verification",
+            post_with(email::resend_handler, email::resend_handler_docs),
+        )
+        .api_route(
+            "/profile",
+            post_with(profile::handler, profile::handler_docs),
+        )
+        .route("/verify-email", axum::routing::get(verify_email::handler))
         .api_route(
             "/feed-tokens",
             post_with(

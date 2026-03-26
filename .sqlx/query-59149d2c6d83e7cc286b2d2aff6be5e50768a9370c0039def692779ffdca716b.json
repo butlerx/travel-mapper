@@ -1,0 +1,62 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT\n                id as \"id!: i64\",\n                username,\n                password_hash,\n                email,\n                email_verified as \"email_verified!: bool\",\n                email_verified_at,\n                first_name,\n                last_name\n            FROM users WHERE id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!: i64",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "username",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "password_hash",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "email",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "email_verified!: bool",
+        "ordinal": 4,
+        "type_info": "Integer"
+      },
+      {
+        "name": "email_verified_at",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "first_name",
+        "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "last_name",
+        "ordinal": 7,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "59149d2c6d83e7cc286b2d2aff6be5e50768a9370c0039def692779ffdca716b"
+}

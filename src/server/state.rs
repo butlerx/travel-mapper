@@ -17,6 +17,18 @@ use sqlx::SqlitePool;
 use std::{path::PathBuf, sync::Arc};
 use tower_http::trace::TraceLayer;
 
+/// SMTP connection details for sending transactional email (verification, etc.).
+///
+/// All fields are required; when absent, email sending is silently skipped.
+#[derive(Clone, Debug)]
+pub struct SmtpConfig {
+    pub host: String,
+    pub port: u16,
+    pub username: String,
+    pub password: String,
+    pub from: String,
+}
+
 /// Shared application state passed to every Axum handler.
 #[derive(Clone)]
 pub struct AppState {
@@ -28,10 +40,12 @@ pub struct AppState {
     pub tripit_override: Option<Arc<dyn TripItApi>>,
     /// Whether new user registration is allowed (`REGISTRATION_ENABLED` env var).
     pub registration_enabled: bool,
-    /// Optional `AviationStack` API key for flight status enrichment.
-    pub aviationstack_api_key: Option<String>,
+    /// Optional `AirLabs` API key for flight status enrichment.
+    pub airlabs_api_key: Option<String>,
     /// Filesystem directory for attachment storage. `None` disables uploads.
     pub storage_path: Option<PathBuf>,
+    /// Optional SMTP config for sending verification emails.
+    pub smtp_config: Option<SmtpConfig>,
 }
 
 impl FromRef<AppState> for LeptosOptions {

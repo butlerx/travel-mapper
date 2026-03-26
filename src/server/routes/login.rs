@@ -139,7 +139,7 @@ mod tests {
                     .method("POST")
                     .uri("/auth/register")
                     .header(header::CONTENT_TYPE, "application/json")
-                    .body(Body::from(r#"{"username":"alice","password":"secret"}"#))
+                    .body(Body::from(r#"{"username":"alice","password":"secret","email":"alice@test.com","first_name":"Alice","last_name":"Test"}"#))
                     .expect("failed to build request"),
             )
             .await
@@ -178,7 +178,7 @@ mod tests {
                     .method("POST")
                     .uri("/auth/register")
                     .header(header::CONTENT_TYPE, "application/json")
-                    .body(Body::from(r#"{"username":"alice","password":"secret"}"#))
+                    .body(Body::from(r#"{"username":"alice","password":"secret","email":"alice@test.com","first_name":"Alice","last_name":"Test"}"#))
                     .expect("failed to build request"),
             )
             .await

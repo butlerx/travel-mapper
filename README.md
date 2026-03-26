@@ -292,4 +292,5 @@ The server also serves rendered HTML pages:
 | `PORT`                    | No       | `3000`             | Server port                                    |
 | `REGISTRATION_ENABLED`    | No       | `true`             | Set to `false` to disable new user registration |
 | `SYNC_POLL_INTERVAL_SECS` | No       | `5`                | Sync worker poll interval in seconds           |
+| `AIRLABS_API_KEY`         | No       | --                 | AirLabs API key for flight status enrichment   |
 | `RUST_LOG`                | No       | --                 | Log level (e.g. `info`, `debug`)               |

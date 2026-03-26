@@ -5,7 +5,8 @@ use crate::{
     db,
     geocode::Geocoder,
     integrations::{
-        flight_status::{AviationStackClient, FlightStatusApi},
+        airlabs::AirLabsClient,
+        flight_status::FlightStatusApi,
         tripit::{self, FetchError, TripItApi, TripItAuth, TripItClient},
     },
 };
@@ -155,7 +156,7 @@ pub struct SyncWorkerConfig {
     pub consumer_key: String,
     pub consumer_secret: String,
     pub poll_interval: std::time::Duration,
-    pub aviationstack_api_key: Option<String>,
+    pub airlabs_api_key: Option<String>,
 }
 
 /// Run the sync worker loop, polling for pending jobs until shutdown.
@@ -287,12 +288,12 @@ async fn build_client_and_sync(
     Ok(sync_all(&client, &geocoder, &config.pool, job.user_id).await?)
 }
 
-/// Enrich air-type hops with flight status data from `AviationStack`.
+/// Enrich air-type hops with flight status data from `AirLabs`.
 ///
 /// Failures are logged and never propagated — enrichment is optional and must
 /// not block sync completion.
 async fn enrich_flight_statuses(config: &SyncWorkerConfig, user_id: i64) {
-    let Some(ref api_key) = config.aviationstack_api_key else {
+    let Some(ref api_key) = config.airlabs_api_key else {
         return;
     };
 
@@ -314,7 +315,7 @@ async fn enrich_flight_statuses(config: &SyncWorkerConfig, user_id: i64) {
         return;
     }
 
-    let client = AviationStackClient::new(api_key.clone());
+    let client = AirLabsClient::new(api_key.clone());
     let mut enriched = 0_u64;
 
     for hop in &hops {
@@ -350,7 +351,7 @@ async fn enrich_flight_statuses(config: &SyncWorkerConfig, user_id: i64) {
                 let delay = status.dep_delay_minutes.or(status.arr_delay_minutes);
                 if let Err(err) = (db::status_enrichments::Upsert {
                     hop_id: hop.id,
-                    provider: "aviationstack",
+                    provider: "airlabs",
                     status: &status.flight_status,
                     delay_minutes: delay,
                     dep_gate: &status.dep_gate,

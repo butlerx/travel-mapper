@@ -1,9 +1,11 @@
 use sqlx::SqlitePool;
 
-/// Insert a new user with a pre-hashed password.
 pub struct Create<'a> {
     pub username: &'a str,
     pub password_hash: &'a str,
+    pub email: &'a str,
+    pub first_name: &'a str,
+    pub last_name: &'a str,
 }
 
 impl Create<'_> {
@@ -12,9 +14,12 @@ impl Create<'_> {
     /// Returns an error if the insert fails.
     pub async fn execute(&self, pool: &SqlitePool) -> Result<i64, sqlx::Error> {
         let result = sqlx::query!(
-            "INSERT INTO users (username, password_hash) VALUES (?, ?)",
+            "INSERT INTO users (username, password_hash, email, first_name, last_name) VALUES (?, ?, ?, ?, ?)",
             self.username,
             self.password_hash,
+            self.email,
+            self.first_name,
+            self.last_name,
         )
         .execute(pool)
         .await?;
@@ -22,15 +27,18 @@ impl Create<'_> {
     }
 }
 
-/// A row from the `users` table.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Row {
     pub id: i64,
     pub username: String,
     pub password_hash: String,
+    pub email: String,
+    pub email_verified: bool,
+    pub email_verified_at: Option<String>,
+    pub first_name: String,
+    pub last_name: String,
 }
 
-/// Look up a user by their unique username.
 pub struct GetByUsername<'a> {
     pub username: &'a str,
 }
@@ -42,11 +50,111 @@ impl GetByUsername<'_> {
     pub async fn execute(&self, pool: &SqlitePool) -> Result<Option<Row>, sqlx::Error> {
         sqlx::query_as!(
             Row,
-            r#"SELECT id as "id!: i64", username, password_hash FROM users WHERE username = ?"#,
+            r#"SELECT
+                id as "id!: i64",
+                username,
+                password_hash,
+                email,
+                email_verified as "email_verified!: bool",
+                email_verified_at,
+                first_name,
+                last_name
+            FROM users WHERE username = ?"#,
             self.username,
         )
         .fetch_optional(pool)
         .await
+    }
+}
+
+pub struct GetById {
+    pub id: i64,
+}
+
+impl GetById {
+    /// # Errors
+    ///
+    /// Returns an error if the query fails.
+    pub async fn execute(&self, pool: &SqlitePool) -> Result<Option<Row>, sqlx::Error> {
+        sqlx::query_as!(
+            Row,
+            r#"SELECT
+                id as "id!: i64",
+                username,
+                password_hash,
+                email,
+                email_verified as "email_verified!: bool",
+                email_verified_at,
+                first_name,
+                last_name
+            FROM users WHERE id = ?"#,
+            self.id,
+        )
+        .fetch_optional(pool)
+        .await
+    }
+}
+
+pub struct UpdateEmail<'a> {
+    pub user_id: i64,
+    pub email: &'a str,
+}
+
+impl UpdateEmail<'_> {
+    /// # Errors
+    ///
+    /// Returns an error if the update fails.
+    pub async fn execute(&self, pool: &SqlitePool) -> Result<(), sqlx::Error> {
+        sqlx::query!(
+            "UPDATE users SET email = ?, email_verified = 0, email_verified_at = NULL WHERE id = ?",
+            self.email,
+            self.user_id,
+        )
+        .execute(pool)
+        .await?;
+        Ok(())
+    }
+}
+
+pub struct UpdateProfile<'a> {
+    pub user_id: i64,
+    pub first_name: &'a str,
+    pub last_name: &'a str,
+}
+
+impl UpdateProfile<'_> {
+    /// # Errors
+    ///
+    /// Returns an error if the update fails.
+    pub async fn execute(&self, pool: &SqlitePool) -> Result<(), sqlx::Error> {
+        sqlx::query!(
+            "UPDATE users SET first_name = ?, last_name = ? WHERE id = ?",
+            self.first_name,
+            self.last_name,
+            self.user_id,
+        )
+        .execute(pool)
+        .await?;
+        Ok(())
+    }
+}
+
+pub struct SetEmailVerified {
+    pub user_id: i64,
+}
+
+impl SetEmailVerified {
+    /// # Errors
+    ///
+    /// Returns an error if the update fails.
+    pub async fn execute(&self, pool: &SqlitePool) -> Result<(), sqlx::Error> {
+        sqlx::query!(
+            "UPDATE users SET email_verified = 1, email_verified_at = datetime('now') WHERE id = ?",
+            self.user_id,
+        )
+        .execute(pool)
+        .await?;
+        Ok(())
     }
 }
 
@@ -61,6 +169,9 @@ mod tests {
         let user_id = Create {
             username: "alice",
             password_hash: "hash",
+            email: "",
+            first_name: "",
+            last_name: "",
         }
         .execute(&pool)
         .await
@@ -72,6 +183,8 @@ mod tests {
             .expect("user lookup failed")
             .expect("user should exist");
         assert_eq!(user.id, user_id);
+        assert!(user.email.is_empty());
+        assert!(!user.email_verified);
 
         crate::db::sessions::Create {
             token: "session-token",
@@ -104,5 +217,105 @@ mod tests {
         .await
         .expect("session lookup after delete failed");
         assert!(deleted.is_none());
+    }
+
+    #[tokio::test]
+    async fn user_with_email() {
+        let pool = test_pool().await;
+        let user_id = Create {
+            username: "bob",
+            password_hash: "hash",
+            email: "bob@example.com",
+            first_name: "Bob",
+            last_name: "Smith",
+        }
+        .execute(&pool)
+        .await
+        .expect("user create failed");
+
+        let user = GetById { id: user_id }
+            .execute(&pool)
+            .await
+            .expect("user lookup failed")
+            .expect("user should exist");
+        assert_eq!(user.email, "bob@example.com");
+        assert!(!user.email_verified);
+        assert!(user.email_verified_at.is_none());
+
+        SetEmailVerified { user_id }
+            .execute(&pool)
+            .await
+            .expect("verify failed");
+
+        let verified = GetById { id: user_id }
+            .execute(&pool)
+            .await
+            .expect("lookup failed")
+            .expect("user should exist");
+        assert!(verified.email_verified);
+        assert!(verified.email_verified_at.is_some());
+    }
+
+    #[tokio::test]
+    async fn update_email_resets_verification() {
+        let pool = test_pool().await;
+        let user_id = Create {
+            username: "carol",
+            password_hash: "hash",
+            email: "carol@example.com",
+            first_name: "",
+            last_name: "",
+        }
+        .execute(&pool)
+        .await
+        .expect("create failed");
+
+        SetEmailVerified { user_id }
+            .execute(&pool)
+            .await
+            .expect("verify failed");
+
+        UpdateEmail {
+            user_id,
+            email: "new@example.com",
+        }
+        .execute(&pool)
+        .await
+        .expect("update failed");
+
+        let user = GetById { id: user_id }
+            .execute(&pool)
+            .await
+            .expect("lookup failed")
+            .expect("user should exist");
+        assert_eq!(user.email, "new@example.com");
+        assert!(!user.email_verified);
+        assert!(user.email_verified_at.is_none());
+    }
+
+    #[tokio::test]
+    async fn duplicate_email_rejected() {
+        let pool = test_pool().await;
+        Create {
+            username: "alice",
+            password_hash: "hash",
+            email: "shared@example.com",
+            first_name: "",
+            last_name: "",
+        }
+        .execute(&pool)
+        .await
+        .expect("first create failed");
+
+        let result = Create {
+            username: "bob",
+            password_hash: "hash",
+            email: "SHARED@example.com",
+            first_name: "",
+            last_name: "",
+        }
+        .execute(&pool)
+        .await;
+        assert!(result.is_err());
     }
 }

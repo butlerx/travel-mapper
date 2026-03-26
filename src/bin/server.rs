@@ -23,11 +23,26 @@ struct Cli {
     #[arg(long, env = "REGISTRATION_ENABLED", default_value_t = true)]
     registration_enabled: bool,
 
-    #[arg(long, env = "AVIATIONSTACK_API_KEY")]
-    aviationstack_api_key: Option<String>,
+    #[arg(long, env = "AIRLABS_API_KEY")]
+    airlabs_api_key: Option<String>,
 
     #[arg(long, env = "ATTACHMENTS_PATH")]
     storage_path: Option<PathBuf>,
+
+    #[arg(long, env = "SMTP_HOST")]
+    smtp_host: Option<String>,
+
+    #[arg(long, env = "SMTP_PORT", default_value_t = 587)]
+    smtp_port: u16,
+
+    #[arg(long, env = "SMTP_USERNAME")]
+    smtp_username: Option<String>,
+
+    #[arg(long, env = "SMTP_PASSWORD")]
+    smtp_password: Option<String>,
+
+    #[arg(long, env = "EMAIL_FROM")]
+    email_from: Option<String>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -61,6 +76,24 @@ async fn run() -> Result<(), ServerError> {
     let encryption_key = parse_encryption_key(&cli.encryption_key)?;
     let pool = travel_mapper::db::create_pool(&cli.database_url).await?;
 
+    let smtp_config = match (
+        cli.smtp_host,
+        cli.smtp_username,
+        cli.smtp_password,
+        cli.email_from,
+    ) {
+        (Some(host), Some(username), Some(password), Some(from)) => {
+            Some(travel_mapper::server::SmtpConfig {
+                host,
+                port: cli.smtp_port,
+                username,
+                password,
+                from,
+            })
+        }
+        _ => None,
+    };
+
     let state = travel_mapper::server::AppState {
         leptos_options: LeptosOptions::builder()
             .output_name("travel-mapper")
@@ -71,8 +104,9 @@ async fn run() -> Result<(), ServerError> {
         tripit_consumer_secret: cli.consumer_secret,
         tripit_override: None,
         registration_enabled: cli.registration_enabled,
-        aviationstack_api_key: cli.aviationstack_api_key,
+        airlabs_api_key: cli.airlabs_api_key,
         storage_path: cli.storage_path,
+        smtp_config,
     };
     let app = travel_mapper::server::create_router(state);
 

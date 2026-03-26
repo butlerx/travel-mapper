@@ -1,4 +1,4 @@
-use crate::server::{AppState, components::AuthFormPage};
+use crate::server::{AppState, components::Shell};
 use axum::{
     extract::{Query, State},
     http::StatusCode,
@@ -23,16 +23,42 @@ pub async fn page(
     }
 
     let html = view! {
-        <AuthFormPage
-            title="Register"
-            action="/auth/register"
-            submit_label="Create Account"
-            footer_text="Already have an account? "
-            footer_link_href="/login"
-            footer_link_text="Log in"
-            autocomplete_password="new-password"
-            error=feedback.error
-        />
+        <Shell title="Register".to_owned()>
+            <main class="auth-page">
+                <div class="card auth-card">
+                    <h1>"Register"</h1>
+                    {feedback.error.map(|e| view! {
+                        <div class="alert alert-error" role="alert">{e}</div>
+                    })}
+                    <form method="post" action="/auth/register">
+                        <div class="form-group">
+                            <label for="first_name">"First Name"</label>
+                            <input type="text" id="first_name" name="first_name" required autocomplete="given-name" placeholder=" " />
+                        </div>
+                        <div class="form-group">
+                            <label for="last_name">"Last Name"</label>
+                            <input type="text" id="last_name" name="last_name" required autocomplete="family-name" placeholder=" " />
+                        </div>
+                        <div class="form-group">
+                            <label for="email">"Email"</label>
+                            <input type="email" id="email" name="email" required autocomplete="email" placeholder=" " />
+                        </div>
+                        <div class="form-group">
+                            <label for="username">"Username"</label>
+                            <input type="text" id="username" name="username" required autocomplete="username" placeholder=" " />
+                        </div>
+                        <div class="form-group">
+                            <label for="password">"Password"</label>
+                            <input type="password" id="password" name="password" required autocomplete="new-password" placeholder=" " />
+                        </div>
+                        <button class="btn btn-primary btn-full" type="submit">"Create Account"</button>
+                    </form>
+                    <div class="form-footer">
+                        <p>"Already have an account? " <a href="/login">"Log in"</a></p>
+                    </div>
+                </div>
+            </main>
+        </Shell>
     };
     (StatusCode::OK, axum::response::Html(html.to_html())).into_response()
 }
@@ -67,6 +93,12 @@ mod tests {
         assert!(body.contains("Register"));
         assert!(body.contains("action=\"/auth/register\""));
         assert!(body.contains("method=\"post\""));
+        assert!(body.contains("id=\"first_name\""));
+        assert!(body.contains("name=\"first_name\""));
+        assert!(body.contains("id=\"last_name\""));
+        assert!(body.contains("name=\"last_name\""));
+        assert!(body.contains("id=\"email\""));
+        assert!(body.contains("name=\"email\""));
         assert!(body.contains("id=\"username\""));
         assert!(body.contains("name=\"username\""));
         assert!(body.contains("id=\"password\""));

@@ -68,7 +68,8 @@ src/
     resolve.rs                      # coordinate resolution orchestration
     sanitize.rs                     # address string cleanup
   integrations.rs + integrations/   # third-party travel data sources
-    flight_status.rs                # AviationStack flight status API client
+    airlabs.rs                      # AirLabs flight status API client
+    flight_status.rs                # FlightStatusApi trait + shared types
     generic_csv.rs                  # auto-detects Flighty, myFlightradar24, OpenFlights, App in the Air
     tripit.rs + tripit/             # TripIt integration
       auth.rs                       # OAuth 1.0a signing

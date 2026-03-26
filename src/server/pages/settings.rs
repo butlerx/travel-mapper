@@ -2,8 +2,11 @@
 mod api_keys_section;
 /// Generic CSV/delimited import section.
 mod csv_import_section;
+/// Email address and verification status section.
+mod email_section;
 /// Calendar feed subscription section.
 mod feed_section;
+mod profile_section;
 /// Shareable stats link section.
 mod share_section;
 /// Sync status and trigger section.
@@ -21,8 +24,10 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use csv_import_section::CsvImportSection;
+use email_section::EmailSection;
 use feed_section::FeedSection;
 use leptos::prelude::*;
+use profile_section::ProfileSection;
 use serde::Deserialize;
 use share_section::ShareSection;
 use sync_section::SyncSection;
@@ -33,16 +38,18 @@ pub struct SettingsFeedback {
     pub error: Option<String>,
     pub tripit: Option<String>,
     pub csv: Option<String>,
+    pub email: Option<String>,
+    pub profile: Option<String>,
 }
 
-/// Render the settings page as an HTML string.
-///
-/// Extracted so both the page handler and the API route can produce the same
-/// HTML output without duplicating Leptos component wiring.
 pub fn render_page(
     has_tripit: bool,
     sync_state: Option<&db::sync_state::Row>,
     feedback: SettingsFeedback,
+    email: &str,
+    email_verified: bool,
+    first_name: &str,
+    last_name: &str,
 ) -> Response {
     let html = view! {
         <Settings
@@ -54,6 +61,12 @@ pub fn render_page(
             error=feedback.error
             tripit_connected=feedback.tripit
             csv_imported=feedback.csv
+            email_feedback=feedback.email
+            profile_feedback=feedback.profile
+            email=email.to_owned()
+            email_verified=email_verified
+            first_name=first_name.to_owned()
+            last_name=last_name.to_owned()
         />
     };
     (StatusCode::OK, axum::response::Html(html.to_html())).into_response()
@@ -69,7 +82,31 @@ fn Settings(
     #[prop(optional_no_strip)] error: Option<String>,
     #[prop(optional_no_strip)] tripit_connected: Option<String>,
     #[prop(optional_no_strip)] csv_imported: Option<String>,
+    #[prop(optional_no_strip)] email_feedback: Option<String>,
+    #[prop(optional_no_strip)] profile_feedback: Option<String>,
+    #[prop(optional_no_strip)] email: String,
+    email_verified: bool,
+    first_name: String,
+    last_name: String,
 ) -> impl IntoView {
+    let email_alert = email_feedback
+        .as_deref()
+        .map(|v| match v {
+            "verified" => "Email address verified successfully!",
+            "updated" => "Email address updated. Please check your inbox for a verification link.",
+            "sent" => "Verification email sent. Please check your inbox.",
+            _ => "",
+        })
+        .filter(|msg| !msg.is_empty());
+
+    let profile_alert = profile_feedback
+        .as_deref()
+        .map(|v| match v {
+            "updated" => "Profile updated successfully!",
+            _ => "",
+        })
+        .filter(|msg| !msg.is_empty());
+
     view! {
         <Shell title="Settings".to_owned()>
             <NavBar current="settings" />
@@ -85,6 +122,16 @@ fn Settings(
                         {format!("Successfully imported {count} flights!")}
                     </div>
                 })}
+                {email_alert.map(|msg| view! {
+                    <div class="alert alert-success" role="status">{msg}</div>
+                })}
+                {profile_alert.map(|msg| view! {
+                    <div class="alert alert-success" role="status">{msg}</div>
+                })}
+
+                <ProfileSection first_name=first_name last_name=last_name />
+
+                <EmailSection email=email email_verified=email_verified />
 
                 <TripitSection has_tripit=has_tripit />
 

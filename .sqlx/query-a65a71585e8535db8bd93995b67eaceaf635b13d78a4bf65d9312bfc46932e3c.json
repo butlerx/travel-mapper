@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM email_verifications WHERE expires_at < datetime('now')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "a65a71585e8535db8bd93995b67eaceaf635b13d78a4bf65d9312bfc46932e3c"
+}

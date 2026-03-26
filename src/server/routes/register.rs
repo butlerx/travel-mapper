@@ -8,7 +8,7 @@ use crate::{
         AppState,
         error::AppError,
         extractors::FormOrJson,
-        session::{create_user_session, is_form_request, session_cookie},
+        session::{create_user_session, is_form_request, session_cookie, sha256_hex},
     },
 };
 use aide::transform::TransformOperation;
@@ -20,6 +20,15 @@ use axum::{
 use axum_extra::extract::CookieJar;
 use schemars::JsonSchema;
 use serde::Deserialize;
+use uuid::Uuid;
+
+struct RegistrationInput<'a> {
+    username: &'a str,
+    password_hash: &'a str,
+    email: &'a str,
+    first_name: &'a str,
+    last_name: &'a str,
+}
 
 /// Credentials for creating a new account.
 #[derive(Default, Deserialize, JsonSchema)]
@@ -28,6 +37,9 @@ pub struct RegisterRequest {
     pub username: String,
     /// Password for the new account.
     pub password: String,
+    pub email: String,
+    pub first_name: String,
+    pub last_name: String,
 }
 
 /// Register a new user account.
@@ -91,7 +103,20 @@ pub async fn handler(
         }
     };
 
-    create_and_authenticate(state, jar, &headers, is_form, &parsed.username, &hash).await
+    create_and_authenticate(
+        state,
+        jar,
+        &headers,
+        is_form,
+        RegistrationInput {
+            username: &parsed.username,
+            password_hash: &hash,
+            email: &parsed.email,
+            first_name: &parsed.first_name,
+            last_name: &parsed.last_name,
+        },
+    )
+    .await
 }
 
 async fn create_and_authenticate(
@@ -99,12 +124,14 @@ async fn create_and_authenticate(
     jar: CookieJar,
     headers: &HeaderMap,
     is_form: bool,
-    username: &str,
-    hash: &str,
+    input: RegistrationInput<'_>,
 ) -> (CookieJar, Response) {
     match (db::users::Create {
-        username,
-        password_hash: hash,
+        username: input.username,
+        password_hash: input.password_hash,
+        email: input.email,
+        first_name: input.first_name,
+        last_name: input.last_name,
     })
     .execute(&state.db)
     .await
@@ -118,6 +145,48 @@ async fn create_and_authenticate(
                 }
             };
 
+            if !input.email.is_empty() {
+                let raw_token = Uuid::new_v4().to_string();
+                let token_hash = sha256_hex(&raw_token);
+                let pool = state.db.clone();
+                let smtp = state.smtp_config.clone();
+                let email_owned = input.email.to_owned();
+                let raw_token_owned = raw_token;
+                tokio::spawn(async move {
+                    let expires_at =
+                        sqlx::query_scalar::<_, Option<String>>("SELECT datetime('now', '+1 day')")
+                            .fetch_one(&pool)
+                            .await
+                            .ok()
+                            .flatten()
+                            .unwrap_or_else(|| "2099-01-01 00:00:00".to_string());
+
+                    if let Err(err) = (db::email_verifications::Create {
+                        user_id: id,
+                        token_hash: &token_hash,
+                        expires_at: &expires_at,
+                    })
+                    .execute(&pool)
+                    .await
+                    {
+                        tracing::error!(user_id = id, error = %err, "failed to store verification token");
+                        return;
+                    }
+
+                    let base_url = "";
+                    if let Err(err) = crate::server::email::send_verification_email(
+                        smtp.as_ref(),
+                        &email_owned,
+                        &raw_token_owned,
+                        base_url,
+                    )
+                    .await
+                    {
+                        tracing::warn!(user_id = id, error = %err, "failed to send verification email");
+                    }
+                });
+            }
+
             let updated_jar = jar.add(session_cookie(&token));
             (
                 updated_jar,
@@ -127,7 +196,7 @@ async fn create_and_authenticate(
                     let format = negotiate_format(headers);
                     let response = AuthResponse {
                         id,
-                        username: username.to_owned(),
+                        username: input.username.to_owned(),
                     };
                     AuthResponse::single_format_response(&response, format, StatusCode::CREATED)
                 },
@@ -178,14 +247,14 @@ mod tests {
         let pool = test_pool().await;
         let app = create_router(test_app_state(pool));
         let response = app
-            .oneshot(
-                Request::builder()
-                    .method("POST")
-                    .uri("/auth/register")
-                    .header(header::CONTENT_TYPE, "application/json")
-                    .body(Body::from(r#"{"username":"alice","password":"secret"}"#))
-                    .expect("failed to build request"),
-            )
+                    .oneshot(
+                        Request::builder()
+                            .method("POST")
+                            .uri("/auth/register")
+                            .header(header::CONTENT_TYPE, "application/json")
+                            .body(Body::from(r#"{"username":"alice","password":"secret","email":"alice@test.com","first_name":"Alice","last_name":"Test"}"#))
+                            .expect("failed to build request"),
+                    )
             .await
             .expect("router request failed");
         assert_eq!(response.status(), StatusCode::CREATED);
@@ -201,7 +270,7 @@ mod tests {
                 .method("POST")
                 .uri("/auth/register")
                 .header(header::CONTENT_TYPE, "application/json")
-                .body(Body::from(r#"{"username":"alice","password":"secret"}"#))
+                .body(Body::from(r#"{"username":"alice","password":"secret","email":"alice@test.com","first_name":"Alice","last_name":"Test"}"#))
                 .expect("failed to build request")
         };
 
@@ -229,7 +298,7 @@ mod tests {
                     .method("POST")
                     .uri("/auth/register")
                     .header(header::CONTENT_TYPE, "application/json")
-                    .body(Body::from(r#"{"username":"alice","password":"secret"}"#))
+                    .body(Body::from(r#"{"username":"alice","password":"secret","email":"alice@test.com","first_name":"Alice","last_name":"Test"}"#))
                     .expect("failed to build request"),
             )
             .await
