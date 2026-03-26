@@ -4,6 +4,8 @@ mod api_keys_section;
 mod csv_import_section;
 /// Calendar feed subscription section.
 mod feed_section;
+/// Shareable stats link section.
+mod share_section;
 /// Sync status and trigger section.
 mod sync_section;
 /// `TripIt` connection section.
@@ -22,6 +24,7 @@ use csv_import_section::CsvImportSection;
 use feed_section::FeedSection;
 use leptos::prelude::*;
 use serde::Deserialize;
+use share_section::ShareSection;
 use sync_section::SyncSection;
 use tripit_section::TripitSection;
 
@@ -98,6 +101,8 @@ fn Settings(
                 <ApiKeysSection />
 
                 <FeedSection />
+
+                <ShareSection />
             </main>
         </Shell>
     }

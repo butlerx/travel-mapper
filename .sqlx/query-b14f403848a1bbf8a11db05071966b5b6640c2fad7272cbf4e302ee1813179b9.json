@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO share_tokens (user_id, token_hash, label) VALUES (?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "b14f403848a1bbf8a11db05071966b5b6640c2fad7272cbf4e302ee1813179b9"
+}

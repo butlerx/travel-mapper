@@ -91,6 +91,11 @@ fn api_docs(api: TransformOpenApi) -> TransformOpenApi {
             description: Some("Calendar ICS feed".into()),
             ..Default::default()
         })
+        .tag(Tag {
+            name: "share".into(),
+            description: Some("Public shareable stats pages".into()),
+            ..Default::default()
+        })
         .security_scheme(
             "bearer",
             SecurityScheme::Http {
@@ -126,6 +131,7 @@ pub fn create_router(state: AppState) -> Router {
         .nest("/trips", routes::trip_api_routes())
         .nest("/import", routes::import_api_routes())
         .route("/feed/{token}", get(routes::feed::handler))
+        .route("/share/{token}", get(routes::share::handler))
         .route(
             "/docs",
             get(Swagger::new("/openapi.json")

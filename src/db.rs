@@ -12,6 +12,8 @@ pub mod hops;
 pub mod oauth_tokens;
 /// Query objects for the `sessions` table — cookie-based browser sessions.
 pub mod sessions;
+/// Query objects for the `share_tokens` table — per-user shareable stats access tokens.
+pub mod share_tokens;
 /// Query objects for the `status_enrichments` table — live/historical flight status data.
 pub mod status_enrichments;
 /// Query objects for the `sync_jobs` table — background sync job queue.

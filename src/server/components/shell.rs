@@ -5,6 +5,7 @@ use leptos::prelude::*;
 pub fn Shell(
     title: String,
     #[prop(optional)] body_class: Option<&'static str>,
+    #[prop(optional)] og_meta: Option<String>,
     children: Children,
 ) -> impl IntoView {
     let class = body_class.unwrap_or_default();
@@ -22,6 +23,7 @@ pub fn Shell(
                 <link rel="apple-touch-icon" href="/static/logo.svg" />
                 <link rel="manifest" href="/manifest.json" />
                 <link rel="stylesheet" href="/static/style.css" />
+                {og_meta.map(|m| view! { <div inner_html=m style="display:none" /> })}
                 <script defer src="/static/nav.js"></script>
             </head>
             <body class=class>

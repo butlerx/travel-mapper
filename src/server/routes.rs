@@ -32,6 +32,10 @@ pub(super) mod logout;
 pub(super) mod register;
 /// Account settings (JSON + HTML via content negotiation).
 pub(super) mod settings;
+/// Public shareable stats page served by token.
+pub(super) mod share;
+/// Authenticated share token create/revoke handlers.
+pub(super) mod share_tokens;
 pub(super) mod static_assets;
 pub(super) mod stats;
 pub(super) mod sync;
@@ -365,6 +369,20 @@ pub(super) fn auth_api_routes() -> ApiRouter<super::AppState> {
             delete_with(
                 feed_tokens::delete_handler,
                 feed_tokens::delete_handler_docs,
+            ),
+        )
+        .api_route(
+            "/share-tokens",
+            post_with(
+                share_tokens::create_handler,
+                share_tokens::create_handler_docs,
+            ),
+        )
+        .api_route(
+            "/share-tokens/{id}",
+            delete_with(
+                share_tokens::delete_handler,
+                share_tokens::delete_handler_docs,
             ),
         )
 }

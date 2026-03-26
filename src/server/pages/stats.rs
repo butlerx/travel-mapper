@@ -214,6 +214,14 @@ pub(crate) fn render_page(stats: DetailedStats) -> Response {
     (StatusCode::OK, axum::response::Html(html.to_html())).into_response()
 }
 
+/// Render the public share stats page (no navbar, with OG meta tags).
+pub(crate) fn render_share_page(stats: DetailedStats, token: &str) -> Response {
+    let html = view! {
+        <ShareStatsPage stats=stats token=token.to_owned() />
+    };
+    (StatusCode::OK, axum::response::Html(html.to_html())).into_response()
+}
+
 fn format_distance(km: u64) -> String {
     if km >= 1_000_000 {
         let whole = km / 1_000_000;
@@ -316,13 +324,17 @@ fn TopList(title: &'static str, items: Vec<CountedItem>) -> impl IntoView {
 }
 
 #[component]
-fn YearFilter(available_years: Vec<String>, selected_year: Option<String>) -> impl IntoView {
+fn YearFilter(
+    available_years: Vec<String>,
+    selected_year: Option<String>,
+    #[prop(default = "/stats".to_owned())] action: String,
+) -> impl IntoView {
     if available_years.is_empty() {
         return ().into_any();
     }
 
     view! {
-        <form method="get" action="/stats" class="stats-year-filter">
+        <form method="get" action=action class="stats-year-filter">
             <label for="year-filter">"Filter by year: "</label>
             <select name="year" id="year-filter" onchange="this.form.submit()">
                 <option value="" selected=selected_year.is_none()>"All years"</option>
@@ -397,6 +409,111 @@ fn StatsPage(stats: DetailedStats) -> impl IntoView {
                             <div class="empty-state">
                                 <div class="empty-state-icon">{"\u{1F4CA}"}</div>
                                 <p>"No travel data yet. Add flights or sync from TripIt to see your stats."</p>
+                            </div>
+                        </section>
+                    </main>
+                }.into_any()
+            }}
+        </Shell>
+    }
+}
+
+fn build_og_description(stats: &DetailedStats) -> String {
+    let parts = [
+        (stats.total_flights, "flight"),
+        (stats.total_rail, "rail journey"),
+        (stats.total_boat, "boat trip"),
+    ];
+    let mut segments: Vec<String> = Vec::new();
+    for (count, label) in &parts {
+        if *count > 0 {
+            let plural = if *count == 1 { "" } else { "s" };
+            segments.push(format!("{count} {label}{plural}"));
+        }
+    }
+    if segments.is_empty() {
+        return "Travel stats".to_owned();
+    }
+    let distance = format_distance(stats.total_distance_km);
+    format!(
+        "{} across {} countries \u{00b7} {}",
+        segments.join(", "),
+        stats.unique_countries,
+        distance
+    )
+}
+
+#[allow(clippy::must_use_candidate, clippy::needless_pass_by_value)]
+#[component]
+fn ShareStatsPage(stats: DetailedStats, token: String) -> impl IntoView {
+    let has_data = stats.total_journeys > 0;
+    let og_description = build_og_description(&stats);
+    let share_action = format!("/share/{token}");
+    let og_meta = format!(
+        r#"<meta property="og:title" content="Travel Stats"><meta property="og:description" content="{}"><meta property="og:url" content="{}">"#,
+        og_description.replace('"', "&quot;"),
+        share_action.replace('"', "&quot;"),
+    );
+    let distance = format_distance(stats.total_distance_km);
+    let year_range = format_year_range(stats.first_year.as_ref(), stats.last_year.as_ref());
+
+    let available_years = stats.available_years.clone();
+    let selected_year = stats.selected_year.clone();
+    let top_airlines = stats.top_airlines.clone();
+    let top_aircraft = stats.top_aircraft.clone();
+    let top_routes = stats.top_routes.clone();
+    let cabin_class = stats.cabin_class_breakdown.clone();
+    let seat_type = stats.seat_type_breakdown.clone();
+    let flight_reason = stats.flight_reason_breakdown.clone();
+    let countries = stats.countries.clone();
+    let country_counts_json = countries_json(&countries);
+
+    view! {
+        <Shell
+            title="Shared Travel Stats".to_owned()
+            body_class="stats-layout"
+            og_meta=og_meta
+        >
+            {if has_data {
+                view! {
+                    <main class="stats-page">
+                        <YearFilter
+                            available_years=available_years
+                            selected_year=selected_year
+                            action=share_action
+                        />
+                        <OverviewCards stats=stats distance=distance year_range=year_range />
+                        <div class="stats-grid">
+                            <TopList title="Top Airlines" items=top_airlines />
+                            <TopList title="Top Aircraft" items=top_aircraft />
+                            <TopList title="Top Routes" items=top_routes />
+                            <TopList title="Cabin Class" items=cabin_class />
+                            <TopList title="Seat Type" items=seat_type />
+                            <TopList title="Flight Reason" items=flight_reason />
+                            <TopList title="Countries Visited" items=countries />
+                        </div>
+                        <section class="stats-section stats-map-section">
+                            <h3 class="stats-section-title">"Country Map"</h3>
+                            <div id="stats-map"></div>
+                        </section>
+                        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+                            integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+                            crossorigin="" />
+                        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+                            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+                            crossorigin=""></script>
+                        <script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
+                        <script type="application/json" id="country-counts" inner_html=country_counts_json></script>
+                        <script type="module" src="/static/stats-map.js"></script>
+                    </main>
+                }.into_any()
+            } else {
+                view! {
+                    <main class="container-wide">
+                        <section class="card">
+                            <div class="empty-state">
+                                <div class="empty-state-icon">{"\u{1F4CA}"}</div>
+                                <p>"No travel data to display."</p>
                             </div>
                         </section>
                     </main>
