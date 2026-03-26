@@ -76,6 +76,16 @@ fn api_docs(api: TransformOpenApi) -> TransformOpenApi {
             description: Some("TripIt OAuth integration".into()),
             ..Default::default()
         })
+        .tag(Tag {
+            name: "stats".into(),
+            description: Some("Aggregated travel statistics".into()),
+            ..Default::default()
+        })
+        .tag(Tag {
+            name: "settings".into(),
+            description: Some("Account settings".into()),
+            ..Default::default()
+        })
         .security_scheme(
             "bearer",
             SecurityScheme::Http {

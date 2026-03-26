@@ -1,16 +1,8 @@
 use crate::{
-    db::{
-        self,
-        hops::{StatsRow, TravelType},
-    },
-    server::{
-        AppState,
-        components::{NavBar, Shell},
-        extractors::AuthUser,
-    },
+    db::hops::{StatsRow, TravelType},
+    server::components::{NavBar, Shell},
 };
 use axum::{
-    extract::{Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
 };
@@ -19,7 +11,7 @@ use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
 
-#[derive(Deserialize, Default)]
+#[derive(Deserialize, Default, schemars::JsonSchema)]
 pub struct StatsQuery {
     pub year: Option<String>,
 }
@@ -215,22 +207,9 @@ pub fn compute_detailed_stats(all_rows: &[StatsRow], year_filter: Option<&str>) 
     stats
 }
 
-pub async fn page(
-    State(state): State<AppState>,
-    auth: AuthUser,
-    Query(query): Query<StatsQuery>,
-) -> Response {
-    let all_rows = db::hops::GetAllForStats {
-        user_id: auth.user_id,
-    }
-    .execute(&state.db)
-    .await
-    .unwrap_or_default();
-
-    let detailed = compute_detailed_stats(&all_rows, query.year.as_deref());
-
+pub(crate) fn render_page(stats: DetailedStats) -> Response {
     let html = view! {
-        <StatsPage stats=detailed />
+        <StatsPage stats=stats />
     };
     (StatusCode::OK, axum::response::Html(html.to_html())).into_response()
 }
@@ -473,6 +452,7 @@ mod tests {
                     .method("GET")
                     .uri("/stats")
                     .header(header::COOKIE, cookie)
+                    .header(header::ACCEPT, "text/html")
                     .body(Body::empty())
                     .expect("failed to build request"),
             )
@@ -520,6 +500,7 @@ mod tests {
                     .method("GET")
                     .uri("/stats")
                     .header(header::COOKIE, cookie)
+                    .header(header::ACCEPT, "text/html")
                     .body(Body::empty())
                     .expect("failed to build request"),
             )
@@ -580,6 +561,7 @@ mod tests {
                     .method("GET")
                     .uri("/stats?year=2024")
                     .header(header::COOKIE, cookie)
+                    .header(header::ACCEPT, "text/html")
                     .body(Body::empty())
                     .expect("failed to build request"),
             )

@@ -9,15 +9,10 @@ mod tripit_section;
 
 use crate::{
     db,
-    server::{
-        AppState,
-        components::{NavBar, Shell},
-        extractors::AuthUser,
-    },
+    server::components::{NavBar, Shell},
 };
 use api_keys_section::ApiKeysSection;
 use axum::{
-    extract::{Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
 };
@@ -27,38 +22,29 @@ use serde::Deserialize;
 use sync_section::SyncSection;
 use tripit_section::TripitSection;
 
-#[derive(Deserialize, Default)]
+#[derive(Deserialize, Default, schemars::JsonSchema)]
 pub struct SettingsFeedback {
     pub error: Option<String>,
     pub tripit: Option<String>,
     pub csv: Option<String>,
 }
 
-pub async fn page(
-    State(state): State<AppState>,
-    auth: AuthUser,
-    Query(feedback): Query<SettingsFeedback>,
+/// Render the settings page as an HTML string.
+///
+/// Extracted so both the page handler and the API route can produce the same
+/// HTML output without duplicating Leptos component wiring.
+pub fn render_page(
+    has_tripit: bool,
+    sync_state: Option<&db::sync_state::Row>,
+    feedback: SettingsFeedback,
 ) -> Response {
-    let has_tripit = db::credentials::Has {
-        user_id: auth.user_id,
-    }
-    .execute(&state.db)
-    .await
-    .unwrap_or(false);
-    let sync_state = db::sync_state::GetOrCreate {
-        user_id: auth.user_id,
-    }
-    .execute(&state.db)
-    .await
-    .ok();
-
     let html = view! {
         <Settings
             has_tripit=has_tripit
-            sync_status=sync_state.as_ref().map(|s| s.sync_status.clone())
-            last_sync_at=sync_state.as_ref().and_then(|s| s.last_sync_at.clone())
-            trips_fetched=sync_state.as_ref().map(|s| s.trips_fetched)
-            hops_fetched=sync_state.as_ref().map(|s| s.hops_fetched)
+            sync_status=sync_state.map(|s| s.sync_status.clone())
+            last_sync_at=sync_state.and_then(|s| s.last_sync_at.clone())
+            trips_fetched=sync_state.map(|s| s.trips_fetched)
+            hops_fetched=sync_state.map(|s| s.hops_fetched)
             error=feedback.error
             tripit_connected=feedback.tripit
             csv_imported=feedback.csv
@@ -137,6 +123,7 @@ mod tests {
                     .method("GET")
                     .uri("/settings")
                     .header(header::COOKIE, cookie)
+                    .header(header::ACCEPT, "text/html")
                     .body(Body::empty())
                     .expect("failed to build request"),
             )
@@ -203,6 +190,7 @@ mod tests {
                     .method("GET")
                     .uri("/settings")
                     .header(header::COOKIE, cookie)
+                    .header(header::ACCEPT, "text/html")
                     .body(Body::empty())
                     .expect("failed to build request"),
             )
@@ -227,6 +215,7 @@ mod tests {
                     .method("GET")
                     .uri("/settings?error=Something+broke")
                     .header(header::COOKIE, cookie)
+                    .header(header::ACCEPT, "text/html")
                     .body(Body::empty())
                     .expect("failed to build request"),
             )
@@ -251,6 +240,7 @@ mod tests {
                     .method("GET")
                     .uri("/settings?tripit=connected")
                     .header(header::COOKIE, cookie)
+                    .header(header::ACCEPT, "text/html")
                     .body(Body::empty())
                     .expect("failed to build request"),
             )
@@ -274,6 +264,7 @@ mod tests {
                     .method("GET")
                     .uri("/settings")
                     .header(header::COOKIE, cookie)
+                    .header(header::ACCEPT, "text/html")
                     .body(Body::empty())
                     .expect("failed to build request"),
             )
@@ -299,6 +290,7 @@ mod tests {
                     .method("GET")
                     .uri("/settings")
                     .header(header::COOKIE, cookie)
+                    .header(header::ACCEPT, "text/html")
                     .body(Body::empty())
                     .expect("failed to build request"),
             )
@@ -325,6 +317,7 @@ mod tests {
                     .method("GET")
                     .uri("/settings?csv=42")
                     .header(header::COOKIE, cookie)
+                    .header(header::ACCEPT, "text/html")
                     .body(Body::empty())
                     .expect("failed to build request"),
             )

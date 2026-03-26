@@ -26,7 +26,10 @@ pub(super) mod journeys;
 pub(super) mod login;
 pub(super) mod logout;
 pub(super) mod register;
+/// Account settings (JSON + HTML via content negotiation).
+pub(super) mod settings;
 pub(super) mod static_assets;
+pub(super) mod stats;
 pub(super) mod sync;
 pub(super) mod tripit_callback;
 pub(super) mod tripit_connect;
@@ -431,6 +434,11 @@ pub(super) fn toplevel_api_routes() -> ApiRouter<super::AppState> {
     ApiRouter::new()
         .api_route("/health", get_with(health::handler, health::handler_docs))
         .api_route("/sync", post_with(sync::handler, sync::handler_docs))
+        .api_route("/stats", get_with(stats::handler, stats::handler_docs))
+        .api_route(
+            "/settings",
+            get_with(settings::handler, settings::handler_docs),
+        )
 }
 
 impl ErrorResponse {

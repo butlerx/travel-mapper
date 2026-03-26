@@ -31,8 +31,6 @@ pub(super) fn page_routes() -> ApiRouter<AppState> {
         .route("/register", get(register::page))
         .route("/login", get(login::page))
         .route("/dashboard", get(dashboard::page))
-        .route("/settings", get(settings::page))
-        .route("/stats", get(stats::page))
         .route("/journeys/new", get(add_journey::page))
 }
 
