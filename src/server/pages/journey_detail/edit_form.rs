@@ -167,6 +167,8 @@ pub(super) fn EditForm(journey: DetailRow) -> impl IntoView {
                 {form_field("edit-dest", "dest_name", "Destination", &journey.dest_name, "text")}
                 {form_field("edit-start-date", "start_date", "Start Date", &journey.start_date, "date")}
                 {form_field("edit-end-date", "end_date", "End Date", &journey.end_date, "date")}
+                {form_field("edit-cost-amount", "cost_amount", "Cost", &journey.cost_amount.map_or_else(String::new, |v| v.to_string()), "number")}
+                {form_field("edit-cost-currency", "cost_currency", "Currency", &journey.cost_currency.clone().unwrap_or_default(), "text")}
 
                 {detail_fields}
 

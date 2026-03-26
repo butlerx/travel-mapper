@@ -467,6 +467,8 @@ mod tests {
             boat_detail: None,
             transport_detail: None,
             cached_carrier: None,
+            cost_amount: None,
+            cost_currency: None,
         }
     }
 

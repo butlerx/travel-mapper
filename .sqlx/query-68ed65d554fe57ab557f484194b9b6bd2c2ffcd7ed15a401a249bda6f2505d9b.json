@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT\n                   h.travel_type,\n                   h.origin_name,\n                   h.origin_lat,\n                   h.origin_lng,\n                   h.origin_country,\n                   h.dest_name,\n                   h.dest_lat,\n                   h.dest_lng,\n                   h.dest_country,\n                   h.start_date,\n                   h.end_date,\n                   fd.airline,\n                   fd.aircraft_type,\n                   fd.cabin_class,\n                   fd.seat_type,\n                   fd.flight_reason\n               FROM hops h\n               LEFT JOIN flight_details fd ON fd.hop_id = h.id\n               WHERE h.user_id = ?\n               ORDER BY h.start_date ASC",
+  "query": "SELECT\n                   h.travel_type,\n                   h.origin_name,\n                   h.origin_lat,\n                   h.origin_lng,\n                   h.origin_country,\n                   h.dest_name,\n                   h.dest_lat,\n                   h.dest_lng,\n                   h.dest_country,\n                   h.start_date,\n                   h.end_date,\n                   fd.airline,\n                   fd.aircraft_type,\n                   fd.cabin_class,\n                   fd.seat_type,\n                   fd.flight_reason,\n                   h.cost_amount,\n                   h.cost_currency\n                FROM hops h\n               LEFT JOIN flight_details fd ON fd.hop_id = h.id\n               WHERE h.user_id = ?\n               ORDER BY h.start_date ASC",
   "describe": {
     "columns": [
       {
@@ -82,6 +82,16 @@
         "name": "flight_reason",
         "ordinal": 15,
         "type_info": "Text"
+      },
+      {
+        "name": "cost_amount",
+        "ordinal": 16,
+        "type_info": "Float"
+      },
+      {
+        "name": "cost_currency",
+        "ordinal": 17,
+        "type_info": "Text"
       }
     ],
     "parameters": {
@@ -103,8 +113,10 @@
       false,
       false,
       false,
-      false
+      false,
+      true,
+      true
     ]
   },
-  "hash": "a1fe3b42ba7a953679a1c5e6216d5b03de2721ff5e61fa4e445729dec46cbf49"
+  "hash": "68ed65d554fe57ab557f484194b9b6bd2c2ffcd7ed15a401a249bda6f2505d9b"
 }

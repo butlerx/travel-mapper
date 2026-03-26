@@ -178,6 +178,17 @@ fn AddHop(
                             </div>
                         </div>
 
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="cost_amount">"Cost"</label>
+                                <input type="number" id="cost_amount" name="cost_amount" step="0.01" min="0" placeholder="0.00" />
+                            </div>
+                            <div class="form-group">
+                                <label for="cost_currency">"Currency"</label>
+                                <input type="text" id="cost_currency" name="cost_currency" placeholder="EUR" maxlength="3" style="text-transform:uppercase" />
+                            </div>
+                        </div>
+
                         <button class="btn btn-primary btn-full" type="submit">"Add Journey"</button>
                     </form>
                 </section>

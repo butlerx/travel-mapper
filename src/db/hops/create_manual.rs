@@ -13,6 +13,8 @@ pub struct CreateManual {
     pub destination: String,
     pub date: String,
     pub detail: ManualDetail,
+    pub cost_amount: Option<f64>,
+    pub cost_currency: Option<String>,
 }
 
 impl CreateManual {
@@ -63,9 +65,11 @@ impl CreateManual {
                dest_country,
                start_date,
                end_date,
+               cost_amount,
+               cost_currency,
                raw_json,
                updated_at
-           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, datetime('now'))",
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, datetime('now'))",
             trip_id,
             self.user_id,
             travel_type,
@@ -79,6 +83,8 @@ impl CreateManual {
             dest_country,
             date,
             date,
+            self.cost_amount,
+            self.cost_currency,
         )
         .execute(&mut *tx)
         .await?;
@@ -125,6 +131,8 @@ mod tests {
                 seat: String::new(),
                 pnr: String::new(),
             }),
+            cost_amount: None,
+            cost_currency: None,
         }
         .execute(&pool)
         .await
@@ -177,6 +185,8 @@ mod tests {
                 booking_site: String::new(),
                 notes: String::new(),
             }),
+            cost_amount: None,
+            cost_currency: None,
         }
         .execute(&pool)
         .await
@@ -224,6 +234,8 @@ mod tests {
                 booking_site: String::new(),
                 notes: String::new(),
             }),
+            cost_amount: None,
+            cost_currency: None,
         }
         .execute(&pool)
         .await
@@ -268,6 +280,8 @@ mod tests {
                 confirmation_num: String::new(),
                 notes: "Window seat preferred".to_string(),
             }),
+            cost_amount: None,
+            cost_currency: None,
         }
         .execute(&pool)
         .await

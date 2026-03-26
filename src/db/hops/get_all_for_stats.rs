@@ -20,6 +20,8 @@ pub struct StatsRow {
     pub cabin_class: Option<String>,
     pub seat_type: Option<String>,
     pub flight_reason: Option<String>,
+    pub cost_amount: Option<f64>,
+    pub cost_currency: Option<String>,
 }
 
 /// Internal row type for the stats query.
@@ -40,6 +42,8 @@ struct StatsHopRow {
     cabin_class: Option<String>,
     seat_type: Option<String>,
     flight_reason: Option<String>,
+    cost_amount: Option<f64>,
+    cost_currency: Option<String>,
 }
 
 impl TryFrom<StatsHopRow> for StatsRow {
@@ -68,6 +72,8 @@ impl TryFrom<StatsHopRow> for StatsRow {
             cabin_class: non_empty(row.cabin_class),
             seat_type: non_empty(row.seat_type),
             flight_reason: non_empty(row.flight_reason),
+            cost_amount: row.cost_amount,
+            cost_currency: non_empty(row.cost_currency),
         })
     }
 }
@@ -100,8 +106,10 @@ impl GetAllForStats {
                    fd.aircraft_type,
                    fd.cabin_class,
                    fd.seat_type,
-                   fd.flight_reason
-               FROM hops h
+                   fd.flight_reason,
+                   h.cost_amount,
+                   h.cost_currency
+                FROM hops h
                LEFT JOIN flight_details fd ON fd.hop_id = h.id
                WHERE h.user_id = ?
                ORDER BY h.start_date ASC",

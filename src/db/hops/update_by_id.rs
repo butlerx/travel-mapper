@@ -26,6 +26,8 @@ pub struct UpdateById {
     pub rail_detail: Option<RailDetail>,
     pub boat_detail: Option<BoatDetail>,
     pub transport_detail: Option<TransportDetail>,
+    pub cost_amount: Option<f64>,
+    pub cost_currency: Option<String>,
 }
 
 impl UpdateById {
@@ -49,6 +51,8 @@ impl UpdateById {
                    dest_lng       = ?,
                    dest_country   = ?,
                    travel_type    = ?,
+                   cost_amount    = ?,
+                   cost_currency  = ?,
                    updated_at     = datetime('now')
              WHERE id = ? AND user_id = ?",
             self.origin_name,
@@ -62,6 +66,8 @@ impl UpdateById {
             self.dest_lng,
             self.dest_country,
             travel_type,
+            self.cost_amount,
+            self.cost_currency,
             self.id,
             self.user_id,
         )
@@ -172,6 +178,8 @@ mod tests {
             rail_detail: None,
             boat_detail: None,
             transport_detail: None,
+            cost_amount: None,
+            cost_currency: None,
         }
         .execute(&pool)
         .await
@@ -247,6 +255,8 @@ mod tests {
             rail_detail: Some(RailDetail::default()),
             boat_detail: None,
             transport_detail: None,
+            cost_amount: None,
+            cost_currency: None,
         }
         .execute(&pool)
         .await
@@ -277,6 +287,8 @@ mod tests {
             rail_detail: None,
             boat_detail: None,
             transport_detail: None,
+            cost_amount: None,
+            cost_currency: None,
         }
         .execute(&pool)
         .await

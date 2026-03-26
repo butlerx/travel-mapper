@@ -66,6 +66,10 @@ pub struct JourneyResponse {
     /// Arrival terminal from status enrichment.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub arr_terminal: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cost_amount: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cost_currency: Option<String>,
 }
 
 /// Mode of transport for a travel journey.
@@ -178,6 +182,8 @@ impl From<db::hops::Row> for JourneyResponse {
             dep_terminal: None,
             arr_gate: None,
             arr_terminal: None,
+            cost_amount: hop.cost_amount,
+            cost_currency: hop.cost_currency,
         }
     }
 }
@@ -211,6 +217,8 @@ impl From<db::hops::DetailRow> for JourneyResponse {
             dep_terminal: None,
             arr_gate: None,
             arr_terminal: None,
+            cost_amount: hop.cost_amount,
+            cost_currency: hop.cost_currency,
         }
     }
 }
@@ -236,6 +244,8 @@ impl MultiFormatResponse for JourneyResponse {
         "dep_terminal",
         "arr_gate",
         "arr_terminal",
+        "cost_amount",
+        "cost_currency",
     ];
 
     fn csv_row(&self) -> Vec<String> {
@@ -258,6 +268,8 @@ impl MultiFormatResponse for JourneyResponse {
             self.dep_terminal.clone().unwrap_or_default(),
             self.arr_gate.clone().unwrap_or_default(),
             self.arr_terminal.clone().unwrap_or_default(),
+            self.cost_amount.map_or_else(String::new, |v| v.to_string()),
+            self.cost_currency.clone().unwrap_or_default(),
         ]
     }
 
@@ -455,6 +467,14 @@ fn encode_query_value(s: &str) -> String {
     utf8_percent_encode(s, QUERY_ENCODE_SET).to_string()
 }
 
+fn update_form_error_redirect(id: i64, message: &str) -> Response {
+    Redirect::to(&format!(
+        "/journeys/{id}?error={}",
+        encode_query_value(message)
+    ))
+    .into_response()
+}
+
 /// Request body for manually creating a journey of any travel type.
 #[derive(Default, Deserialize, JsonSchema)]
 pub struct CreateJourneyRequest {
@@ -515,6 +535,10 @@ pub struct CreateJourneyRequest {
     pub transport_confirmation: Option<String>,
     #[serde(default)]
     pub transport_notes: Option<String>,
+    #[serde(default)]
+    pub cost_amount: Option<f64>,
+    #[serde(default)]
+    pub cost_currency: Option<String>,
 }
 
 impl CreateJourneyRequest {
@@ -615,6 +639,8 @@ pub async fn create_handler(
         destination: req.destination,
         date: req.date,
         detail,
+        cost_amount: req.cost_amount,
+        cost_currency: req.cost_currency,
     })
     .execute(&state.db)
     .await;
@@ -754,6 +780,10 @@ pub struct UpdateJourneyRequest {
     pub transport_confirmation: Option<String>,
     #[serde(default)]
     pub transport_notes: Option<String>,
+    #[serde(default)]
+    pub cost_amount: Option<f64>,
+    #[serde(default)]
+    pub cost_currency: Option<String>,
 }
 
 impl UpdateJourneyRequest {
@@ -838,11 +868,7 @@ pub async fn update_handler(
         Ok(r) => r,
         Err(err) => {
             return if is_form {
-                Redirect::to(&format!(
-                    "/journeys/{id}?error={}",
-                    encode_query_value(&format!("Invalid form data: {err}"))
-                ))
-                .into_response()
+                update_form_error_redirect(id, &format!("Invalid form data: {err}"))
             } else {
                 let format = negotiate_format(&headers);
                 err.into_format_response(format)
@@ -853,11 +879,7 @@ pub async fn update_handler(
     if req.origin_name.is_empty() || req.dest_name.is_empty() || req.start_date.is_empty() {
         let err = AppError::MissingField("origin_name, dest_name, and start_date are required");
         return if is_form {
-            Redirect::to(&format!(
-                "/journeys/{id}?error={}",
-                encode_query_value(&err.to_string())
-            ))
-            .into_response()
+            update_form_error_redirect(id, &err.to_string())
         } else {
             let format = negotiate_format(&headers);
             err.into_format_response(format)
@@ -887,6 +909,8 @@ pub async fn update_handler(
         rail_detail,
         boat_detail,
         transport_detail,
+        cost_amount: req.cost_amount,
+        cost_currency: req.cost_currency,
     })
     .execute(&state.db)
     .await;
@@ -905,11 +929,7 @@ pub async fn update_handler(
         }
         Ok(false) => {
             if is_form {
-                Redirect::to(&format!(
-                    "/journeys/{id}?error={}",
-                    encode_query_value("Journey not found")
-                ))
-                .into_response()
+                update_form_error_redirect(id, "Journey not found")
             } else {
                 (
                     StatusCode::NOT_FOUND,
@@ -923,11 +943,7 @@ pub async fn update_handler(
         Err(err) => {
             let err = AppError::from(err);
             if is_form {
-                Redirect::to(&format!(
-                    "/journeys/{id}?error={}",
-                    encode_query_value(&err.to_string())
-                ))
-                .into_response()
+                update_form_error_redirect(id, &err.to_string())
             } else {
                 let format = negotiate_format(&headers);
                 err.into_format_response(format)

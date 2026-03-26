@@ -43,6 +43,7 @@ pub struct DetailedStats {
     pub selected_year: Option<String>,
     pub first_year: Option<String>,
     pub last_year: Option<String>,
+    pub spending_summary: Vec<String>,
 }
 
 fn haversine_km(lat1: f64, lng1: f64, lat2: f64, lng2: f64) -> f64 {
@@ -104,6 +105,35 @@ fn count_journey_countries(row: &StatsRow, countries: &mut HashMap<String, usize
     }
 }
 
+fn summarize_spending(spending: HashMap<String, f64>) -> Vec<String> {
+    let mut spending_vec: Vec<(String, f64)> = spending.into_iter().collect();
+    spending_vec.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+    spending_vec
+        .into_iter()
+        .map(|(currency, total)| format!("{total:.2} {currency}"))
+        .collect()
+}
+
+fn spending_section_view(spending_summary: Vec<String>) -> AnyView {
+    if spending_summary.is_empty() {
+        ().into_any()
+    } else {
+        view! {
+            <section class="stats-section">
+                <h3 class="stats-section-title">"Spending"</h3>
+                <ul class="stats-top-list">
+                    {spending_summary.into_iter().map(|s| view! {
+                        <li class="stats-top-item">
+                            <span class="stats-top-name">{s}</span>
+                        </li>
+                    }).collect::<Vec<_>>()}
+                </ul>
+            </section>
+        }
+        .into_any()
+    }
+}
+
 pub fn compute_detailed_stats(all_rows: &[StatsRow], year_filter: Option<&str>) -> DetailedStats {
     let mut year_set: HashSet<String> = HashSet::new();
     for row in all_rows {
@@ -138,6 +168,7 @@ pub fn compute_detailed_stats(all_rows: &[StatsRow], year_filter: Option<&str>) 
     let mut cabin_classes: HashMap<String, usize> = HashMap::new();
     let mut seat_types: HashMap<String, usize> = HashMap::new();
     let mut flight_reasons: HashMap<String, usize> = HashMap::new();
+    let mut spending: HashMap<String, f64> = HashMap::new();
     let mut years: Vec<&str> = Vec::new();
 
     for row in &rows {
@@ -182,6 +213,16 @@ pub fn compute_detailed_stats(all_rows: &[StatsRow], year_filter: Option<&str>) 
             increment(&mut flight_reasons, r);
         }
 
+        if let Some(amount) = row.cost_amount {
+            let currency = row.cost_currency.clone().unwrap_or_default();
+            let key = if currency.is_empty() {
+                "???".to_owned()
+            } else {
+                currency
+            };
+            *spending.entry(key).or_insert(0.0) += amount;
+        }
+
         let route = format!("{}\u{2192}{}", row.origin_name, row.dest_name);
         *routes.entry(route).or_insert(0) += 1;
 
@@ -203,6 +244,7 @@ pub fn compute_detailed_stats(all_rows: &[StatsRow], year_filter: Option<&str>) 
     years.sort_unstable();
     stats.first_year = years.first().map(|y| (*y).to_owned());
     stats.last_year = years.last().map(|y| (*y).to_owned());
+    stats.spending_summary = summarize_spending(spending);
 
     stats
 }
@@ -367,6 +409,7 @@ fn StatsPage(stats: DetailedStats) -> impl IntoView {
     let seat_type = stats.seat_type_breakdown.clone();
     let flight_reason = stats.flight_reason_breakdown.clone();
     let countries = stats.countries.clone();
+    let spending_summary = stats.spending_summary.clone();
     let country_counts_json = countries_json(&countries);
 
     view! {
@@ -386,6 +429,7 @@ fn StatsPage(stats: DetailedStats) -> impl IntoView {
                             <TopList title="Seat Type" items=seat_type />
                             <TopList title="Flight Reason" items=flight_reason />
                             <TopList title="Countries Visited" items=countries />
+                            {spending_section_view(spending_summary)}
                         </div>
                         <section class="stats-section stats-map-section">
                             <h3 class="stats-section-title">"Country Map"</h3>
@@ -466,6 +510,7 @@ fn ShareStatsPage(stats: DetailedStats, token: String) -> impl IntoView {
     let seat_type = stats.seat_type_breakdown.clone();
     let flight_reason = stats.flight_reason_breakdown.clone();
     let countries = stats.countries.clone();
+    let spending_summary = stats.spending_summary.clone();
     let country_counts_json = countries_json(&countries);
 
     view! {
@@ -491,6 +536,7 @@ fn ShareStatsPage(stats: DetailedStats, token: String) -> impl IntoView {
                             <TopList title="Seat Type" items=seat_type />
                             <TopList title="Flight Reason" items=flight_reason />
                             <TopList title="Countries Visited" items=countries />
+                            {spending_section_view(spending_summary)}
                         </div>
                         <section class="stats-section stats-map-section">
                             <h3 class="stats-section-title">"Country Map"</h3>
@@ -726,6 +772,8 @@ mod tests {
                 cabin_class: Some("Economy".to_string()),
                 seat_type: Some("Window".to_string()),
                 flight_reason: Some("Leisure".to_string()),
+                cost_amount: None,
+                cost_currency: None,
             },
             StatsRow {
                 travel_type: TravelType::Rail,
@@ -744,6 +792,8 @@ mod tests {
                 cabin_class: None,
                 seat_type: None,
                 flight_reason: None,
+                cost_amount: None,
+                cost_currency: None,
             },
         ];
 
@@ -780,6 +830,8 @@ mod tests {
             cabin_class: None,
             seat_type: None,
             flight_reason: None,
+            cost_amount: None,
+            cost_currency: None,
         }];
 
         let stats = compute_detailed_stats(&rows, None);

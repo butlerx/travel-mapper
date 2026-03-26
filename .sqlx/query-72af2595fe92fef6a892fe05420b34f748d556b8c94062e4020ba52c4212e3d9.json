@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT\n                           h.id as \"id!: i64\",\n                           h.travel_type,\n                           h.origin_name,\n                           h.origin_lat,\n                           h.origin_lng,\n                           h.origin_country,\n                           h.dest_name,\n                           h.dest_lat,\n                           h.dest_lng,\n                           h.dest_country,\n                           h.start_date,\n                           h.end_date,\n                           COALESCE(fd.airline, rd.carrier, bd.ship_name, td.carrier_name) as \"carrier: String\"\n                       FROM hops h\n                       LEFT JOIN flight_details fd ON fd.hop_id = h.id\n                       LEFT JOIN rail_details rd ON rd.hop_id = h.id\n                       LEFT JOIN boat_details bd ON bd.hop_id = h.id\n                       LEFT JOIN transport_details td ON td.hop_id = h.id\n                       WHERE h.user_id = ? AND h.travel_type = ?\n                       ORDER BY h.start_date ASC",
+  "query": "SELECT\n                           h.id as \"id!: i64\",\n                           h.travel_type,\n                           h.origin_name,\n                           h.origin_lat,\n                           h.origin_lng,\n                           h.origin_country,\n                           h.dest_name,\n                           h.dest_lat,\n                           h.dest_lng,\n                           h.dest_country,\n                           h.start_date,\n                           h.end_date,\n                           COALESCE(fd.airline, rd.carrier, bd.ship_name, td.carrier_name) as \"carrier: String\",\n                           h.cost_amount,\n                           h.cost_currency\n                       FROM hops h\n                       LEFT JOIN flight_details fd ON fd.hop_id = h.id\n                       LEFT JOIN rail_details rd ON rd.hop_id = h.id\n                       LEFT JOIN boat_details bd ON bd.hop_id = h.id\n                       LEFT JOIN transport_details td ON td.hop_id = h.id\n                       WHERE h.user_id = ?\n                       ORDER BY h.start_date ASC",
   "describe": {
     "columns": [
       {
@@ -67,10 +67,20 @@
         "name": "carrier: String",
         "ordinal": 12,
         "type_info": "Null"
+      },
+      {
+        "name": "cost_amount",
+        "ordinal": 13,
+        "type_info": "Float"
+      },
+      {
+        "name": "cost_currency",
+        "ordinal": 14,
+        "type_info": "Text"
       }
     ],
     "parameters": {
-      "Right": 2
+      "Right": 1
     },
     "nullable": [
       true,
@@ -85,8 +95,10 @@
       true,
       false,
       false,
-      null
+      null,
+      true,
+      true
     ]
   },
-  "hash": "71f3f11388d100ad6d4dcf82058dd530335ba1204501ccb797ef8fb6dccc46e3"
+  "hash": "72af2595fe92fef6a892fe05420b34f748d556b8c94062e4020ba52c4212e3d9"
 }

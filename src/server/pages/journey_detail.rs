@@ -137,6 +137,15 @@ fn JourneyDetailPage(
         _ => ().into_any(),
     };
 
+    let cost_view = journey.cost_amount.map(|amount| {
+        let currency = journey.cost_currency.clone().unwrap_or_default();
+        if currency.is_empty() {
+            format!("{amount:.2}")
+        } else {
+            format!("{amount:.2} {currency}")
+        }
+    });
+
     let origin_lat = journey.origin_lat.to_string();
     let origin_lng = journey.origin_lng.to_string();
     let dest_lat = journey.dest_lat.to_string();
@@ -205,6 +214,9 @@ fn JourneyDetailPage(
                         <span class=css>{label}</span>
                     })}
                     {countries_view}
+                    {cost_view.map(|text| view! {
+                        <p class="journey-detail-cost">{text}</p>
+                    })}
                 </header>
 
                 <div

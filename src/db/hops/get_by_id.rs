@@ -49,6 +49,8 @@ pub struct DetailRow {
     pub rail_detail: Option<RailDetail>,
     pub boat_detail: Option<BoatDetail>,
     pub transport_detail: Option<TransportDetail>,
+    pub cost_amount: Option<f64>,
+    pub cost_currency: Option<String>,
 }
 
 /// Internal row type for the `GetById` query — all detail columns are nullable from LEFT JOINs.
@@ -111,6 +113,8 @@ struct DetailHopRow {
     vehicle_description: Option<String>,
     transport_confirmation: Option<String>,
     transport_notes: Option<String>,
+    cost_amount: Option<f64>,
+    cost_currency: Option<String>,
 }
 
 impl TryFrom<DetailHopRow> for DetailRow {
@@ -198,6 +202,8 @@ impl TryFrom<DetailHopRow> for DetailRow {
             rail_detail,
             boat_detail,
             transport_detail,
+            cost_amount: row.cost_amount,
+            cost_currency: non_empty(row.cost_currency),
         })
     }
 }
@@ -266,11 +272,13 @@ impl GetById {
                    bd.confirmation_num AS boat_confirmation,
                    bd.booking_site AS boat_booking_site,
                    bd.notes AS boat_notes,
-                   td.carrier_name AS transport_carrier,
-                   td.vehicle_description,
-                   td.confirmation_num AS transport_confirmation,
-                   td.notes AS transport_notes
-               FROM hops h
+                    td.carrier_name AS transport_carrier,
+                    td.vehicle_description,
+                    td.confirmation_num AS transport_confirmation,
+                    td.notes AS transport_notes,
+                    h.cost_amount,
+                    h.cost_currency
+                FROM hops h
                LEFT JOIN flight_details fd ON fd.hop_id = h.id
                LEFT JOIN rail_details rd ON rd.hop_id = h.id
                LEFT JOIN boat_details bd ON bd.hop_id = h.id

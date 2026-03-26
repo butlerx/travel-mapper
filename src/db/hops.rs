@@ -154,6 +154,8 @@ pub struct Row {
     pub rail_detail: Option<RailDetail>,
     pub boat_detail: Option<BoatDetail>,
     pub transport_detail: Option<TransportDetail>,
+    pub cost_amount: Option<f64>,
+    pub cost_currency: Option<String>,
     /// Carrier name from SQL COALESCE — used as fallback when detail structs
     /// are not loaded (e.g. listing queries).  Not a domain field; populated
     /// only by `TryFrom<HopRow>`.
@@ -197,6 +199,8 @@ pub(super) struct HopRow {
     pub start_date: String,
     pub end_date: String,
     pub carrier: Option<String>,
+    pub cost_amount: Option<f64>,
+    pub cost_currency: Option<String>,
 }
 
 /// Lightweight summary of a hop — used for trip detail listings and
@@ -237,6 +241,8 @@ impl TryFrom<HopRow> for Row {
             boat_detail: None,
             transport_detail: None,
             cached_carrier: row.carrier,
+            cost_amount: row.cost_amount,
+            cost_currency: row.cost_currency,
         })
     }
 }
@@ -459,5 +465,7 @@ pub(super) fn sample_hop(
         boat_detail: None,
         transport_detail: None,
         cached_carrier: None,
+        cost_amount: None,
+        cost_currency: None,
     }
 }
