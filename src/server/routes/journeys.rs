@@ -3,6 +3,7 @@ use super::{
 };
 use crate::{
     db,
+    distance::haversine_miles,
     server::{
         AppState,
         components::CarrierIcon,
@@ -70,6 +71,10 @@ pub struct JourneyResponse {
     pub cost_amount: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cost_currency: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub loyalty_program: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub miles_earned: Option<f64>,
 }
 
 /// Mode of transport for a travel journey.
@@ -184,6 +189,8 @@ impl From<db::hops::Row> for JourneyResponse {
             arr_terminal: None,
             cost_amount: hop.cost_amount,
             cost_currency: hop.cost_currency,
+            loyalty_program: hop.loyalty_program,
+            miles_earned: hop.miles_earned,
         }
     }
 }
@@ -219,6 +226,8 @@ impl From<db::hops::DetailRow> for JourneyResponse {
             arr_terminal: None,
             cost_amount: hop.cost_amount,
             cost_currency: hop.cost_currency,
+            loyalty_program: hop.loyalty_program,
+            miles_earned: hop.miles_earned,
         }
     }
 }
@@ -467,6 +476,32 @@ fn encode_query_value(s: &str) -> String {
     utf8_percent_encode(s, QUERY_ENCODE_SET).to_string()
 }
 
+fn has_coords(origin_lat: f64, origin_lng: f64, dest_lat: f64, dest_lng: f64) -> bool {
+    origin_lat != 0.0 && origin_lng != 0.0 && dest_lat != 0.0 && dest_lng != 0.0
+}
+
+fn auto_miles_if_air(
+    travel_type: &JourneyTravelType,
+    miles_earned: Option<f64>,
+    origin_lat: f64,
+    origin_lng: f64,
+    dest_lat: f64,
+    dest_lng: f64,
+) -> Option<f64> {
+    if *travel_type != JourneyTravelType::Air || miles_earned.is_some() {
+        return miles_earned;
+    }
+    if !has_coords(origin_lat, origin_lng, dest_lat, dest_lng) {
+        return None;
+    }
+    let computed = haversine_miles(origin_lat, origin_lng, dest_lat, dest_lng);
+    if computed.is_finite() && computed > 0.0 {
+        Some(computed)
+    } else {
+        None
+    }
+}
+
 fn update_form_error_redirect(id: i64, message: &str) -> Response {
     Redirect::to(&format!(
         "/journeys/{id}?error={}",
@@ -539,6 +574,10 @@ pub struct CreateJourneyRequest {
     pub cost_amount: Option<f64>,
     #[serde(default)]
     pub cost_currency: Option<String>,
+    #[serde(default)]
+    pub loyalty_program: Option<String>,
+    #[serde(default)]
+    pub miles_earned: Option<f64>,
 }
 
 impl CreateJourneyRequest {
@@ -632,6 +671,21 @@ pub async fn create_handler(
     }
 
     let detail = req.build_manual_detail();
+    let miles_earned = match &detail {
+        db::hops::ManualDetail::Air(_) => {
+            let origin = crate::geocode::airports::lookup_enriched(&req.origin);
+            let dest = crate::geocode::airports::lookup_enriched(&req.destination);
+            auto_miles_if_air(
+                &req.travel_type,
+                req.miles_earned,
+                origin.as_ref().map_or(0.0, |a| a.latitude),
+                origin.as_ref().map_or(0.0, |a| a.longitude),
+                dest.as_ref().map_or(0.0, |a| a.latitude),
+                dest.as_ref().map_or(0.0, |a| a.longitude),
+            )
+        }
+        _ => req.miles_earned,
+    };
 
     let result = (db::hops::CreateManual {
         user_id: auth.user_id,
@@ -641,6 +695,8 @@ pub async fn create_handler(
         detail,
         cost_amount: req.cost_amount,
         cost_currency: req.cost_currency,
+        loyalty_program: req.loyalty_program.as_deref(),
+        miles_earned,
     })
     .execute(&state.db)
     .await;
@@ -784,6 +840,10 @@ pub struct UpdateJourneyRequest {
     pub cost_amount: Option<f64>,
     #[serde(default)]
     pub cost_currency: Option<String>,
+    #[serde(default)]
+    pub loyalty_program: Option<String>,
+    #[serde(default)]
+    pub miles_earned: Option<f64>,
 }
 
 impl UpdateJourneyRequest {
@@ -890,6 +950,7 @@ pub async fn update_handler(
     let rail_detail = req.build_rail_detail();
     let boat_detail = req.build_boat_detail();
     let transport_detail = req.build_transport_detail();
+    let travel_type = req.travel_type.clone();
 
     let result = (db::hops::UpdateById {
         id,
@@ -904,13 +965,22 @@ pub async fn update_handler(
         dest_lat: req.dest_lat,
         dest_lng: req.dest_lng,
         dest_country: req.dest_country,
-        travel_type: req.travel_type.into(),
+        travel_type: travel_type.clone().into(),
         flight_detail,
         rail_detail,
         boat_detail,
         transport_detail,
         cost_amount: req.cost_amount,
         cost_currency: req.cost_currency,
+        loyalty_program: req.loyalty_program.as_deref(),
+        miles_earned: auto_miles_if_air(
+            &travel_type,
+            req.miles_earned,
+            req.origin_lat,
+            req.origin_lng,
+            req.dest_lat,
+            req.dest_lng,
+        ),
     })
     .execute(&state.db)
     .await;

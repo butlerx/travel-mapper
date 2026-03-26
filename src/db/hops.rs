@@ -156,6 +156,8 @@ pub struct Row {
     pub transport_detail: Option<TransportDetail>,
     pub cost_amount: Option<f64>,
     pub cost_currency: Option<String>,
+    pub loyalty_program: Option<String>,
+    pub miles_earned: Option<f64>,
     /// Carrier name from SQL COALESCE — used as fallback when detail structs
     /// are not loaded (e.g. listing queries).  Not a domain field; populated
     /// only by `TryFrom<HopRow>`.
@@ -201,6 +203,8 @@ pub(super) struct HopRow {
     pub carrier: Option<String>,
     pub cost_amount: Option<f64>,
     pub cost_currency: Option<String>,
+    pub loyalty_program: Option<String>,
+    pub miles_earned: Option<f64>,
 }
 
 /// Lightweight summary of a hop — used for trip detail listings and
@@ -243,6 +247,8 @@ impl TryFrom<HopRow> for Row {
             cached_carrier: row.carrier,
             cost_amount: row.cost_amount,
             cost_currency: row.cost_currency,
+            loyalty_program: row.loyalty_program,
+            miles_earned: row.miles_earned,
         })
     }
 }
@@ -467,5 +473,7 @@ pub(super) fn sample_hop(
         cached_carrier: None,
         cost_amount: None,
         cost_currency: None,
+        loyalty_program: None,
+        miles_earned: None,
     }
 }

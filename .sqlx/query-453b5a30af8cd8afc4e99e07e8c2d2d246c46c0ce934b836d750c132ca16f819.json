@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT\n                           h.id as \"id!: i64\",\n                           h.travel_type,\n                           h.origin_name,\n                           h.origin_lat,\n                           h.origin_lng,\n                           h.origin_country,\n                           h.dest_name,\n                           h.dest_lat,\n                           h.dest_lng,\n                           h.dest_country,\n                           h.start_date,\n                           h.end_date,\n                           COALESCE(fd.airline, rd.carrier, bd.ship_name, td.carrier_name) as \"carrier: String\",\n                           h.cost_amount,\n                           h.cost_currency\n                       FROM hops h\n                       LEFT JOIN flight_details fd ON fd.hop_id = h.id\n                       LEFT JOIN rail_details rd ON rd.hop_id = h.id\n                       LEFT JOIN boat_details bd ON bd.hop_id = h.id\n                       LEFT JOIN transport_details td ON td.hop_id = h.id\n                       WHERE h.user_id = ?\n                       ORDER BY h.start_date ASC",
+  "query": "SELECT\n                           h.id as \"id!: i64\",\n                           h.travel_type,\n                           h.origin_name,\n                           h.origin_lat,\n                           h.origin_lng,\n                           h.origin_country,\n                           h.dest_name,\n                           h.dest_lat,\n                           h.dest_lng,\n                           h.dest_country,\n                           h.start_date,\n                           h.end_date,\n                           COALESCE(fd.airline, rd.carrier, bd.ship_name, td.carrier_name) as \"carrier: String\",\n                           h.cost_amount,\n                           h.cost_currency,\n                           h.loyalty_program,\n                           h.miles_earned\n                       FROM hops h\n                       LEFT JOIN flight_details fd ON fd.hop_id = h.id\n                       LEFT JOIN rail_details rd ON rd.hop_id = h.id\n                       LEFT JOIN boat_details bd ON bd.hop_id = h.id\n                       LEFT JOIN transport_details td ON td.hop_id = h.id\n                       WHERE h.user_id = ?\n                       ORDER BY h.start_date ASC",
   "describe": {
     "columns": [
       {
@@ -77,6 +77,16 @@
         "name": "cost_currency",
         "ordinal": 14,
         "type_info": "Text"
+      },
+      {
+        "name": "loyalty_program",
+        "ordinal": 15,
+        "type_info": "Text"
+      },
+      {
+        "name": "miles_earned",
+        "ordinal": 16,
+        "type_info": "Float"
       }
     ],
     "parameters": {
@@ -97,8 +107,10 @@
       false,
       null,
       true,
+      true,
+      true,
       true
     ]
   },
-  "hash": "72af2595fe92fef6a892fe05420b34f748d556b8c94062e4020ba52c4212e3d9"
+  "hash": "453b5a30af8cd8afc4e99e07e8c2d2d246c46c0ce934b836d750c132ca16f819"
 }

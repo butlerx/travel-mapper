@@ -31,7 +31,9 @@ impl GetAll<'_> {
                            h.end_date,
                            COALESCE(fd.airline, rd.carrier, bd.ship_name, td.carrier_name) as "carrier: String",
                            h.cost_amount,
-                           h.cost_currency
+                           h.cost_currency,
+                           h.loyalty_program,
+                           h.miles_earned
                        FROM hops h
                        LEFT JOIN flight_details fd ON fd.hop_id = h.id
                        LEFT JOIN rail_details rd ON rd.hop_id = h.id
@@ -63,7 +65,9 @@ impl GetAll<'_> {
                            h.end_date,
                            COALESCE(fd.airline, rd.carrier, bd.ship_name, td.carrier_name) as "carrier: String",
                            h.cost_amount,
-                           h.cost_currency
+                           h.cost_currency,
+                           h.loyalty_program,
+                           h.miles_earned
                        FROM hops h
                        LEFT JOIN flight_details fd ON fd.hop_id = h.id
                        LEFT JOIN rail_details rd ON rd.hop_id = h.id

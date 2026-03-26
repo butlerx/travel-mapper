@@ -1,5 +1,6 @@
 use crate::{
     db::hops::{StatsRow, TravelType},
+    distance::{haversine_km, haversine_miles},
     server::components::{NavBar, Shell},
 };
 use axum::{
@@ -44,15 +45,8 @@ pub struct DetailedStats {
     pub first_year: Option<String>,
     pub last_year: Option<String>,
     pub spending_summary: Vec<String>,
-}
-
-fn haversine_km(lat1: f64, lng1: f64, lat2: f64, lng2: f64) -> f64 {
-    let r = 6371.0_f64;
-    let d_lat = (lat2 - lat1).to_radians();
-    let d_lng = (lng2 - lng1).to_radians();
-    let a = (d_lat / 2.0).sin().powi(2)
-        + lat1.to_radians().cos() * lat2.to_radians().cos() * (d_lng / 2.0).sin().powi(2);
-    r * 2.0 * a.sqrt().atan2((1.0 - a).sqrt())
+    pub miles_by_program: Vec<(String, f64)>,
+    pub miles_summary: Vec<String>,
 }
 
 /// Earth distances cap out well below `u64::MAX`, so truncation is safe.
@@ -114,6 +108,16 @@ fn summarize_spending(spending: HashMap<String, f64>) -> Vec<String> {
         .collect()
 }
 
+fn summarize_miles(miles_map: HashMap<String, f64>) -> Vec<String> {
+    let mut miles_vec: Vec<(String, f64)> = miles_map.into_iter().collect();
+    miles_vec.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+    miles_vec
+        .into_iter()
+        .filter(|(_, total)| total.is_finite() && *total > 0.0)
+        .map(|(program, total)| format!("{total:.0} mi ({program})"))
+        .collect()
+}
+
 fn spending_section_view(spending_summary: Vec<String>) -> AnyView {
     if spending_summary.is_empty() {
         ().into_any()
@@ -134,7 +138,27 @@ fn spending_section_view(spending_summary: Vec<String>) -> AnyView {
     }
 }
 
-pub fn compute_detailed_stats(all_rows: &[StatsRow], year_filter: Option<&str>) -> DetailedStats {
+fn miles_section_view(miles_summary: Vec<String>) -> AnyView {
+    if miles_summary.is_empty() {
+        ().into_any()
+    } else {
+        view! {
+            <section class="stats-section">
+                <h3 class="stats-section-title">"Miles by Program"</h3>
+                <ul class="stats-top-list">
+                    {miles_summary.into_iter().map(|s| view! {
+                        <li class="stats-top-item">
+                            <span class="stats-top-name">{s}</span>
+                        </li>
+                    }).collect::<Vec<_>>()}
+                </ul>
+            </section>
+        }
+        .into_any()
+    }
+}
+
+fn sorted_available_years(all_rows: &[StatsRow]) -> Vec<String> {
     let mut year_set: HashSet<String> = HashSet::new();
     for row in all_rows {
         if let Some(y) = extract_year(&row.start_date) {
@@ -143,15 +167,47 @@ pub fn compute_detailed_stats(all_rows: &[StatsRow], year_filter: Option<&str>) 
     }
     let mut available_years: Vec<String> = year_set.into_iter().collect();
     available_years.sort_unstable();
+    available_years
+}
 
-    let rows: Vec<&StatsRow> = if let Some(y) = year_filter {
+fn selected_rows<'a>(all_rows: &'a [StatsRow], year_filter: Option<&str>) -> Vec<&'a StatsRow> {
+    if let Some(y) = year_filter {
         all_rows
             .iter()
             .filter(|r| extract_year(&r.start_date) == Some(y))
             .collect()
     } else {
         all_rows.iter().collect()
-    };
+    }
+}
+
+fn add_row_miles(miles_by_program: &mut HashMap<String, f64>, row: &StatsRow) {
+    if let Some(miles) = row.miles_earned {
+        if miles.is_finite() && miles > 0.0 {
+            let program = row
+                .loyalty_program
+                .clone()
+                .unwrap_or_else(|| "Unassigned".to_owned());
+            *miles_by_program.entry(program).or_insert(0.0) += miles;
+        }
+    } else if row.travel_type == TravelType::Air
+        && (row.origin_lat != 0.0
+            || row.origin_lng != 0.0
+            || row.dest_lat != 0.0
+            || row.dest_lng != 0.0)
+    {
+        let miles = haversine_miles(row.origin_lat, row.origin_lng, row.dest_lat, row.dest_lng);
+        if miles.is_finite() && miles > 0.0 {
+            *miles_by_program
+                .entry("Unassigned".to_owned())
+                .or_insert(0.0) += miles;
+        }
+    }
+}
+
+pub fn compute_detailed_stats(all_rows: &[StatsRow], year_filter: Option<&str>) -> DetailedStats {
+    let available_years = sorted_available_years(all_rows);
+    let rows = selected_rows(all_rows, year_filter);
 
     let mut stats = DetailedStats {
         total_journeys: rows.len(),
@@ -169,6 +225,7 @@ pub fn compute_detailed_stats(all_rows: &[StatsRow], year_filter: Option<&str>) 
     let mut seat_types: HashMap<String, usize> = HashMap::new();
     let mut flight_reasons: HashMap<String, usize> = HashMap::new();
     let mut spending: HashMap<String, f64> = HashMap::new();
+    let mut miles_by_program: HashMap<String, f64> = HashMap::new();
     let mut years: Vec<&str> = Vec::new();
 
     for row in &rows {
@@ -223,6 +280,8 @@ pub fn compute_detailed_stats(all_rows: &[StatsRow], year_filter: Option<&str>) 
             *spending.entry(key).or_insert(0.0) += amount;
         }
 
+        add_row_miles(&mut miles_by_program, row);
+
         let route = format!("{}\u{2192}{}", row.origin_name, row.dest_name);
         *routes.entry(route).or_insert(0) += 1;
 
@@ -245,6 +304,10 @@ pub fn compute_detailed_stats(all_rows: &[StatsRow], year_filter: Option<&str>) 
     stats.first_year = years.first().map(|y| (*y).to_owned());
     stats.last_year = years.last().map(|y| (*y).to_owned());
     stats.spending_summary = summarize_spending(spending);
+    let mut miles_entries: Vec<(String, f64)> = miles_by_program.into_iter().collect();
+    miles_entries.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+    stats.miles_by_program.clone_from(&miles_entries);
+    stats.miles_summary = summarize_miles(miles_entries.into_iter().collect::<HashMap<_, _>>());
 
     stats
 }
@@ -410,6 +473,7 @@ fn StatsPage(stats: DetailedStats) -> impl IntoView {
     let flight_reason = stats.flight_reason_breakdown.clone();
     let countries = stats.countries.clone();
     let spending_summary = stats.spending_summary.clone();
+    let miles_summary = stats.miles_summary.clone();
     let country_counts_json = countries_json(&countries);
 
     view! {
@@ -430,6 +494,7 @@ fn StatsPage(stats: DetailedStats) -> impl IntoView {
                             <TopList title="Flight Reason" items=flight_reason />
                             <TopList title="Countries Visited" items=countries />
                             {spending_section_view(spending_summary)}
+                            {miles_section_view(miles_summary)}
                         </div>
                         <section class="stats-section stats-map-section">
                             <h3 class="stats-section-title">"Country Map"</h3>
@@ -511,6 +576,7 @@ fn ShareStatsPage(stats: DetailedStats, token: String) -> impl IntoView {
     let flight_reason = stats.flight_reason_breakdown.clone();
     let countries = stats.countries.clone();
     let spending_summary = stats.spending_summary.clone();
+    let miles_summary = stats.miles_summary.clone();
     let country_counts_json = countries_json(&countries);
 
     view! {
@@ -537,6 +603,7 @@ fn ShareStatsPage(stats: DetailedStats, token: String) -> impl IntoView {
                             <TopList title="Flight Reason" items=flight_reason />
                             <TopList title="Countries Visited" items=countries />
                             {spending_section_view(spending_summary)}
+                            {miles_section_view(miles_summary)}
                         </div>
                         <section class="stats-section stats-map-section">
                             <h3 class="stats-section-title">"Country Map"</h3>
@@ -774,6 +841,8 @@ mod tests {
                 flight_reason: Some("Leisure".to_string()),
                 cost_amount: None,
                 cost_currency: None,
+                loyalty_program: None,
+                miles_earned: None,
             },
             StatsRow {
                 travel_type: TravelType::Rail,
@@ -794,6 +863,8 @@ mod tests {
                 flight_reason: None,
                 cost_amount: None,
                 cost_currency: None,
+                loyalty_program: None,
+                miles_earned: None,
             },
         ];
 
@@ -832,6 +903,8 @@ mod tests {
             flight_reason: None,
             cost_amount: None,
             cost_currency: None,
+            loyalty_program: None,
+            miles_earned: None,
         }];
 
         let stats = compute_detailed_stats(&rows, None);

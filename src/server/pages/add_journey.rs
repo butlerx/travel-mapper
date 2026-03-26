@@ -189,6 +189,17 @@ fn AddHop(
                             </div>
                         </div>
 
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="loyalty_program">"Loyalty Program"</label>
+                                <input type="text" id="loyalty_program" name="loyalty_program" placeholder="e.g. Delta SkyMiles" />
+                            </div>
+                            <div class="form-group">
+                                <label for="miles_earned">"Miles Earned"</label>
+                                <input type="number" id="miles_earned" name="miles_earned" step="1" placeholder="auto-calculated for flights" />
+                            </div>
+                        </div>
+
                         <button class="btn btn-primary btn-full" type="submit">"Add Journey"</button>
                     </form>
                 </section>

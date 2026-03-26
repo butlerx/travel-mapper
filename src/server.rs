@@ -190,6 +190,8 @@ pub(crate) mod test_helpers {
             cached_carrier: None,
             cost_amount: None,
             cost_currency: None,
+            loyalty_program: None,
+            miles_earned: None,
         }
     }
 

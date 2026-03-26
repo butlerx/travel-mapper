@@ -76,6 +76,22 @@ fn detail_row_view(label: &'static str, value: &str) -> impl IntoView + use<> {
     }
 }
 
+fn format_miles(miles: f64) -> Option<String> {
+    if !miles.is_finite() || miles <= 0.0 {
+        return None;
+    }
+    let rounded = miles.round();
+    let text = format!("{rounded:.0}");
+    let mut out = String::new();
+    for (i, ch) in text.chars().rev().enumerate() {
+        if i > 0 && i % 3 == 0 {
+            out.push(',');
+        }
+        out.push(ch);
+    }
+    Some(format!("{} mi", out.chars().rev().collect::<String>()))
+}
+
 fn timing_row(phase: &'static str, scheduled: &str, actual: &str) -> Option<impl IntoView + use<>> {
     if scheduled.is_empty() && actual.is_empty() {
         return None;
@@ -145,6 +161,8 @@ fn JourneyDetailPage(
             format!("{amount:.2} {currency}")
         }
     });
+    let loyalty_view = journey.loyalty_program.clone().filter(|v| !v.is_empty());
+    let miles_view = journey.miles_earned.and_then(format_miles);
 
     let origin_lat = journey.origin_lat.to_string();
     let origin_lng = journey.origin_lng.to_string();
@@ -215,6 +233,12 @@ fn JourneyDetailPage(
                     })}
                     {countries_view}
                     {cost_view.map(|text| view! {
+                        <p class="journey-detail-cost">{text}</p>
+                    })}
+                    {loyalty_view.map(|program| view! {
+                        <p class="journey-detail-cost">{format!("Loyalty: {program}")}</p>
+                    })}
+                    {miles_view.map(|text| view! {
                         <p class="journey-detail-cost">{text}</p>
                     })}
                 </header>

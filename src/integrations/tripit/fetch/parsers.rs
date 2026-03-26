@@ -74,6 +74,8 @@ pub(super) fn parse_air(obj: &Value) -> Vec<Hop> {
                 cached_carrier: None,
                 cost_amount: None,
                 cost_currency: None,
+                loyalty_program: None,
+                miles_earned: None,
             })
         })
         .collect()
@@ -143,6 +145,8 @@ pub(super) fn parse_rail(obj: &Value) -> Vec<Hop> {
                 cached_carrier: None,
                 cost_amount: None,
                 cost_currency: None,
+                loyalty_program: None,
+                miles_earned: None,
             })
         })
         .collect()
@@ -203,6 +207,8 @@ pub(super) fn parse_cruise(obj: &Value) -> Vec<Hop> {
         cached_carrier: None,
         cost_amount: None,
         cost_currency: None,
+        loyalty_program: None,
+        miles_earned: None,
     }]
 }
 
@@ -308,6 +314,8 @@ pub(super) fn parse_transport(obj: &Value) -> Vec<Hop> {
                 cached_carrier: None,
                 cost_amount: None,
                 cost_currency: None,
+                loyalty_program: None,
+                miles_earned: None,
             }
         })
         .collect()

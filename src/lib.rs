@@ -5,6 +5,8 @@
 
 pub mod auth;
 pub mod db;
+/// Distance calculation utilities — haversine great-circle distance.
+pub mod distance;
 pub mod geocode;
 pub mod integrations;
 pub mod server;

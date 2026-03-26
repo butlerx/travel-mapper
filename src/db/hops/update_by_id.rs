@@ -8,7 +8,7 @@ use sqlx::SqlitePool;
 ///
 /// The hop must belong to the given `user_id` — returns `Ok(false)` if not
 /// found (either missing or owned by another user).
-pub struct UpdateById {
+pub struct UpdateById<'a> {
     pub id: i64,
     pub user_id: i64,
     pub origin_name: String,
@@ -28,9 +28,11 @@ pub struct UpdateById {
     pub transport_detail: Option<TransportDetail>,
     pub cost_amount: Option<f64>,
     pub cost_currency: Option<String>,
+    pub loyalty_program: Option<&'a str>,
+    pub miles_earned: Option<f64>,
 }
 
-impl UpdateById {
+impl UpdateById<'_> {
     /// # Errors
     ///
     /// Returns an error if the update query or detail upserts fail.
@@ -53,6 +55,8 @@ impl UpdateById {
                    travel_type    = ?,
                    cost_amount    = ?,
                    cost_currency  = ?,
+                   loyalty_program = ?,
+                   miles_earned = ?,
                    updated_at     = datetime('now')
              WHERE id = ? AND user_id = ?",
             self.origin_name,
@@ -68,6 +72,8 @@ impl UpdateById {
             travel_type,
             self.cost_amount,
             self.cost_currency,
+            self.loyalty_program,
+            self.miles_earned,
             self.id,
             self.user_id,
         )
@@ -180,6 +186,8 @@ mod tests {
             transport_detail: None,
             cost_amount: None,
             cost_currency: None,
+            loyalty_program: None,
+            miles_earned: None,
         }
         .execute(&pool)
         .await
@@ -257,6 +265,8 @@ mod tests {
             transport_detail: None,
             cost_amount: None,
             cost_currency: None,
+            loyalty_program: None,
+            miles_earned: None,
         }
         .execute(&pool)
         .await
@@ -289,6 +299,8 @@ mod tests {
             transport_detail: None,
             cost_amount: None,
             cost_currency: None,
+            loyalty_program: None,
+            miles_earned: None,
         }
         .execute(&pool)
         .await

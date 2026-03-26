@@ -7,7 +7,7 @@ use sqlx::SqlitePool;
 use uuid::Uuid;
 
 /// Create a single manually-entered hop with type-specific details.
-pub struct CreateManual {
+pub struct CreateManual<'a> {
     pub user_id: i64,
     pub origin: String,
     pub destination: String,
@@ -15,9 +15,11 @@ pub struct CreateManual {
     pub detail: ManualDetail,
     pub cost_amount: Option<f64>,
     pub cost_currency: Option<String>,
+    pub loyalty_program: Option<&'a str>,
+    pub miles_earned: Option<f64>,
 }
 
-impl CreateManual {
+impl CreateManual<'_> {
     /// # Errors
     ///
     /// Returns an error if inserting the hop or its details fails.
@@ -67,9 +69,11 @@ impl CreateManual {
                end_date,
                cost_amount,
                cost_currency,
+               loyalty_program,
+               miles_earned,
                raw_json,
                updated_at
-           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, datetime('now'))",
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, datetime('now'))",
             trip_id,
             self.user_id,
             travel_type,
@@ -85,6 +89,8 @@ impl CreateManual {
             date,
             self.cost_amount,
             self.cost_currency,
+            self.loyalty_program,
+            self.miles_earned,
         )
         .execute(&mut *tx)
         .await?;
@@ -133,6 +139,8 @@ mod tests {
             }),
             cost_amount: None,
             cost_currency: None,
+            loyalty_program: None,
+            miles_earned: None,
         }
         .execute(&pool)
         .await
@@ -187,6 +195,8 @@ mod tests {
             }),
             cost_amount: None,
             cost_currency: None,
+            loyalty_program: None,
+            miles_earned: None,
         }
         .execute(&pool)
         .await
@@ -236,6 +246,8 @@ mod tests {
             }),
             cost_amount: None,
             cost_currency: None,
+            loyalty_program: None,
+            miles_earned: None,
         }
         .execute(&pool)
         .await
@@ -282,6 +294,8 @@ mod tests {
             }),
             cost_amount: None,
             cost_currency: None,
+            loyalty_program: None,
+            miles_earned: None,
         }
         .execute(&pool)
         .await

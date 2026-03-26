@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT\n                   h.travel_type,\n                   h.origin_name,\n                   h.origin_lat,\n                   h.origin_lng,\n                   h.origin_country,\n                   h.dest_name,\n                   h.dest_lat,\n                   h.dest_lng,\n                   h.dest_country,\n                   h.start_date,\n                   h.end_date,\n                   fd.airline,\n                   fd.aircraft_type,\n                   fd.cabin_class,\n                   fd.seat_type,\n                   fd.flight_reason,\n                   h.cost_amount,\n                   h.cost_currency\n                FROM hops h\n               LEFT JOIN flight_details fd ON fd.hop_id = h.id\n               WHERE h.user_id = ?\n               ORDER BY h.start_date ASC",
+  "query": "SELECT\n                   h.travel_type,\n                   h.origin_name,\n                   h.origin_lat,\n                   h.origin_lng,\n                   h.origin_country,\n                   h.dest_name,\n                   h.dest_lat,\n                   h.dest_lng,\n                   h.dest_country,\n                   h.start_date,\n                   h.end_date,\n                   fd.airline,\n                   fd.aircraft_type,\n                   fd.cabin_class,\n                   fd.seat_type,\n                   fd.flight_reason,\n                   h.cost_amount,\n                   h.cost_currency,\n                   h.loyalty_program,\n                   h.miles_earned\n                FROM hops h\n               LEFT JOIN flight_details fd ON fd.hop_id = h.id\n               WHERE h.user_id = ?\n               ORDER BY h.start_date ASC",
   "describe": {
     "columns": [
       {
@@ -92,6 +92,16 @@
         "name": "cost_currency",
         "ordinal": 17,
         "type_info": "Text"
+      },
+      {
+        "name": "loyalty_program",
+        "ordinal": 18,
+        "type_info": "Text"
+      },
+      {
+        "name": "miles_earned",
+        "ordinal": 19,
+        "type_info": "Float"
       }
     ],
     "parameters": {
@@ -115,8 +125,10 @@
       false,
       false,
       true,
+      true,
+      true,
       true
     ]
   },
-  "hash": "68ed65d554fe57ab557f484194b9b6bd2c2ffcd7ed15a401a249bda6f2505d9b"
+  "hash": "ea7148051b33364daf9b1ab8bee2b3e69a150abc3bd448a108719a10e9d3ed79"
 }
