@@ -127,6 +127,10 @@ impl OpenSkyClient {
         self.daily_requests.load(Ordering::Relaxed)
     }
 
+    /// # Errors
+    ///
+    /// Returns an error if authentication fails, the request fails, or the
+    /// response cannot be parsed.
     pub async fn get_flights_for_aircraft(
         &self,
         icao24: &str,
@@ -140,6 +144,10 @@ impl OpenSkyClient {
         self.get_flights(&url).await
     }
 
+    /// # Errors
+    ///
+    /// Returns an error if the window exceeds `OpenSky` limits, authentication
+    /// fails, the request fails, or the response cannot be parsed.
     pub async fn get_flights_all(
         &self,
         begin: i64,
@@ -155,6 +163,10 @@ impl OpenSkyClient {
         self.get_flights(&url).await
     }
 
+    /// # Errors
+    ///
+    /// Returns an error if request limits are exceeded, date parsing fails,
+    /// upstream calls fail, or response payloads cannot be serialized.
     pub async fn verify_route(
         &self,
         flight_iata: &str,
@@ -471,7 +483,7 @@ const AIRLINE_IATA_TO_ICAO: [(&str, &str); 85] = [
     ("WY", "OMA"),
 ];
 
-const AIRPORT_IATA_TO_ICAO: [(&str, &str); 177] = [
+const AIRPORT_IATA_TO_ICAO: [(&str, &str); 175] = [
     ("ABQ", "KABQ"),
     ("ACC", "DGAA"),
     ("ADB", "LTBJ"),
@@ -727,7 +739,7 @@ mod tests {
             }
         });
 
-        format!("http://{}", addr)
+        format!("http://{addr}")
     }
 
     #[tokio::test]

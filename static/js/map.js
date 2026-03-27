@@ -353,6 +353,31 @@ function statusBadgeHtml(journey) {
  * @param {HopResponse} journey
  * @returns {string}
  */
+function verificationBadgeHtml(journey) {
+  if (journey.route_verified == null) return '';
+  if (journey.route_verified) {
+    return '<span class="status-badge status-connected">✓ Verified</span>';
+  }
+  return '<span class="status-badge status-disconnected">Unverified</span>';
+}
+
+/**
+ * @param {HopResponse} journey
+ * @returns {string}
+ */
+function platformBadgeHtml(journey) {
+  if (journey.travel_type !== 'rail') return '';
+  const parts = [];
+  if (journey.dep_platform) parts.push(`Pl. ${escapeHtml(journey.dep_platform)}`);
+  if (journey.arr_platform) parts.push(`→ Pl. ${escapeHtml(journey.arr_platform)}`);
+  if (parts.length === 0) return '';
+  return `<span class="platform-badge">${parts.join(' ')}</span>`;
+}
+
+/**
+ * @param {HopResponse} journey
+ * @returns {string}
+ */
 function journeyCardHtml(journey) {
   const travelTypeKey = journey.travel_type || '';
   const emoji = emojis[travelTypeKey] || '';
@@ -377,7 +402,7 @@ function journeyCardHtml(journey) {
     dist = km < 1 ? '<1 km' : `${Math.round(km).toLocaleString()} km`;
   }
 
-  return `<a href="/journeys/${journey.id}" class="journey-card-link"><div class="journey-card"><div class="journey-route">${carrierIconHtml(journey, 20)} <span class="journey-origin">${originName}</span><span class="journey-arrow">\u2192</span><span class="journey-dest">${destName}</span></div><div class="journey-meta"><span class="journey-badge badge-${travelType}">${emoji} ${typeLabel}</span>${statusBadgeHtml(journey)}<span class="journey-date">${startDate}</span>${dist ? `<span class="journey-distance">${dist}</span>` : ''}</div></div></a>`;
+  return `<a href="/journeys/${journey.id}" class="journey-card-link"><div class="journey-card"><div class="journey-route">${carrierIconHtml(journey, 20)} <span class="journey-origin">${originName}</span><span class="journey-arrow">\u2192</span><span class="journey-dest">${destName}</span></div><div class="journey-meta"><span class="journey-badge badge-${travelType}">${emoji} ${typeLabel}</span>${statusBadgeHtml(journey)}${verificationBadgeHtml(journey)}${platformBadgeHtml(journey)}<span class="journey-date">${startDate}</span>${dist ? `<span class="journey-distance">${dist}</span>` : ''}</div></div></a>`;
 }
 
 /**
@@ -430,7 +455,7 @@ function renderJourneyCards(journeys) {
   if (upcoming.length > 0) {
     html += `<h3 class="journey-sidebar-heading journey-sidebar-heading--upcoming">Upcoming (${upcoming.length})</h3>`;
     upcoming.forEach((journey) => {
-      html += `<a href="/journeys/${journey.id}" class="journey-card-link"><div class="journey-card journey-card--upcoming"><div class="journey-route">${carrierIconHtml(journey, 20)} <span class="journey-origin">${escapeHtml(journey.origin_name || '')}</span><span class="journey-arrow">\u2192</span><span class="journey-dest">${escapeHtml(journey.dest_name || '')}</span></div><div class="journey-meta"><span class="journey-badge badge-${escapeHtml(journey.travel_type || '')}">${emojis[journey.travel_type] || ''} ${escapeHtml((journey.travel_type || '').charAt(0).toUpperCase() + (journey.travel_type || '').slice(1))}</span>${statusBadgeHtml(journey)}<span class="journey-countdown">${countdownText(journey.start_date)}</span><span class="journey-date">${escapeHtml(journey.start_date || '')}</span></div></div></a>`;
+      html += `<a href="/journeys/${journey.id}" class="journey-card-link"><div class="journey-card journey-card--upcoming"><div class="journey-route">${carrierIconHtml(journey, 20)} <span class="journey-origin">${escapeHtml(journey.origin_name || '')}</span><span class="journey-arrow">\u2192</span><span class="journey-dest">${escapeHtml(journey.dest_name || '')}</span></div><div class="journey-meta"><span class="journey-badge badge-${escapeHtml(journey.travel_type || '')}">${emojis[journey.travel_type] || ''} ${escapeHtml((journey.travel_type || '').charAt(0).toUpperCase() + (journey.travel_type || '').slice(1))}</span>${statusBadgeHtml(journey)}${verificationBadgeHtml(journey)}${platformBadgeHtml(journey)}<span class="journey-countdown">${countdownText(journey.start_date)}</span><span class="journey-date">${escapeHtml(journey.start_date || '')}</span></div></div></a>`;
     });
   }
 

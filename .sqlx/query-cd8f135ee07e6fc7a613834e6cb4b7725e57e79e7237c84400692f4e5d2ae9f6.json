@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO gtfs_feeds (onestop_id, feed_version, expires_at, static_url)\n             VALUES (?, ?, ?, ?)\n             RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "cd8f135ee07e6fc7a613834e6cb4b7725e57e79e7237c84400692f4e5d2ae9f6"
+}

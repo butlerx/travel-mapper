@@ -14,10 +14,14 @@ pub mod feed_tokens;
 pub mod hops;
 /// Query objects for the `oauth_request_tokens` table — temporary OAuth flow tokens.
 pub mod oauth_tokens;
+/// Query objects for the `push_subscriptions` table — Web Push notification subscriptions.
+pub mod push_subscriptions;
 /// Query objects for the `sessions` table — cookie-based browser sessions.
 pub mod sessions;
 /// Query objects for the `share_tokens` table — per-user shareable stats access tokens.
 pub mod share_tokens;
+/// Query objects for the `station_eva_cache` table — German station EVA number cache.
+pub mod station_eva_cache;
 /// Query objects for the `status_enrichments` table — live/historical flight status data.
 pub mod status_enrichments;
 /// Query objects for the `sync_jobs` table — background sync job queue.

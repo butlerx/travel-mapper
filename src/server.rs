@@ -9,6 +9,8 @@ pub(crate) mod extractors;
 /// Tower middleware for HTTP request tracing and diagnostics.
 pub(crate) mod middleware;
 pub(crate) mod pages;
+/// Web Push notification delivery.
+pub(crate) mod push;
 pub(crate) mod routes;
 pub(crate) mod session;
 mod state;
@@ -117,8 +119,16 @@ pub(crate) mod test_helpers {
             tripit_override: None,
             registration_enabled: true,
             airlabs_api_key: None,
+            opensky_client_id: None,
+            opensky_client_secret: None,
+            darwin_api_token: None,
+            db_ris_api_key: None,
+            db_ris_client_id: None,
+            transitland_api_key: None,
             storage_path: None,
             smtp_config: None,
+            vapid_private_key: None,
+            vapid_public_key: None,
         }
     }
 

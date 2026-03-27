@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO gtfs_trips (feed_id, trip_id, route_id, service_id)\n                 VALUES (?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "805547d6dfbf20a6b4f52ae35574c3034b1f48db39be2b4243b3fa67ee556421"
+}

@@ -9,7 +9,13 @@ const PRECACHE_URLS = [
   '/static/map.js',
   '/static/stats-map.js',
   '/static/nav.js',
-  '/static/logo.svg',
+  '/static/add-journey.js',
+  '/static/journey-map.js',
+  '/static/icons/logo.svg',
+  '/static/icons/plane.svg',
+  '/static/icons/train.svg',
+  '/static/icons/boat.svg',
+  '/static/icons/transport.svg',
   '/manifest.json',
 ];
 
@@ -64,4 +70,46 @@ self.addEventListener('fetch', (event) => {
 
   // Network-first for pages and API
   event.respondWith(fetch(request).catch(() => caches.match(request)));
+});
+
+// Push: show notification from server
+self.addEventListener('push', (event) => {
+  const data = event.data ? event.data.json() : {};
+  const title = data.title || 'Travel Mapper';
+  const options = {
+    body: data.body || '',
+    icon: '/static/logo.svg',
+    badge: '/static/logo.svg',
+    data: { url: data.url || '/' },
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+// Notification click: open or focus the target page
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url || '/';
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      for (const client of windowClients) {
+        if (client.url.includes(url) && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      return clients.openWindow(url);
+    }),
+  );
+});
+
+// Subscription change: re-subscribe and update server
+self.addEventListener('pushsubscriptionchange', (event) => {
+  event.waitUntil(
+    self.registration.pushManager.subscribe(event.oldSubscription.options).then((newSub) =>
+      fetch('/auth/push-subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newSub.toJSON()),
+      }),
+    ),
+  );
 });

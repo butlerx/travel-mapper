@@ -23,11 +23,12 @@ use axum::{
 };
 use boat_section::BoatSection;
 use edit_form::EditForm;
-use flight_section::FlightSection;
+use flight_section::{FlightSection, FlightVerificationView};
 use leptos::prelude::*;
-use rail_section::RailSection;
+use rail_section::{RailEnrichmentView, RailSection};
 use schemars::JsonSchema;
 use serde::Deserialize;
+use serde_json::Value;
 use transport_section::TransportSection;
 
 #[derive(Deserialize, Default, JsonSchema)]
@@ -44,6 +45,7 @@ pub fn render_page(
     feedback: JourneyDetailFeedback,
     enrichment: Option<status_enrichments::Row>,
     attachments: Vec<db::attachments::Row>,
+    opensky_verification: Option<status_enrichments::Row>,
 ) -> Response {
     let html = view! {
         <JourneyDetailPage
@@ -52,6 +54,7 @@ pub fn render_page(
             journey=journey
             enrichment=enrichment
             attachments=attachments
+            opensky_verification=opensky_verification
         />
     };
     (StatusCode::OK, axum::response::Html(html.to_html())).into_response()
@@ -110,6 +113,34 @@ fn timing_row(phase: &'static str, scheduled: &str, actual: &str) -> Option<impl
     })
 }
 
+fn opensky_verification_view(raw_json: &str) -> Option<FlightVerificationView> {
+    let parsed: Value = serde_json::from_str(raw_json).ok()?;
+    let est_departure_airport = parsed
+        .get("est_departure_airport")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_owned();
+    let est_arrival_airport = parsed
+        .get("est_arrival_airport")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_owned();
+    let callsign = parsed
+        .get("callsign")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_owned();
+    if est_departure_airport.is_empty() && est_arrival_airport.is_empty() && callsign.is_empty() {
+        None
+    } else {
+        Some(FlightVerificationView {
+            est_departure_airport,
+            est_arrival_airport,
+            callsign,
+        })
+    }
+}
+
 #[component]
 fn JourneyDetailPage(
     #[prop(optional_no_strip)] error_msg: Option<String>,
@@ -117,6 +148,7 @@ fn JourneyDetailPage(
     journey: DetailRow,
     #[prop(optional_no_strip)] enrichment: Option<status_enrichments::Row>,
     attachments: Vec<db::attachments::Row>,
+    #[prop(optional_no_strip)] opensky_verification: Option<status_enrichments::Row>,
 ) -> impl IntoView {
     let edit_journey = journey.clone();
 
@@ -173,14 +205,32 @@ fn JourneyDetailPage(
     let dest_lat = journey.dest_lat.to_string();
     let dest_lng = journey.dest_lng.to_string();
 
+    let flight_verification = if journey.travel_type == TravelType::Air {
+        opensky_verification
+            .as_ref()
+            .and_then(|v| opensky_verification_view(&v.raw_json))
+    } else {
+        None
+    };
+
+    let rail_enrichment = if journey.travel_type == TravelType::Rail {
+        enrichment.as_ref().map(|e| RailEnrichmentView {
+            dep_platform: e.dep_platform.clone(),
+            arr_platform: e.arr_platform.clone(),
+            provider: e.provider.clone(),
+        })
+    } else {
+        None
+    };
+
     let detail_section = match journey.travel_type {
         TravelType::Air => journey.flight_detail.map_or_else(
             || ().into_any(),
-            |d| view! { <FlightSection detail=d /> }.into_any(),
+            |d| view! { <FlightSection detail=d verification=flight_verification /> }.into_any(),
         ),
         TravelType::Rail => journey.rail_detail.map_or_else(
             || ().into_any(),
-            |d| view! { <RailSection detail=d /> }.into_any(),
+            |d| view! { <RailSection detail=d enrichment=rail_enrichment /> }.into_any(),
         ),
         TravelType::Boat => journey.boat_detail.map_or_else(
             || ().into_any(),
@@ -208,6 +258,20 @@ fn JourneyDetailPage(
             (css, label)
         });
 
+    let verification_badge_view = opensky_verification.as_ref().map(|v| {
+        if v.status == "verified" {
+            (
+                "status-badge status-connected",
+                "✓ Route Verified".to_owned(),
+            )
+        } else {
+            (
+                "status-badge status-disconnected",
+                "Route Unverified".to_owned(),
+            )
+        }
+    });
+
     view! {
         <Shell title="Journey Detail".to_owned() body_class="journey-detail-layout">
             <NavBar current="" />
@@ -233,6 +297,9 @@ fn JourneyDetailPage(
                     <p class="journey-detail-dates">{dates}</p>
                     <span class=badge_class>{type_label}</span>
                     {status_badge_view.map(|(css, label)| view! {
+                        <span class=css>{label}</span>
+                    })}
+                    {verification_badge_view.map(|(css, label)| view! {
                         <span class=css>{label}</span>
                     })}
                     {countries_view}

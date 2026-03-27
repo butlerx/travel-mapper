@@ -1,0 +1,292 @@
+/* ===== Hop Detail Page ===== */
+.journey-detail-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.journey-detail-page {
+  flex: 1;
+  padding: var(--space-lg) var(--space-xl);
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.journey-detail-back {
+  display: inline-block;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  margin-bottom: var(--space-lg);
+  transition: color 0.15s;
+}
+
+.journey-detail-back:hover {
+  color: var(--color-text);
+}
+
+.journey-detail-header {
+  margin-bottom: var(--space-xl);
+}
+
+.journey-detail-route {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.journey-detail-dates {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  margin: var(--space-xs) 0 var(--space-sm);
+}
+
+.journey-detail-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25em;
+  padding: 2px var(--space-sm);
+  border-radius: 9999px;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  text-transform: capitalize;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+.journey-detail-badge.air {
+  color: var(--color-type-air);
+  border-color: var(--color-type-air-border);
+}
+.journey-detail-badge.rail {
+  color: var(--color-type-rail);
+  border-color: var(--color-type-rail-border);
+}
+.journey-detail-badge.boat {
+  color: var(--color-type-boat);
+  border-color: var(--color-type-boat-border);
+}
+.journey-detail-badge.transport {
+  color: var(--color-type-transport);
+  border-color: var(--color-type-transport-border);
+}
+
+.journey-detail-countries {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  margin: var(--space-xs) 0 0;
+}
+
+#journey-map {
+  height: 300px;
+  width: 100%;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  margin-bottom: var(--space-xl);
+  background: var(--color-surface);
+}
+
+.journey-detail-section {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-md);
+}
+
+.journey-detail-section h3 {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 var(--space-md) 0;
+}
+
+.journey-detail-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-xs) var(--space-md);
+  align-items: baseline;
+}
+
+.journey-detail-label {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.journey-detail-value {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.journey-detail-canceled {
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
+.journey-detail-muted {
+  color: var(--color-text-muted);
+  font-style: italic;
+  font-size: var(--text-xs);
+}
+
+.platform-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  background: var(--color-info-bg, #e8f4fd);
+  color: var(--color-info, #1976d2);
+}
+
+.journey-detail-timing {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.journey-detail-timing th {
+  text-align: left;
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.journey-detail-timing td {
+  padding: var(--space-xs) var(--space-sm);
+  color: var(--color-text-secondary);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.journey-detail-timing tr:last-child td {
+  border-bottom: none;
+}
+
+.journey-detail-notes {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 640px) {
+  .journey-detail-page {
+    padding: var(--space-md) var(--space-sm);
+  }
+
+  .journey-detail-route {
+    font-size: var(--text-xl);
+  }
+
+  #journey-map {
+    height: 200px;
+  }
+
+  .journey-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Edit Form — Slide-in Panel */
+.edit-panel-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.3s,
+    visibility 0.3s;
+  z-index: 1100;
+}
+
+.edit-panel-backdrop.open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.journey-edit-form {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(480px, 90vw);
+  height: 100vh;
+  background: var(--color-surface);
+  border-left: 1px solid var(--color-border);
+  padding: var(--space-lg);
+  overflow-y: auto;
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
+  z-index: 1101;
+}
+
+.journey-edit-form.open {
+  transform: translateX(0);
+}
+
+.journey-edit-form h3 {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 var(--space-lg) 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.edit-panel-close {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: var(--text-xl);
+  cursor: pointer;
+  padding: var(--space-xs);
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.edit-panel-close:hover {
+  color: var(--color-text);
+}
+
+.edit-form-fieldset {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md) var(--space-lg);
+  margin: 0 0 var(--space-md) 0;
+}
+
+.edit-form-fieldset legend {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-accent);
+  padding: 0 var(--space-xs);
+}
+
+.edit-form-actions {
+  display: flex;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+  padding-bottom: var(--space-lg);
+}
+
+@media (max-width: 640px) {
+  .journey-edit-form {
+    width: 100vw;
+  }
+}

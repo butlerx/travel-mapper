@@ -1,0 +1,12 @@
+/* ===== Layout ===== */
+.container {
+  max-width: 640px;
+  margin: var(--space-xl) auto;
+  padding: 0 var(--space-md);
+}
+
+.container-wide {
+  max-width: 960px;
+  margin: var(--space-xl) auto;
+  padding: 0 var(--space-md);
+}

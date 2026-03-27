@@ -26,6 +26,24 @@ struct Cli {
     #[arg(long, env = "AIRLABS_API_KEY")]
     airlabs_api_key: Option<String>,
 
+    #[arg(long, env = "OPENSKY_CLIENT_ID")]
+    opensky_client_id: Option<String>,
+
+    #[arg(long, env = "OPENSKY_CLIENT_SECRET")]
+    opensky_client_secret: Option<String>,
+
+    #[arg(long, env = "DARWIN_API_TOKEN")]
+    darwin_api_token: Option<String>,
+
+    #[arg(long, env = "DB_RIS_API_KEY")]
+    db_ris_api_key: Option<String>,
+
+    #[arg(long, env = "DB_RIS_CLIENT_ID")]
+    db_ris_client_id: Option<String>,
+
+    #[arg(long, env = "TRANSITLAND_API_KEY")]
+    transitland_api_key: Option<String>,
+
     #[arg(long, env = "ATTACHMENTS_PATH")]
     storage_path: Option<PathBuf>,
 
@@ -43,6 +61,12 @@ struct Cli {
 
     #[arg(long, env = "EMAIL_FROM")]
     email_from: Option<String>,
+
+    #[arg(long, env = "VAPID_PRIVATE_KEY_PATH")]
+    vapid_private_key_path: Option<std::path::PathBuf>,
+
+    #[arg(long, env = "VAPID_PUBLIC_KEY")]
+    vapid_public_key: Option<String>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -94,6 +118,22 @@ async fn run() -> Result<(), ServerError> {
         _ => None,
     };
 
+    let vapid_private_key = cli
+        .vapid_private_key_path
+        .as_ref()
+        .map(std::fs::read)
+        .transpose()
+        .map_err(ServerError::Bind)?;
+
+    // Registration requires working email verification, so disable it when
+    // SMTP is not configured — even if the operator explicitly enabled it.
+    let registration_enabled = cli.registration_enabled && smtp_config.is_some();
+    if cli.registration_enabled && smtp_config.is_none() {
+        tracing::warn!(
+            "REGISTRATION_ENABLED is true but SMTP is not configured — registration disabled"
+        );
+    }
+
     let state = travel_mapper::server::AppState {
         leptos_options: LeptosOptions::builder()
             .output_name("travel-mapper")
@@ -103,10 +143,18 @@ async fn run() -> Result<(), ServerError> {
         tripit_consumer_key: cli.consumer_key,
         tripit_consumer_secret: cli.consumer_secret,
         tripit_override: None,
-        registration_enabled: cli.registration_enabled,
+        registration_enabled,
         airlabs_api_key: cli.airlabs_api_key,
+        opensky_client_id: cli.opensky_client_id,
+        opensky_client_secret: cli.opensky_client_secret,
+        darwin_api_token: cli.darwin_api_token,
+        db_ris_api_key: cli.db_ris_api_key,
+        db_ris_client_id: cli.db_ris_client_id,
+        transitland_api_key: cli.transitland_api_key,
         storage_path: cli.storage_path,
         smtp_config,
+        vapid_private_key,
+        vapid_public_key: cli.vapid_public_key,
     };
     let app = travel_mapper::server::create_router(state);
 

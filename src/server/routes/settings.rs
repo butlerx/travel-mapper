@@ -77,10 +77,13 @@ pub async fn handler(
             has_tripit,
             sync_state.as_ref(),
             feedback,
-            &email,
-            email_verified,
-            &first_name,
-            &last_name,
+            pages::settings::UserProfileData {
+                email,
+                email_verified,
+                first_name,
+                last_name,
+            },
+            state.vapid_public_key.clone(),
         ),
         ResponseFormat::Json => {
             let response = SettingsResponse {

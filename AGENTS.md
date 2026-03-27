@@ -47,21 +47,27 @@ src/
     seed.rs                         # DB seeding for development
   auth.rs                           # encryption, session helpers
   db.rs + db/                       # sqlx query objects (one file per table/command)
-    api_keys.rs
-    credentials.rs
+    api_keys.rs                     # programmatic access tokens
+    attachments.rs                  # photo/file attachments on journeys
+    credentials.rs                  # encrypted TripIt OAuth tokens
+    email_verifications.rs          # pending email verification tokens
+    feed_tokens.rs                  # per-user calendar feed access tokens
     hops.rs + hops/                 # one file per query command
       create.rs, create_from_csv.rs, create_manual.rs
       delete_for_trip.rs, delete_stale.rs
       exists_in_trip.rs, get_all.rs, get_all_for_stats.rs
       get_by_id.rs, get_for_trip.rs, get_unassigned.rs
       replace_for_trip.rs, search.rs, update_by_id.rs
-    oauth_tokens.rs
-    sessions.rs
+    oauth_tokens.rs                 # temporary OAuth flow tokens
+    push_subscriptions.rs           # Web Push notification subscriptions
+    sessions.rs                     # cookie-based browser sessions
+    share_tokens.rs                 # per-user shareable stats access tokens
     status_enrichments.rs           # live/historical flight status data
-    sync_jobs.rs
-    sync_state.rs
+    sync_jobs.rs                    # background sync job queue
+    sync_state.rs                   # per-user sync progress and status
     trips.rs                        # named travel trip groups
-    users.rs
+    users.rs                        # registration and lookup
+  distance.rs                       # haversine great-circle distance calculation
   geocode.rs + geocode/             # Nominatim geocoding + IATA airport lookup
     airports.rs                     # IATA code → coordinates
     nominatim.rs                    # OpenStreetMap geocoding client
@@ -71,6 +77,13 @@ src/
     airlabs.rs                      # AirLabs flight status API client
     flight_status.rs                # FlightStatusApi trait + shared types
     generic_csv.rs                  # auto-detects Flighty, myFlightradar24, OpenFlights, App in the Air
+    opensky.rs                      # OpenSky Network route verification via ADS-B data
+    transitland.rs + transitland/   # Transitland GTFS-RT rail status enrichment
+      cache.rs                      # feed response caching
+      client.rs                     # HTTP client
+      feed_discovery.rs             # GTFS feed URL discovery
+      gtfs_rt.rs                    # GTFS-RT protobuf parsing
+      matcher.rs                    # trip update matching
     tripit.rs + tripit/             # TripIt integration
       auth.rs                       # OAuth 1.0a signing
       fetch.rs + fetch/             # TripIt API data fetching
@@ -80,6 +93,7 @@ src/
   server.rs + server/               # Axum web server
     components.rs + components/     # shared Leptos UI components
       auth_page.rs, carrier_icon.rs, error_page.rs, navbar.rs, shell.rs
+    email.rs                        # email delivery for verification and notifications
     error.rs                        # error response types
     extractors.rs + extractors/     # Axum extractors
       auth_user.rs                  # AuthUser (FromRequestParts)
@@ -96,19 +110,56 @@ src/
         rail_section.rs, transport_section.rs
       settings.rs + settings/       # settings page sections
         api_keys_section.rs, csv_import_section.rs
+        email_section.rs            # email address and verification status
+        feed_section.rs             # calendar feed subscription
+        profile_section.rs          # user profile (name, email)
+        push_section.rs             # Web Push notification subscription
+        share_section.rs            # shareable stats link
         sync_section.rs, tripit_section.rs
+    push.rs                         # Web Push notification delivery
     routes.rs + routes/             # one file per route handler
-      api_keys.rs, csv_import.rs, health.rs
-      journeys.rs, trips.rs        # journey and trip CRUD
-      login.rs, logout.rs, register.rs
-      static_assets.rs, sync.rs
+      api_keys.rs, attachments.rs, csv_import.rs
+      email.rs, feed.rs, feed_tokens.rs
+      health.rs, journeys.rs, login.rs, logout.rs
+      profile.rs, push.rs, register.rs
+      settings.rs, share.rs, share_tokens.rs
+      static_assets.rs, stats.rs, sync.rs
+      trips.rs                      # trip CRUD + journey assignment
       tripit_callback.rs, tripit_connect.rs, tripit_credentials.rs
+      verify_email.rs               # email verification link handler
     session.rs                      # session management
     state.rs                        # AppState definition
   worker.rs                         # background sync orchestration
   telemetry.rs                      # tracing/logging setup
 migrations/                         # SQLite migrations (sqlx migrate)
-static/                             # JS, CSS, icons served at runtime
+static/                             # JS, icons, PWA assets served at runtime
+  sw.js                             # service worker: precache, offline shell, push notifications
+  logo.svg                          # app logo / PWA icon
+  icons/                            # travel-type SVG icons
+    boat.svg, plane.svg, train.svg, transport.svg
+  js/                               # page scripts and type declarations, embedded at compile time
+    add-journey.js                  # add-journey form: travel-type toggle, IATA autocomplete
+    journey-map.js                  # single-journey Leaflet map on detail page
+    map.js                          # dashboard Leaflet map with arc layers, filters, popups
+    nav.js                          # mobile navigation hamburger toggle
+    stats-map.js                    # stats page choropleth map and year filter
+    globals.d.ts                    # ambient types for third-party browser globals (Leaflet, etc.)
+    types.d.ts                      # shared TS declarations for JS files (HopResponse, etc.)
+  css/                              # CSS split into logical partials, concatenated at compile time
+    tokens.css                      # design tokens / CSS custom properties
+    reset.css                       # box-sizing reset and body defaults
+    layout.css                      # container classes
+    typography.css                  # headings, paragraphs, links, code
+    nav.css                         # navigation bar + mobile responsive
+    cards.css                       # generic .card component
+    buttons.css                     # button variants (primary, success, danger, secondary)
+    forms.css                       # form inputs, file inputs, alerts
+    dashboard.css                   # dashboard layout, stat cards, journey list, sidebar
+    map.css                         # map container, legend, controls, filters, popups
+    pages.css                       # landing/hero, error, auth, data pages
+    stats.css                       # stats page layout, year filter, grid, choropleth
+    journey-detail.css              # journey detail page, edit slide-in panel
+    utilities.css                   # utility margins and global responsive overrides
 ```
 
 ## Module Conventions

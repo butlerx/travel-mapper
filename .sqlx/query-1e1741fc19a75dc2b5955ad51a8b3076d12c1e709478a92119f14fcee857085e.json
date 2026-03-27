@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO gtfs_calendar_dates (feed_id, service_id, date, exception_type)\n                     VALUES (?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "1e1741fc19a75dc2b5955ad51a8b3076d12c1e709478a92119f14fcee857085e"
+}

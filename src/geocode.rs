@@ -9,5 +9,7 @@ mod nominatim;
 mod resolve;
 /// String-cleaning utilities for location names and timezone mapping.
 mod sanitize;
+/// UK CRS station code lookup from an embedded dataset.
+pub mod stations;
 
 pub use nominatim::Geocoder;

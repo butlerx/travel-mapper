@@ -160,8 +160,9 @@ pub struct Row {
     pub miles_earned: Option<f64>,
     /// Carrier name from SQL COALESCE — used as fallback when detail structs
     /// are not loaded (e.g. listing queries).  Not a domain field; populated
-    /// only by `TryFrom<HopRow>`.
-    pub(crate) cached_carrier: Option<String>,
+    /// only by `TryFrom<HopRow>`.  External constructors should set this to
+    /// `None` — prefer [`Row::carrier()`] for reads.
+    pub cached_carrier: Option<String>,
 }
 
 impl Row {

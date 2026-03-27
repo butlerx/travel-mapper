@@ -1,0 +1,92 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT\n                   se.id as \"id!: i64\",\n                   se.hop_id as \"hop_id!: i64\",\n                   se.provider as \"provider!: String\",\n                   se.status as \"status!: String\",\n                   se.delay_minutes,\n                   se.dep_gate as \"dep_gate!: String\",\n                   se.dep_terminal as \"dep_terminal!: String\",\n                   se.arr_gate as \"arr_gate!: String\",\n                   se.arr_terminal as \"arr_terminal!: String\",\n                   se.dep_platform as \"dep_platform!: String\",\n                   se.arr_platform as \"arr_platform!: String\",\n                   se.raw_json as \"raw_json!: String\",\n                   se.fetched_at as \"fetched_at!: String\"\n               FROM status_enrichments se\n               INNER JOIN (\n                   SELECT hop_id, MAX(fetched_at) AS max_fetched\n                   FROM status_enrichments\n                   WHERE hop_id IN (SELECT value FROM json_each(?))\n                   GROUP BY hop_id\n               ) latest ON se.hop_id = latest.hop_id AND se.fetched_at = latest.max_fetched\n               WHERE se.hop_id IN (SELECT value FROM json_each(?))",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!: i64",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "hop_id!: i64",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "provider!: String",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "status!: String",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "delay_minutes",
+        "ordinal": 4,
+        "type_info": "Integer"
+      },
+      {
+        "name": "dep_gate!: String",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "dep_terminal!: String",
+        "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "arr_gate!: String",
+        "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "arr_terminal!: String",
+        "ordinal": 8,
+        "type_info": "Text"
+      },
+      {
+        "name": "dep_platform!: String",
+        "ordinal": 9,
+        "type_info": "Text"
+      },
+      {
+        "name": "arr_platform!: String",
+        "ordinal": 10,
+        "type_info": "Text"
+      },
+      {
+        "name": "raw_json!: String",
+        "ordinal": 11,
+        "type_info": "Text"
+      },
+      {
+        "name": "fetched_at!: String",
+        "ordinal": 12,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "5afd1ac07cd9d212ed144aa85481142aac275769f3255822887091ec0e355c91"
+}

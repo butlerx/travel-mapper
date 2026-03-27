@@ -1,0 +1,44 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT\n                   eva_number as \"eva_number!: i64\",\n                   name as \"name!: String\",\n                   lat,\n                   lng,\n                   updated_at as \"updated_at!: String\"\n               FROM station_eva_cache\n               WHERE name = ?\n               LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "name": "eva_number!: i64",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "name!: String",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "lat",
+        "ordinal": 2,
+        "type_info": "Float"
+      },
+      {
+        "name": "lng",
+        "ordinal": 3,
+        "type_info": "Float"
+      },
+      {
+        "name": "updated_at!: String",
+        "ordinal": 4,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "35660304371f6e79e94cca70e7ed4dc1b6307c499204f8a650176d470e0ef8a9"
+}

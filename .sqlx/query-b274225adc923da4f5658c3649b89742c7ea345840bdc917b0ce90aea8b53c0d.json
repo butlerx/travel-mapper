@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO station_eva_cache (eva_number, name, lat, lng)\n               VALUES (?, ?, ?, ?)\n               ON CONFLICT(eva_number) DO UPDATE SET\n                   name = excluded.name,\n                   lat = excluded.lat,\n                   lng = excluded.lng,\n                   updated_at = datetime('now')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "b274225adc923da4f5658c3649b89742c7ea345840bdc917b0ce90aea8b53c0d"
+}

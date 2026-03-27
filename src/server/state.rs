@@ -42,10 +42,26 @@ pub struct AppState {
     pub registration_enabled: bool,
     /// Optional `AirLabs` API key for flight status enrichment.
     pub airlabs_api_key: Option<String>,
+    /// Optional `OpenSky` Network `OAuth2` client ID for route verification.
+    pub opensky_client_id: Option<String>,
+    /// Optional `OpenSky` Network `OAuth2` client secret for route verification.
+    pub opensky_client_secret: Option<String>,
+    /// Optional National Rail Darwin API token for UK rail status.
+    pub darwin_api_token: Option<String>,
+    /// Optional DB RIS API key for German rail status.
+    pub db_ris_api_key: Option<String>,
+    /// Optional DB RIS client ID for German rail status.
+    pub db_ris_client_id: Option<String>,
+    /// Optional Transitland API key for multi-region rail status.
+    pub transitland_api_key: Option<String>,
     /// Filesystem directory for attachment storage. `None` disables uploads.
     pub storage_path: Option<PathBuf>,
     /// Optional SMTP config for sending verification emails.
     pub smtp_config: Option<SmtpConfig>,
+    /// PEM-encoded VAPID private key for Web Push. `None` disables push notifications.
+    pub vapid_private_key: Option<Vec<u8>>,
+    /// Base64url-encoded VAPID public key served to browsers for subscription.
+    pub vapid_public_key: Option<String>,
 }
 
 impl FromRef<AppState> for LeptosOptions {

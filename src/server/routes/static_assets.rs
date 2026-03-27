@@ -20,60 +20,70 @@ macro_rules! static_handler {
     };
 }
 
+macro_rules! svg_handler {
+    ($name:ident, $content:expr) => {
+        static_handler!($name, $content, "image/svg+xml");
+    };
+}
+
+macro_rules! js_handler {
+    ($name:ident, $content:expr) => {
+        static_handler!($name, $content, "application/javascript; charset=utf-8");
+    };
+}
+
 static_handler!(
     serve_css,
-    include_str!("../../../static/style.css"),
+    concat!(
+        include_str!("../../../static/css/tokens.css"),
+        include_str!("../../../static/css/reset.css"),
+        include_str!("../../../static/css/layout.css"),
+        include_str!("../../../static/css/typography.css"),
+        include_str!("../../../static/css/nav.css"),
+        include_str!("../../../static/css/cards.css"),
+        include_str!("../../../static/css/buttons.css"),
+        include_str!("../../../static/css/forms.css"),
+        include_str!("../../../static/css/dashboard.css"),
+        include_str!("../../../static/css/map.css"),
+        include_str!("../../../static/css/pages.css"),
+        include_str!("../../../static/css/stats.css"),
+        include_str!("../../../static/css/journey-detail.css"),
+        include_str!("../../../static/css/utilities.css"),
+    ),
     "text/css; charset=utf-8"
 );
-static_handler!(
-    serve_js,
-    include_str!("../../../static/map.js"),
-    "application/javascript; charset=utf-8"
-);
-static_handler!(
+
+js_handler!(serve_js, include_str!("../../../static/js/map.js"));
+js_handler!(
     serve_stats_js,
-    include_str!("../../../static/stats-map.js"),
-    "application/javascript; charset=utf-8"
+    include_str!("../../../static/js/stats-map.js")
 );
-static_handler!(
-    serve_nav_js,
-    include_str!("../../../static/nav.js"),
-    "application/javascript; charset=utf-8"
-);
-static_handler!(
+js_handler!(serve_nav_js, include_str!("../../../static/js/nav.js"));
+js_handler!(
     serve_add_journey_js,
-    include_str!("../../../static/add-journey.js"),
-    "application/javascript; charset=utf-8"
+    include_str!("../../../static/js/add-journey.js")
 );
-static_handler!(
+js_handler!(
     serve_journey_map_js,
-    include_str!("../../../static/journey-map.js"),
-    "application/javascript; charset=utf-8"
+    include_str!("../../../static/js/journey-map.js")
 );
-static_handler!(
-    serve_logo,
-    include_str!("../../../static/logo.svg"),
-    "image/svg+xml"
-);
-static_handler!(
+
+svg_handler!(serve_logo, include_str!("../../../static/icons/logo.svg"));
+svg_handler!(
     serve_icon_plane,
-    include_str!("../../../static/icons/plane.svg"),
-    "image/svg+xml"
+    include_str!("../../../static/icons/plane.svg")
 );
-static_handler!(
+svg_handler!(
     serve_icon_train,
-    include_str!("../../../static/icons/train.svg"),
-    "image/svg+xml"
+    include_str!("../../../static/icons/train.svg")
 );
-static_handler!(
+svg_handler!(
     serve_icon_boat,
-    include_str!("../../../static/icons/boat.svg"),
-    "image/svg+xml"
+    include_str!("../../../static/icons/boat.svg")
 );
-static_handler!(
+svg_handler!(
     serve_icon_transport,
-    include_str!("../../../static/icons/transport.svg"),
-    "image/svg+xml"
+    include_str!("../../../static/icons/transport.svg")
 );
 
 #[derive(Serialize)]
@@ -116,7 +126,7 @@ pub async fn serve_manifest() -> impl IntoResponse {
             theme_color: THEME_COLOR,
             background_color: THEME_COLOR,
             icons: [ManifestIcon {
-                src: "/static/logo.svg",
+                src: "/static/icons/logo.svg",
                 sizes: "any",
                 mime: "image/svg+xml",
                 purpose: "any",
@@ -144,7 +154,7 @@ pub fn routes() -> ApiRouter<crate::server::AppState> {
         .route("/nav.js", get(serve_nav_js))
         .route("/add-journey.js", get(serve_add_journey_js))
         .route("/journey-map.js", get(serve_journey_map_js))
-        .route("/logo.svg", get(serve_logo))
+        .route("/icons/logo.svg", get(serve_logo))
         .route("/icons/plane.svg", get(serve_icon_plane))
         .route("/icons/train.svg", get(serve_icon_train))
         .route("/icons/boat.svg", get(serve_icon_boat))

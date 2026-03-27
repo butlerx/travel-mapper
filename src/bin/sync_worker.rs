@@ -1,4 +1,5 @@
 use clap::Parser;
+use std::path::PathBuf;
 use std::time::Duration;
 use tokio::sync::watch;
 
@@ -22,6 +23,27 @@ struct Cli {
 
     #[arg(long, env = "AIRLABS_API_KEY")]
     airlabs_api_key: Option<String>,
+
+    #[arg(long, env = "OPENSKY_CLIENT_ID")]
+    opensky_client_id: Option<String>,
+
+    #[arg(long, env = "OPENSKY_CLIENT_SECRET")]
+    opensky_client_secret: Option<String>,
+
+    #[arg(long, env = "DARWIN_API_TOKEN")]
+    darwin_api_token: Option<String>,
+
+    #[arg(long, env = "DB_RIS_API_KEY")]
+    db_ris_api_key: Option<String>,
+
+    #[arg(long, env = "DB_RIS_CLIENT_ID")]
+    db_ris_client_id: Option<String>,
+
+    #[arg(long, env = "TRANSITLAND_API_KEY")]
+    transitland_api_key: Option<String>,
+
+    #[arg(long, env = "VAPID_PRIVATE_KEY_PATH")]
+    vapid_private_key_path: Option<PathBuf>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -31,6 +53,9 @@ enum WorkerError {
 
     #[error("failed to create database pool: {0}")]
     Database(#[from] sqlx::Error),
+
+    #[error("I/O error: {0}")]
+    Io(#[from] std::io::Error),
 }
 
 fn parse_encryption_key(hex: &str) -> Result<[u8; 32], WorkerError> {
@@ -61,6 +86,18 @@ async fn run() -> Result<(), WorkerError> {
         consumer_secret: cli.consumer_secret,
         poll_interval: Duration::from_secs(cli.poll_interval_secs),
         airlabs_api_key: cli.airlabs_api_key,
+        opensky_client_id: cli.opensky_client_id,
+        opensky_client_secret: cli.opensky_client_secret,
+        darwin_api_token: cli.darwin_api_token,
+        db_ris_api_key: cli.db_ris_api_key,
+        db_ris_client_id: cli.db_ris_client_id,
+        transitland_api_key: cli.transitland_api_key,
+        vapid_private_key: cli
+            .vapid_private_key_path
+            .as_ref()
+            .map(std::fs::read)
+            .transpose()
+            .map_err(WorkerError::Io)?,
     };
 
     tracing::info!(

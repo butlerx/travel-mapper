@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO gtfs_stops (feed_id, stop_id, stop_name, stop_name_normalized, lat, lng)\n                 VALUES (?, ?, ?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "b3b6fa8f093fbc548ce1301f2023b6481a64640d5587bc7a3ab5e7750cfc9c29"
+}

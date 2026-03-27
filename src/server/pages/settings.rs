@@ -7,6 +7,8 @@ mod email_section;
 /// Calendar feed subscription section.
 mod feed_section;
 mod profile_section;
+/// Push notification subscription section.
+mod push_section;
 /// Shareable stats link section.
 mod share_section;
 /// Sync status and trigger section.
@@ -28,6 +30,7 @@ use email_section::EmailSection;
 use feed_section::FeedSection;
 use leptos::prelude::*;
 use profile_section::ProfileSection;
+use push_section::PushSection;
 use serde::Deserialize;
 use share_section::ShareSection;
 use sync_section::SyncSection;
@@ -42,14 +45,19 @@ pub struct SettingsFeedback {
     pub profile: Option<String>,
 }
 
+pub struct UserProfileData {
+    pub email: String,
+    pub email_verified: bool,
+    pub first_name: String,
+    pub last_name: String,
+}
+
 pub fn render_page(
     has_tripit: bool,
     sync_state: Option<&db::sync_state::Row>,
     feedback: SettingsFeedback,
-    email: &str,
-    email_verified: bool,
-    first_name: &str,
-    last_name: &str,
+    profile: UserProfileData,
+    vapid_public_key: Option<String>,
 ) -> Response {
     let html = view! {
         <Settings
@@ -63,10 +71,11 @@ pub fn render_page(
             csv_imported=feedback.csv
             email_feedback=feedback.email
             profile_feedback=feedback.profile
-            email=email.to_owned()
-            email_verified=email_verified
-            first_name=first_name.to_owned()
-            last_name=last_name.to_owned()
+            email=profile.email
+            email_verified=profile.email_verified
+            first_name=profile.first_name
+            last_name=profile.last_name
+            vapid_public_key=vapid_public_key
         />
     };
     (StatusCode::OK, axum::response::Html(html.to_html())).into_response()
@@ -88,6 +97,7 @@ fn Settings(
     email_verified: bool,
     first_name: String,
     last_name: String,
+    #[prop(optional_no_strip)] vapid_public_key: Option<String>,
 ) -> impl IntoView {
     let email_alert = email_feedback
         .as_deref()
@@ -150,6 +160,8 @@ fn Settings(
                 <FeedSection />
 
                 <ShareSection />
+
+                <PushSection vapid_public_key=vapid_public_key />
             </main>
         </Shell>
     }

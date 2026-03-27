@@ -41,6 +41,12 @@ interface HopResponse {
   arr_gate?: string;
   /** Arrival terminal from status enrichment. */
   arr_terminal?: string;
+  /** Departure platform from rail status enrichment. */
+  dep_platform?: string;
+  /** Arrival platform from rail status enrichment. */
+  arr_platform?: string;
+  /** Whether the route was verified via ADS-B data from OpenSky Network. */
+  route_verified?: boolean;
 }
 
 /** An aggregated route between two cities, used for map rendering. */

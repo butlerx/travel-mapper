@@ -6,7 +6,12 @@ use crate::{
     geocode::Geocoder,
     integrations::{
         airlabs::AirLabsClient,
+        darwin::DarwinClient,
+        db_ris::DbRisClient,
         flight_status::FlightStatusApi,
+        opensky::OpenSkyClient,
+        rail_status::RailStatusApi,
+        transitland::rail_status_impl::TransitlandRailClient,
         tripit::{self, FetchError, TripItApi, TripItAuth, TripItClient},
     },
 };
@@ -157,6 +162,13 @@ pub struct SyncWorkerConfig {
     pub consumer_secret: String,
     pub poll_interval: std::time::Duration,
     pub airlabs_api_key: Option<String>,
+    pub opensky_client_id: Option<String>,
+    pub opensky_client_secret: Option<String>,
+    pub darwin_api_token: Option<String>,
+    pub db_ris_api_key: Option<String>,
+    pub db_ris_client_id: Option<String>,
+    pub transitland_api_key: Option<String>,
+    pub vapid_private_key: Option<Vec<u8>>,
 }
 
 /// Run the sync worker loop, polling for pending jobs until shutdown.
@@ -218,6 +230,25 @@ async fn process_sync_job(config: &SyncWorkerConfig, job: &db::sync_jobs::Row) {
                 "sync job completed",
             );
             enrich_flight_statuses(config, job.user_id).await;
+            verify_flight_routes(config, job.user_id).await;
+            enrich_rail_statuses(config, job.user_id).await;
+            if let Some(ref vapid_key) = config.vapid_private_key {
+                let duration_secs =
+                    std::time::Duration::from_millis(sync_result.duration_ms).as_secs_f64();
+                let body = format!(
+                    "Synced {} trips with {} journeys in {:.1}s",
+                    sync_result.trips_fetched, sync_result.hops_fetched, duration_secs,
+                );
+                crate::server::push::send_to_user(
+                    &config.pool,
+                    vapid_key,
+                    job.user_id,
+                    "Sync Complete",
+                    &body,
+                    "/dashboard",
+                )
+                .await;
+            }
             if let Err(err) = (db::sync_jobs::Complete { job_id: job.id })
                 .execute(&config.pool)
                 .await
@@ -358,6 +389,8 @@ async fn enrich_flight_statuses(config: &SyncWorkerConfig, user_id: i64) {
                     dep_terminal: &status.dep_terminal,
                     arr_gate: &status.arr_gate,
                     arr_terminal: &status.arr_terminal,
+                    dep_platform: "",
+                    arr_platform: "",
                     raw_json: &status.raw_json,
                 })
                 .execute(&config.pool)
@@ -392,5 +425,392 @@ async fn enrich_flight_statuses(config: &SyncWorkerConfig, user_id: i64) {
 
     if enriched > 0 {
         tracing::info!(user_id, enriched, "flight status enrichment complete");
+    }
+}
+
+/// Verify air-hop routes against `OpenSky` ADS-B observations.
+///
+/// Failures are logged and never propagated — verification is optional and must
+/// not block sync completion.
+async fn verify_flight_routes(config: &SyncWorkerConfig, user_id: i64) {
+    let (Some(client_id), Some(client_secret)) =
+        (&config.opensky_client_id, &config.opensky_client_secret)
+    else {
+        return;
+    };
+
+    let Some(hops) = fetch_air_hops_for_route_verification(config, user_id).await else {
+        return;
+    };
+
+    if hops.is_empty() {
+        return;
+    }
+
+    let client = OpenSkyClient::new(client_id.clone(), client_secret.clone());
+    let mut verified = 0_u64;
+
+    for hop in &hops {
+        match verify_air_hop_route(config, &client, user_id, hop).await {
+            RouteVerificationOutcome::Verified => {
+                verified += 1;
+            }
+            RouteVerificationOutcome::RateLimited => {
+                tracing::info!(
+                    user_id,
+                    requests = client.requests_made(),
+                    "opensky rate limit reached, stopping verification",
+                );
+                break;
+            }
+            RouteVerificationOutcome::Noop => {}
+        }
+    }
+
+    if verified > 0 {
+        tracing::info!(user_id, verified, "opensky route verification complete");
+    }
+}
+
+async fn fetch_air_hops_for_route_verification(
+    config: &SyncWorkerConfig,
+    user_id: i64,
+) -> Option<Vec<db::hops::Row>> {
+    match (db::hops::GetAll {
+        user_id,
+        travel_type_filter: Some("air"),
+    })
+    .execute(&config.pool)
+    .await
+    {
+        Ok(hops) => Some(hops),
+        Err(err) => {
+            tracing::warn!(user_id, error = %err, "failed to fetch air hops for route verification");
+            None
+        }
+    }
+}
+
+enum RouteVerificationOutcome {
+    Verified,
+    RateLimited,
+    Noop,
+}
+
+async fn verify_air_hop_route(
+    config: &SyncWorkerConfig,
+    client: &OpenSkyClient,
+    user_id: i64,
+    hop: &db::hops::Row,
+) -> RouteVerificationOutcome {
+    let detail = match (db::hops::GetById {
+        id: hop.id,
+        user_id,
+    })
+    .execute(&config.pool)
+    .await
+    {
+        Ok(Some(d)) => d,
+        Ok(None) => return RouteVerificationOutcome::Noop,
+        Err(err) => {
+            tracing::warn!(hop_id = hop.id, error = %err, "failed to fetch hop detail for route verification");
+            return RouteVerificationOutcome::Noop;
+        }
+    };
+
+    let flight_number = detail
+        .flight_detail
+        .as_ref()
+        .map(|d| d.flight_number.as_str())
+        .unwrap_or_default();
+    if flight_number.is_empty() || hop.start_date.is_empty() {
+        return RouteVerificationOutcome::Noop;
+    }
+
+    match client
+        .verify_route(
+            flight_number,
+            &hop.start_date,
+            &hop.origin_name,
+            &hop.dest_name,
+        )
+        .await
+    {
+        Ok(Some(verification)) => {
+            let status = if verification.operated {
+                "verified"
+            } else {
+                "unverified"
+            };
+            if let Err(err) = (db::status_enrichments::Upsert {
+                hop_id: hop.id,
+                provider: "opensky",
+                status,
+                delay_minutes: None,
+                dep_gate: "",
+                dep_terminal: "",
+                arr_gate: "",
+                arr_terminal: "",
+                dep_platform: "",
+                arr_platform: "",
+                raw_json: &verification.raw_json,
+            })
+            .execute(&config.pool)
+            .await
+            {
+                tracing::warn!(hop_id = hop.id, error = %err, "failed to upsert opensky route verification");
+                RouteVerificationOutcome::Noop
+            } else {
+                RouteVerificationOutcome::Verified
+            }
+        }
+        Ok(None) => {
+            tracing::debug!(
+                hop_id = hop.id,
+                flight_number,
+                "no opensky route data found"
+            );
+            RouteVerificationOutcome::Noop
+        }
+        Err(crate::integrations::opensky::OpenSkyError::RateLimited) => {
+            RouteVerificationOutcome::RateLimited
+        }
+        Err(err) => {
+            tracing::warn!(hop_id = hop.id, flight_number, error = %err, "opensky route verification failed");
+            RouteVerificationOutcome::Noop
+        }
+    }
+}
+
+fn select_rail_provider<'a>(
+    origin_country: Option<&'a str>,
+    dest_country: Option<&'a str>,
+) -> &'static str {
+    if origin_country != dest_country {
+        return "transitland";
+    }
+    match origin_country {
+        Some("gb") => "darwin",
+        Some("de") => "db_ris",
+        Some("us") => "amtrak",
+        _ => "transitland",
+    }
+}
+
+async fn enrich_rail_statuses(config: &SyncWorkerConfig, user_id: i64) {
+    let has_any_provider = config.darwin_api_token.is_some()
+        || config.db_ris_api_key.is_some()
+        || config.transitland_api_key.is_some();
+
+    if !has_any_provider {
+        return;
+    }
+
+    let hops = match (db::hops::GetAll {
+        user_id,
+        travel_type_filter: Some("rail"),
+    })
+    .execute(&config.pool)
+    .await
+    {
+        Ok(hops) => hops,
+        Err(err) => {
+            tracing::warn!(user_id, error = %err, "failed to fetch rail hops for enrichment");
+            return;
+        }
+    };
+
+    if hops.is_empty() {
+        return;
+    }
+
+    let mut enriched = 0_u64;
+
+    for hop in &hops {
+        match enrich_single_rail_hop(config, user_id, hop).await {
+            Some(RailEnrichResult::Enriched) => enriched += 1,
+            Some(RailEnrichResult::RateLimited) => break,
+            Some(RailEnrichResult::Skipped) | None => {}
+        }
+    }
+
+    if enriched > 0 {
+        tracing::info!(user_id, enriched, "rail status enrichment complete",);
+    }
+}
+
+enum RailEnrichResult {
+    Enriched,
+    RateLimited,
+    Skipped,
+}
+
+async fn enrich_single_rail_hop(
+    config: &SyncWorkerConfig,
+    user_id: i64,
+    hop: &db::hops::Row,
+) -> Option<RailEnrichResult> {
+    let detail = match (db::hops::GetById {
+        id: hop.id,
+        user_id,
+    })
+    .execute(&config.pool)
+    .await
+    {
+        Ok(Some(d)) => d,
+        Ok(None) => return None,
+        Err(err) => {
+            tracing::warn!(hop_id = hop.id, error = %err, "failed to fetch hop detail for rail enrichment");
+            return None;
+        }
+    };
+
+    let train_number = detail
+        .rail_detail
+        .as_ref()
+        .map(|d| d.train_number.as_str())
+        .unwrap_or_default();
+    if train_number.is_empty() || hop.start_date.is_empty() {
+        return None;
+    }
+
+    let provider = select_rail_provider(hop.origin_country.as_deref(), hop.dest_country.as_deref());
+
+    let provider_configured = match provider {
+        "darwin" => config.darwin_api_token.is_some(),
+        "db_ris" => config.db_ris_api_key.is_some(),
+        "transitland" => config.transitland_api_key.is_some(),
+        _ => false,
+    };
+
+    if !provider_configured {
+        tracing::debug!(
+            hop_id = hop.id,
+            provider,
+            "rail provider not configured, skipping",
+        );
+        return Some(RailEnrichResult::Skipped);
+    }
+
+    let carrier = detail
+        .rail_detail
+        .as_ref()
+        .map(|d| d.carrier.as_str())
+        .unwrap_or_default();
+
+    let query = crate::integrations::rail_status::RailStatusQuery {
+        carrier,
+        train_number,
+        origin_name: &hop.origin_name,
+        dest_name: &hop.dest_name,
+        origin_country: hop.origin_country.as_deref(),
+        dest_country: hop.dest_country.as_deref(),
+        start_date: &hop.start_date,
+        end_date: &hop.end_date,
+        origin_lat: hop.origin_lat,
+        origin_lng: hop.origin_lng,
+        dest_lat: hop.dest_lat,
+        dest_lng: hop.dest_lng,
+    };
+
+    dispatch_and_upsert_rail_status(config, user_id, hop, provider, train_number, &query).await
+}
+
+async fn dispatch_and_upsert_rail_status(
+    config: &SyncWorkerConfig,
+    user_id: i64,
+    hop: &db::hops::Row,
+    provider: &str,
+    train_number: &str,
+    query: &crate::integrations::rail_status::RailStatusQuery<'_>,
+) -> Option<RailEnrichResult> {
+    let result = if provider == "db_ris" {
+        let (Some(api_key), Some(client_id)) = (&config.db_ris_api_key, &config.db_ris_client_id)
+        else {
+            return Some(RailEnrichResult::Skipped);
+        };
+        let client = DbRisClient::new(api_key.clone(), client_id.clone(), config.pool.clone());
+        client.get_rail_status(query).await
+    } else if provider == "darwin" {
+        let Some(api_token) = &config.darwin_api_token else {
+            return Some(RailEnrichResult::Skipped);
+        };
+        let client = DarwinClient::new(api_token.clone());
+        client.get_rail_status(query).await
+    } else if provider == "transitland" {
+        let Some(api_key) = &config.transitland_api_key else {
+            return Some(RailEnrichResult::Skipped);
+        };
+        match TransitlandRailClient::new(api_key.clone(), config.pool.clone()) {
+            Ok(client) => client.get_rail_status(query).await,
+            Err(err) => {
+                tracing::warn!(error = %err, "failed to create transitland client");
+                return Some(RailEnrichResult::Skipped);
+            }
+        }
+    } else {
+        tracing::debug!(
+            hop_id = hop.id,
+            provider,
+            train_number,
+            "rail provider not yet implemented",
+        );
+        return Some(RailEnrichResult::Skipped);
+    };
+
+    match result {
+        Ok(Some(status)) => {
+            let delay = status.dep_delay_minutes.or(status.arr_delay_minutes);
+            if let Err(err) = (db::status_enrichments::Upsert {
+                hop_id: hop.id,
+                provider,
+                status: &status.status,
+                delay_minutes: delay,
+                dep_gate: "",
+                dep_terminal: "",
+                arr_gate: "",
+                arr_terminal: "",
+                dep_platform: &status.dep_platform,
+                arr_platform: &status.arr_platform,
+                raw_json: &status.raw_json,
+            })
+            .execute(&config.pool)
+            .await
+            {
+                tracing::warn!(
+                    hop_id = hop.id,
+                    error = %err,
+                    "failed to upsert rail status enrichment",
+                );
+            } else {
+                return Some(RailEnrichResult::Enriched);
+            }
+            Some(RailEnrichResult::Skipped)
+        }
+        Ok(None) => {
+            tracing::debug!(
+                hop_id = hop.id,
+                train_number,
+                "no rail status data returned",
+            );
+            Some(RailEnrichResult::Skipped)
+        }
+        Err(crate::integrations::rail_status::RailStatusError::RateLimited) => {
+            tracing::info!(
+                user_id,
+                provider,
+                "rail provider rate limit reached, stopping enrichment",
+            );
+            Some(RailEnrichResult::RateLimited)
+        }
+        Err(err) => {
+            tracing::warn!(
+                hop_id = hop.id,
+                train_number,
+                error = %err,
+                "rail status API request failed",
+            );
+            Some(RailEnrichResult::Skipped)
+        }
     }
 }

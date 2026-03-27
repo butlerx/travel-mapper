@@ -34,6 +34,8 @@ pub(super) mod journeys;
 pub(super) mod login;
 pub(super) mod logout;
 pub(super) mod profile;
+/// Web Push notification subscription management.
+pub(super) mod push;
 pub(super) mod register;
 /// Account settings (JSON + HTML via content negotiation).
 pub(super) mod settings;
@@ -375,6 +377,15 @@ pub(super) fn auth_api_routes() -> ApiRouter<super::AppState> {
         .api_route(
             "/profile",
             post_with(profile::handler, profile::handler_docs),
+        )
+        .api_route(
+            "/push-subscribe",
+            post_with(push::subscribe_handler, push::subscribe_handler_docs)
+                .delete_with(push::unsubscribe_handler, push::unsubscribe_handler_docs),
+        )
+        .api_route(
+            "/vapid-public-key",
+            get_with(push::vapid_key_handler, push::vapid_key_handler_docs),
         )
         .route("/verify-email", axum::routing::get(verify_email::handler))
         .api_route(

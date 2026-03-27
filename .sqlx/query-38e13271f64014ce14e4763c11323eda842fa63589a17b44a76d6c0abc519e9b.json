@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT DISTINCT\n                t.trip_id,\n                t.route_id,\n                st_origin.departure_time as origin_departure,\n                st_dest.arrival_time as dest_arrival\n            FROM gtfs_trips t\n            JOIN gtfs_stop_times st_origin ON t.feed_id = st_origin.feed_id AND t.trip_id = st_origin.trip_id\n            JOIN gtfs_stop_times st_dest ON t.feed_id = st_dest.feed_id AND t.trip_id = st_dest.trip_id\n            WHERE t.feed_id = ?\n              AND st_origin.stop_id = ?\n              AND st_dest.stop_id = ?\n              AND st_origin.stop_sequence < st_dest.stop_sequence\n            LIMIT 50\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "trip_id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "route_id",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "origin_departure",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "dest_arrival",
+        "ordinal": 3,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "38e13271f64014ce14e4763c11323eda842fa63589a17b44a76d6c0abc519e9b"
+}

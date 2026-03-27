@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id as \"id!: i64\", user_id as \"user_id!: i64\", endpoint, p256dh, auth, created_at\n               FROM push_subscriptions\n               WHERE user_id = ?\n               ORDER BY created_at DESC",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!: i64",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "user_id!: i64",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "endpoint",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "p256dh",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "auth",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 5,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "5fc85a7f06921dd3a1b029bd0a5b532e37b0d5f92839808dcb7af8d276f9f88a"
+}

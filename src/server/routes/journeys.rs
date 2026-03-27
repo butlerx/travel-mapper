@@ -67,6 +67,15 @@ pub struct JourneyResponse {
     /// Arrival terminal from status enrichment.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub arr_terminal: Option<String>,
+    /// Departure platform from rail status enrichment.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dep_platform: Option<String>,
+    /// Arrival platform from rail status enrichment.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub arr_platform: Option<String>,
+    /// Whether the flight route was verified via ADS-B data from `OpenSky` Network.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub route_verified: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cost_amount: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -163,6 +172,12 @@ impl JourneyResponse {
         self.dep_terminal = non_empty(&enrichment.dep_terminal);
         self.arr_gate = non_empty(&enrichment.arr_gate);
         self.arr_terminal = non_empty(&enrichment.arr_terminal);
+        self.dep_platform = non_empty(&enrichment.dep_platform);
+        self.arr_platform = non_empty(&enrichment.arr_platform);
+    }
+
+    fn apply_opensky_verification(&mut self, enrichment: &db::status_enrichments::Row) {
+        self.route_verified = Some(enrichment.status == "verified");
     }
 }
 
@@ -187,6 +202,9 @@ impl From<db::hops::Row> for JourneyResponse {
             dep_terminal: None,
             arr_gate: None,
             arr_terminal: None,
+            dep_platform: None,
+            arr_platform: None,
+            route_verified: None,
             cost_amount: hop.cost_amount,
             cost_currency: hop.cost_currency,
             loyalty_program: hop.loyalty_program,
@@ -224,6 +242,9 @@ impl From<db::hops::DetailRow> for JourneyResponse {
             dep_terminal: None,
             arr_gate: None,
             arr_terminal: None,
+            dep_platform: None,
+            arr_platform: None,
+            route_verified: None,
             cost_amount: hop.cost_amount,
             cost_currency: hop.cost_currency,
             loyalty_program: hop.loyalty_program,
@@ -253,6 +274,9 @@ impl MultiFormatResponse for JourneyResponse {
         "dep_terminal",
         "arr_gate",
         "arr_terminal",
+        "dep_platform",
+        "arr_platform",
+        "route_verified",
         "cost_amount",
         "cost_currency",
     ];
@@ -277,6 +301,10 @@ impl MultiFormatResponse for JourneyResponse {
             self.dep_terminal.clone().unwrap_or_default(),
             self.arr_gate.clone().unwrap_or_default(),
             self.arr_terminal.clone().unwrap_or_default(),
+            self.dep_platform.clone().unwrap_or_default(),
+            self.arr_platform.clone().unwrap_or_default(),
+            self.route_verified
+                .map_or_else(String::new, |v| v.to_string()),
             self.cost_amount.map_or_else(String::new, |v| v.to_string()),
             self.cost_currency.clone().unwrap_or_default(),
         ]
@@ -303,6 +331,13 @@ impl MultiFormatResponse for JourneyResponse {
             };
             (css_class, label)
         });
+        let verified_badge = self.route_verified.map(|verified| {
+            if verified {
+                ("status-badge status-connected", "✓ Verified")
+            } else {
+                ("status-badge status-disconnected", "Unverified")
+            }
+        });
 
         view! {
             <a href=href class="journey-card-link">
@@ -316,6 +351,9 @@ impl MultiFormatResponse for JourneyResponse {
                     <div class="journey-card-meta">
                         <span class=badge_class>{badge_text}</span>
                         {status_badge.map(|(css_class, label)| view! {
+                            <span class=css_class>{label}</span>
+                        })}
+                        {verified_badge.map(|(css_class, label)| view! {
                             <span class=css_class>{label}</span>
                         })}
                         <span class="journey-card-date">{date}</span>
@@ -387,6 +425,31 @@ pub async fn handler(
         }
     }
 
+    let hop_ids_for_opensky: Vec<i64> = responses
+        .iter()
+        .filter(|r| r.travel_type == JourneyTravelType::Air)
+        .map(|r| r.id)
+        .collect();
+    if !hop_ids_for_opensky.is_empty()
+        && let Ok(opensky_enrichments) = (db::status_enrichments::GetByHopIdsAndProvider {
+            hop_ids: hop_ids_for_opensky,
+            provider: "opensky",
+        })
+        .execute(&state.db)
+        .await
+    {
+        let opensky_map: std::collections::HashMap<i64, db::status_enrichments::Row> =
+            opensky_enrichments
+                .into_iter()
+                .map(|e| (e.hop_id, e))
+                .collect();
+        for response in &mut responses {
+            if let Some(enrichment) = opensky_map.get(&response.id) {
+                response.apply_opensky_verification(enrichment);
+            }
+        }
+    }
+
     JourneyResponse::into_format_response(&responses, format, StatusCode::OK)
 }
 
@@ -443,6 +506,15 @@ pub async fn get_journey_handler(
         .ok()
         .flatten();
 
+    let opensky_verification = (db::status_enrichments::GetByHopIdAndProvider {
+        hop_id: detail.id,
+        provider: "opensky",
+    })
+    .execute(&state.db)
+    .await
+    .ok()
+    .flatten();
+
     let attachments = (db::attachments::GetByHopId {
         hop_id: detail.id,
         user_id: auth.user_id,
@@ -452,11 +524,20 @@ pub async fn get_journey_handler(
     .unwrap_or_default();
 
     if format == super::ResponseFormat::Html {
-        crate::server::pages::journey_detail::render_page(detail, feedback, enrichment, attachments)
+        crate::server::pages::journey_detail::render_page(
+            detail,
+            feedback,
+            enrichment,
+            attachments,
+            opensky_verification,
+        )
     } else {
         let mut response: JourneyResponse = detail.into();
         if let Some(ref e) = enrichment {
             response.apply_enrichment(e);
+        }
+        if let Some(ref e) = opensky_verification {
+            response.apply_opensky_verification(e);
         }
         JourneyResponse::single_format_response(&response, format, StatusCode::OK)
     }

@@ -11,6 +11,8 @@ pub struct Row {
     pub dep_terminal: String,
     pub arr_gate: String,
     pub arr_terminal: String,
+    pub dep_platform: String,
+    pub arr_platform: String,
     pub raw_json: String,
     pub fetched_at: String,
 }
@@ -24,6 +26,8 @@ pub struct Upsert<'a> {
     pub dep_terminal: &'a str,
     pub arr_gate: &'a str,
     pub arr_terminal: &'a str,
+    pub dep_platform: &'a str,
+    pub arr_platform: &'a str,
     pub raw_json: &'a str,
 }
 
@@ -35,8 +39,9 @@ impl Upsert<'_> {
         sqlx::query!(
             r"INSERT INTO status_enrichments
                    (hop_id, provider, status, delay_minutes,
-                    dep_gate, dep_terminal, arr_gate, arr_terminal, raw_json)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    dep_gate, dep_terminal, arr_gate, arr_terminal,
+                    dep_platform, arr_platform, raw_json)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                ON CONFLICT(hop_id, provider) DO UPDATE SET
                    status = excluded.status,
                    delay_minutes = excluded.delay_minutes,
@@ -44,6 +49,8 @@ impl Upsert<'_> {
                    dep_terminal = excluded.dep_terminal,
                    arr_gate = excluded.arr_gate,
                    arr_terminal = excluded.arr_terminal,
+                   dep_platform = excluded.dep_platform,
+                   arr_platform = excluded.arr_platform,
                    raw_json = excluded.raw_json,
                    fetched_at = datetime('now')",
             self.hop_id,
@@ -54,6 +61,8 @@ impl Upsert<'_> {
             self.dep_terminal,
             self.arr_gate,
             self.arr_terminal,
+            self.dep_platform,
+            self.arr_platform,
             self.raw_json,
         )
         .execute(pool)
@@ -83,6 +92,8 @@ impl GetByHopId {
                    dep_terminal as "dep_terminal!: String",
                    arr_gate as "arr_gate!: String",
                    arr_terminal as "arr_terminal!: String",
+                   dep_platform as "dep_platform!: String",
+                   arr_platform as "arr_platform!: String",
                    raw_json as "raw_json!: String",
                    fetched_at as "fetched_at!: String"
                FROM status_enrichments
@@ -122,6 +133,8 @@ impl GetByHopIds {
                    se.dep_terminal as "dep_terminal!: String",
                    se.arr_gate as "arr_gate!: String",
                    se.arr_terminal as "arr_terminal!: String",
+                   se.dep_platform as "dep_platform!: String",
+                   se.arr_platform as "arr_platform!: String",
                    se.raw_json as "raw_json!: String",
                    se.fetched_at as "fetched_at!: String"
                FROM status_enrichments se
@@ -134,6 +147,86 @@ impl GetByHopIds {
                WHERE se.hop_id IN (SELECT value FROM json_each(?))"#,
             ids_json,
             ids_json,
+        )
+        .fetch_all(pool)
+        .await
+    }
+}
+
+pub struct GetByHopIdAndProvider<'a> {
+    pub hop_id: i64,
+    pub provider: &'a str,
+}
+
+impl GetByHopIdAndProvider<'_> {
+    /// # Errors
+    ///
+    /// Returns an error if the query fails.
+    pub async fn execute(&self, pool: &SqlitePool) -> Result<Option<Row>, sqlx::Error> {
+        sqlx::query_as!(
+            Row,
+            r#"SELECT
+                   id as "id!: i64",
+                   hop_id as "hop_id!: i64",
+                   provider as "provider!: String",
+                   status as "status!: String",
+                   delay_minutes,
+                   dep_gate as "dep_gate!: String",
+                   dep_terminal as "dep_terminal!: String",
+                   arr_gate as "arr_gate!: String",
+                   arr_terminal as "arr_terminal!: String",
+                   dep_platform as "dep_platform!: String",
+                   arr_platform as "arr_platform!: String",
+                   raw_json as "raw_json!: String",
+                   fetched_at as "fetched_at!: String"
+               FROM status_enrichments
+               WHERE hop_id = ? AND provider = ?
+               ORDER BY fetched_at DESC
+               LIMIT 1"#,
+            self.hop_id,
+            self.provider,
+        )
+        .fetch_optional(pool)
+        .await
+    }
+}
+
+pub struct GetByHopIdsAndProvider<'a> {
+    pub hop_ids: Vec<i64>,
+    pub provider: &'a str,
+}
+
+impl GetByHopIdsAndProvider<'_> {
+    /// # Errors
+    ///
+    /// Returns an error if the query fails.
+    pub async fn execute(&self, pool: &SqlitePool) -> Result<Vec<Row>, sqlx::Error> {
+        if self.hop_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        let ids_json =
+            serde_json::to_string(&self.hop_ids).map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
+        sqlx::query_as!(
+            Row,
+            r#"SELECT
+                   se.id as "id!: i64",
+                   se.hop_id as "hop_id!: i64",
+                   se.provider as "provider!: String",
+                   se.status as "status!: String",
+                   se.delay_minutes,
+                   se.dep_gate as "dep_gate!: String",
+                   se.dep_terminal as "dep_terminal!: String",
+                   se.arr_gate as "arr_gate!: String",
+                   se.arr_terminal as "arr_terminal!: String",
+                   se.dep_platform as "dep_platform!: String",
+                   se.arr_platform as "arr_platform!: String",
+                   se.raw_json as "raw_json!: String",
+                   se.fetched_at as "fetched_at!: String"
+               FROM status_enrichments se
+               WHERE se.hop_id IN (SELECT value FROM json_each(?))
+                 AND se.provider = ?"#,
+            ids_json,
+            self.provider,
         )
         .fetch_all(pool)
         .await
@@ -202,6 +295,8 @@ mod tests {
             dep_terminal: "5",
             arr_gate: "C10",
             arr_terminal: "1",
+            dep_platform: "",
+            arr_platform: "",
             raw_json: r#"{"test":true}"#,
         }
         .execute(&pool)
@@ -236,6 +331,8 @@ mod tests {
             dep_terminal: "",
             arr_gate: "",
             arr_terminal: "",
+            dep_platform: "",
+            arr_platform: "",
             raw_json: "{}",
         }
         .execute(&pool)
@@ -251,6 +348,8 @@ mod tests {
             dep_terminal: "2",
             arr_gate: "D5",
             arr_terminal: "3",
+            dep_platform: "",
+            arr_platform: "",
             raw_json: r#"{"updated":true}"#,
         }
         .execute(&pool)
@@ -301,6 +400,8 @@ mod tests {
             dep_terminal: "",
             arr_gate: "",
             arr_terminal: "",
+            dep_platform: "",
+            arr_platform: "",
             raw_json: "{}",
         }
         .execute(&pool)
@@ -316,6 +417,8 @@ mod tests {
             dep_terminal: "",
             arr_gate: "",
             arr_terminal: "",
+            dep_platform: "",
+            arr_platform: "",
             raw_json: "{}",
         }
         .execute(&pool)
@@ -359,6 +462,8 @@ mod tests {
             dep_terminal: "",
             arr_gate: "",
             arr_terminal: "",
+            dep_platform: "",
+            arr_platform: "",
             raw_json: "{}",
         }
         .execute(&pool)
