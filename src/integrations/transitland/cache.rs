@@ -7,6 +7,7 @@ use super::client::TransitlandClient;
 use crate::integrations::transitland::feed_discovery::RailOperator;
 use deunicode::deunicode;
 use gtfs_structures::Gtfs;
+use serde::Serialize;
 use sqlx::SqlitePool;
 use std::path::Path;
 use thiserror::Error;
@@ -508,8 +509,7 @@ impl GtfsCache {
 }
 
 /// A stop matching result with similarity score.
-#[derive(Debug, Clone)]
-#[allow(dead_code)] // fields match query output shape for debugging context
+#[derive(Debug, Clone, Serialize)]
 pub struct StopMatch {
     pub stop_id: String,
     pub stop_name: String,
@@ -519,8 +519,7 @@ pub struct StopMatch {
 }
 
 /// A trip matching result.
-#[derive(Debug, Clone)]
-#[allow(dead_code)] // fields match query output shape for debugging context
+#[derive(Debug, Clone, Serialize)]
 pub struct TripMatch {
     pub trip_id: String,
     pub route_id: String,

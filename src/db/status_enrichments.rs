@@ -239,6 +239,42 @@ impl GetByHopIdsAndProvider<'_> {
     }
 }
 
+/// Fetch all status enrichments for a hop (one per provider).
+pub struct GetAllByHopId {
+    pub hop_id: i64,
+}
+
+impl GetAllByHopId {
+    /// # Errors
+    ///
+    /// Returns an error if the query fails.
+    pub async fn execute(&self, pool: &SqlitePool) -> Result<Vec<Row>, sqlx::Error> {
+        sqlx::query_as!(
+            Row,
+            r#"SELECT
+                   id as "id!: i64",
+                   hop_id as "hop_id!: i64",
+                   provider as "provider!: String",
+                   status as "status!: String",
+                   delay_minutes,
+                   dep_gate as "dep_gate!: String",
+                   dep_terminal as "dep_terminal!: String",
+                   arr_gate as "arr_gate!: String",
+                   arr_terminal as "arr_terminal!: String",
+                   dep_platform as "dep_platform!: String",
+                   arr_platform as "arr_platform!: String",
+                   raw_json as "raw_json!: String",
+                   fetched_at as "fetched_at!: String"
+               FROM status_enrichments
+               WHERE hop_id = ?
+               ORDER BY fetched_at DESC"#,
+            self.hop_id,
+        )
+        .fetch_all(pool)
+        .await
+    }
+}
+
 /// Delete all status enrichments for a hop.
 pub struct DeleteByHopId {
     pub hop_id: i64,

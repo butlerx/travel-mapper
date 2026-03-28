@@ -10,6 +10,9 @@ pub enum FlightStatusError {
 
     #[error("failed to parse API response: {0}")]
     Json(#[from] serde_json::Error),
+
+    #[error("rate limited by provider")]
+    RateLimited,
 }
 
 /// Live or historical status data for a single flight.

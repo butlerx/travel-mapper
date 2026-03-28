@@ -18,6 +18,8 @@ use schemars::JsonSchema;
 use serde::Serialize;
 use std::fmt::Write;
 
+/// Airport IATA code reference lookups.
+pub(super) mod airports;
 pub(super) mod api_keys;
 /// Photo and document attachments for journeys.
 pub(super) mod attachments;
@@ -25,6 +27,8 @@ pub(super) mod attachments;
 pub(super) mod csv_import;
 /// Email address update and verification resend handlers.
 pub(super) mod email;
+/// Status enrichment detail records for journeys.
+pub(super) mod enrichments;
 /// Public ICS calendar feed served by token.
 pub(super) mod feed;
 /// Authenticated feed token create/revoke handlers.
@@ -36,6 +40,8 @@ pub(super) mod logout;
 pub(super) mod profile;
 /// Web Push notification subscription management.
 pub(super) mod push;
+/// Rail operator and GTFS-RT feed discovery.
+pub(super) mod rail;
 pub(super) mod register;
 /// Account settings (JSON + HTML via content negotiation).
 pub(super) mod settings;
@@ -44,6 +50,8 @@ pub(super) mod share;
 /// Authenticated share token create/revoke handlers.
 pub(super) mod share_tokens;
 pub(super) mod static_assets;
+/// UK CRS station code reference lookups.
+pub(super) mod stations;
 pub(super) mod stats;
 pub(super) mod sync;
 pub(super) mod tripit_callback;
@@ -512,6 +520,57 @@ pub(super) fn attachments_api_routes() -> ApiRouter<super::AppState> {
             get_with(attachments::serve_handler, attachments::serve_handler_docs).delete_with(
                 attachments::delete_handler,
                 attachments::delete_handler_docs,
+            ),
+        )
+}
+
+/// Enrichment API routes, nested under `/journeys/{id}/enrichments`.
+pub(super) fn enrichments_api_routes() -> ApiRouter<super::AppState> {
+    ApiRouter::new().api_route(
+        "/",
+        get_with(enrichments::handler, enrichments::handler_docs),
+    )
+}
+
+/// Airport reference data routes, nested under `/airports`.
+pub(super) fn airports_api_routes() -> ApiRouter<super::AppState> {
+    ApiRouter::new().api_route(
+        "/{iata}",
+        get_with(airports::handler, airports::handler_docs),
+    )
+}
+
+/// Station reference data routes, nested under `/stations`.
+pub(super) fn stations_api_routes() -> ApiRouter<super::AppState> {
+    ApiRouter::new()
+        .api_route(
+            "/lookup",
+            get_with(stations::lookup_handler, stations::lookup_handler_docs),
+        )
+        .api_route(
+            "/{crs}",
+            get_with(
+                stations::get_by_code_handler,
+                stations::get_by_code_handler_docs,
+            ),
+        )
+}
+
+/// Rail operator and feed discovery routes, nested under `/rail`.
+pub(super) fn rail_api_routes() -> ApiRouter<super::AppState> {
+    ApiRouter::new()
+        .api_route(
+            "/operators",
+            get_with(
+                rail::list_operators_handler,
+                rail::list_operators_handler_docs,
+            ),
+        )
+        .api_route(
+            "/operators/{onestop_id}/feeds",
+            get_with(
+                rail::operator_feeds_handler,
+                rail::operator_feeds_handler_docs,
             ),
         )
 }

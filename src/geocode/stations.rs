@@ -1,8 +1,8 @@
 //! UK CRS station code lookup — maps three-letter CRS codes to station names.
 
-struct Station {
-    code: &'static str,
-    name: &'static str,
+pub(crate) struct Station {
+    pub(crate) code: &'static str,
+    pub(crate) name: &'static str,
 }
 
 static STATIONS: &[Station] = &[
@@ -12342,7 +12342,6 @@ static STATIONS: &[Station] = &[
 
 /// Looks up a UK CRS station code and returns the matching station name.
 #[must_use]
-#[allow(dead_code)]
 pub fn lookup_crs(code: &str) -> Option<&'static str> {
     if code.is_empty() {
         return None;

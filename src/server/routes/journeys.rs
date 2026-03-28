@@ -84,6 +84,15 @@ pub struct JourneyResponse {
     pub loyalty_program: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub miles_earned: Option<f64>,
+    /// When the most recent enrichment data was fetched (UTC datetime string).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fetched_at: Option<String>,
+    /// Whether the enrichment data is still within its freshness TTL.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_fresh: Option<bool>,
+    /// Name of the enrichment data provider (e.g. `"airlabs"`, `"darwin"`, `"transitland"`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub provider: Option<String>,
 }
 
 /// Mode of transport for a travel journey.
@@ -174,10 +183,26 @@ impl JourneyResponse {
         self.arr_terminal = non_empty(&enrichment.arr_terminal);
         self.dep_platform = non_empty(&enrichment.dep_platform);
         self.arr_platform = non_empty(&enrichment.arr_platform);
+        self.fetched_at = Some(enrichment.fetched_at.clone());
+        self.is_fresh = Some(Self::compute_freshness(
+            &enrichment.fetched_at,
+            &self.start_date,
+        ));
+        self.provider = non_empty(&enrichment.provider);
     }
 
     fn apply_opensky_verification(&mut self, enrichment: &db::status_enrichments::Row) {
         self.route_verified = Some(enrichment.status == "verified");
+    }
+
+    fn compute_freshness(fetched_at: &str, start_date: &str) -> bool {
+        let Ok(fetched) = chrono::NaiveDateTime::parse_from_str(fetched_at, "%Y-%m-%d %H:%M:%S")
+        else {
+            return false;
+        };
+        let ttl = crate::worker::departure_aware_ttl(start_date);
+        let age = chrono::Utc::now().naive_utc() - fetched;
+        age.num_seconds() < ttl
     }
 }
 
@@ -209,6 +234,9 @@ impl From<db::hops::Row> for JourneyResponse {
             cost_currency: hop.cost_currency,
             loyalty_program: hop.loyalty_program,
             miles_earned: hop.miles_earned,
+            fetched_at: None,
+            is_fresh: None,
+            provider: None,
         }
     }
 }
@@ -249,6 +277,9 @@ impl From<db::hops::DetailRow> for JourneyResponse {
             cost_currency: hop.cost_currency,
             loyalty_program: hop.loyalty_program,
             miles_earned: hop.miles_earned,
+            fetched_at: None,
+            is_fresh: None,
+            provider: None,
         }
     }
 }
@@ -279,6 +310,9 @@ impl MultiFormatResponse for JourneyResponse {
         "route_verified",
         "cost_amount",
         "cost_currency",
+        "fetched_at",
+        "is_fresh",
+        "provider",
     ];
 
     fn csv_row(&self) -> Vec<String> {
@@ -307,6 +341,9 @@ impl MultiFormatResponse for JourneyResponse {
                 .map_or_else(String::new, |v| v.to_string()),
             self.cost_amount.map_or_else(String::new, |v| v.to_string()),
             self.cost_currency.clone().unwrap_or_default(),
+            self.fetched_at.clone().unwrap_or_default(),
+            self.is_fresh.map_or_else(String::new, |v| v.to_string()),
+            self.provider.clone().unwrap_or_default(),
         ]
     }
 

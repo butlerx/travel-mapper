@@ -136,7 +136,7 @@ async fn run() -> Result<(), ServerError> {
 
     let state = travel_mapper::server::AppState {
         leptos_options: LeptosOptions::builder()
-            .output_name("travel-mapper")
+            .output_name(env!("CARGO_PKG_NAME"))
             .build(),
         db: pool,
         encryption_key,

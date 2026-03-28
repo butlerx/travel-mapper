@@ -8,7 +8,7 @@ use crate::{
         airlabs::AirLabsClient,
         darwin::DarwinClient,
         db_ris::DbRisClient,
-        flight_status::FlightStatusApi,
+        flight_status::{FlightStatusApi, FlightStatusError},
         opensky::OpenSkyClient,
         rail_status::RailStatusApi,
         transitland::rail_status_impl::TransitlandRailClient,
@@ -20,9 +20,9 @@ use std::time::Instant;
 use tokio::sync::watch;
 
 /// Default enrichment TTL for non-realtime data (24 hours).
-const ENRICHMENT_TTL_SECS: i64 = 24 * 60 * 60;
+pub(crate) const ENRICHMENT_TTL_SECS: i64 = 24 * 60 * 60;
 /// Shorter TTL for flights departing within 1 day (2 hours).
-const REALTIME_TTL_SECS: i64 = 2 * 60 * 60;
+pub(crate) const REALTIME_TTL_SECS: i64 = 2 * 60 * 60;
 
 /// How often the worker runs a periodic enrichment sweep across all users.
 const PERIODIC_ENRICHMENT_INTERVAL: std::time::Duration =
@@ -204,8 +204,11 @@ async fn is_enrichment_fresh(
     matches!(fresh, Ok(1))
 }
 
-fn departure_aware_ttl(start_date: &str) -> i64 {
-    let Ok(dep) = chrono::NaiveDate::parse_from_str(start_date, "%Y-%m-%d") else {
+pub(crate) fn departure_aware_ttl(start_date: &str) -> i64 {
+    let dep = start_date
+        .get(..10)
+        .and_then(|s| chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d").ok());
+    let Some(dep) = dep else {
         return ENRICHMENT_TTL_SECS;
     };
     let today = chrono::Utc::now().date_naive();
@@ -429,8 +432,16 @@ async fn enrich_flight_statuses(config: &SyncWorkerConfig, user_id: i64) {
     let mut enriched = 0_u64;
 
     for hop in &hops {
-        if enrich_single_flight_hop(config, &client, user_id, hop).await {
-            enriched += 1;
+        match enrich_single_flight_hop(config, &client, user_id, hop).await {
+            FlightEnrichResult::Enriched => enriched += 1,
+            FlightEnrichResult::RateLimited => {
+                tracing::info!(
+                    user_id,
+                    "airlabs rate limit reached, stopping flight enrichment"
+                );
+                break;
+            }
+            FlightEnrichResult::Skipped => {}
         }
     }
 
@@ -439,12 +450,18 @@ async fn enrich_flight_statuses(config: &SyncWorkerConfig, user_id: i64) {
     }
 }
 
+enum FlightEnrichResult {
+    Enriched,
+    RateLimited,
+    Skipped,
+}
+
 async fn enrich_single_flight_hop(
     config: &SyncWorkerConfig,
     client: &AirLabsClient,
     user_id: i64,
     hop: &db::hops::Row,
-) -> bool {
+) -> FlightEnrichResult {
     let detail = match (db::hops::GetById {
         id: hop.id,
         user_id,
@@ -453,10 +470,10 @@ async fn enrich_single_flight_hop(
     .await
     {
         Ok(Some(d)) => d,
-        Ok(None) => return false,
+        Ok(None) => return FlightEnrichResult::Skipped,
         Err(err) => {
             tracing::warn!(hop_id = hop.id, error = %err, "failed to fetch hop detail for enrichment");
-            return false;
+            return FlightEnrichResult::Skipped;
         }
     };
 
@@ -466,12 +483,12 @@ async fn enrich_single_flight_hop(
         .map(|d| d.flight_number.as_str())
         .unwrap_or_default();
     if flight_number.is_empty() || hop.start_date.is_empty() {
-        return false;
+        return FlightEnrichResult::Skipped;
     }
 
     if is_enrichment_fresh(&config.pool, hop.id, "airlabs", &hop.start_date).await {
         tracing::debug!(hop_id = hop.id, "airlabs enrichment still fresh, skipping");
-        return false;
+        return FlightEnrichResult::Skipped;
     }
 
     match client
@@ -501,19 +518,38 @@ async fn enrich_single_flight_hop(
                     error = %err,
                     "failed to upsert flight status enrichment",
                 );
-                false
+                FlightEnrichResult::Skipped
             } else {
-                true
+                FlightEnrichResult::Enriched
             }
         }
         Ok(None) => {
             tracing::debug!(
                 hop_id = hop.id,
                 flight_number,
-                "no flight status data returned",
+                "no flight status data returned, writing sentinel",
             );
-            false
+            if let Err(err) = (db::status_enrichments::Upsert {
+                hop_id: hop.id,
+                provider: "airlabs",
+                status: "",
+                delay_minutes: None,
+                dep_gate: "",
+                dep_terminal: "",
+                arr_gate: "",
+                arr_terminal: "",
+                dep_platform: "",
+                arr_platform: "",
+                raw_json: "",
+            })
+            .execute(&config.pool)
+            .await
+            {
+                tracing::warn!(hop_id = hop.id, error = %err, "failed to write no-data sentinel");
+            }
+            FlightEnrichResult::Skipped
         }
+        Err(FlightStatusError::RateLimited) => FlightEnrichResult::RateLimited,
         Err(err) => {
             tracing::warn!(
                 hop_id = hop.id,
@@ -521,7 +557,7 @@ async fn enrich_single_flight_hop(
                 error = %err,
                 "flight status API request failed",
             );
-            false
+            FlightEnrichResult::Skipped
         }
     }
 }

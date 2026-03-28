@@ -133,6 +133,26 @@ fn api_docs(api: TransformOpenApi) -> TransformOpenApi {
             description: Some("Photo and document attachments for journeys".into()),
             ..Default::default()
         })
+        .tag(Tag {
+            name: "enrichments".into(),
+            description: Some("Status enrichment records for journeys".into()),
+            ..Default::default()
+        })
+        .tag(Tag {
+            name: "airports".into(),
+            description: Some("Airport IATA code reference lookups".into()),
+            ..Default::default()
+        })
+        .tag(Tag {
+            name: "stations".into(),
+            description: Some("UK CRS station code reference lookups".into()),
+            ..Default::default()
+        })
+        .tag(Tag {
+            name: "rail".into(),
+            description: Some("Rail operator and GTFS-RT feed discovery".into()),
+            ..Default::default()
+        })
         .security_scheme(
             "bearer",
             SecurityScheme::Http {
@@ -169,7 +189,14 @@ pub fn create_router(state: AppState) -> Router {
             "/journeys/{id}/attachments",
             routes::attachments_api_routes(),
         )
+        .nest(
+            "/journeys/{id}/enrichments",
+            routes::enrichments_api_routes(),
+        )
         .nest("/trips", routes::trip_api_routes())
+        .nest("/airports", routes::airports_api_routes())
+        .nest("/stations", routes::stations_api_routes())
+        .nest("/rail", routes::rail_api_routes())
         .nest("/import", routes::import_api_routes())
         .route("/feed/{token}", get(routes::feed::handler))
         .route("/share/{token}", get(routes::share::handler))

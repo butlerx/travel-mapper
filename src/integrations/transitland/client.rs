@@ -143,16 +143,14 @@ pub struct FeedSearchParams {
 }
 
 /// Response from feed search endpoint.
-#[derive(Debug, Clone, Deserialize)]
-#[allow(dead_code)] // deserialization shape
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FeedSearchResponse {
     pub feeds: Vec<Feed>,
     pub meta: Option<ResponseMeta>,
 }
 
 /// Individual feed metadata from Transitland.
-#[derive(Debug, Clone, Deserialize)]
-#[allow(dead_code)] // deserialization shape
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Feed {
     pub id: i64,
     pub onestop_id: String,
@@ -162,8 +160,7 @@ pub struct Feed {
 }
 
 /// Feed URLs for GTFS static and realtime data.
-#[derive(Debug, Clone, Deserialize)]
-#[allow(dead_code)] // deserialization shape
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FeedUrls {
     pub static_current: Option<String>,
     pub realtime_trip_updates: Option<String>,
@@ -172,8 +169,7 @@ pub struct FeedUrls {
 }
 
 /// Pagination metadata from API responses.
-#[derive(Debug, Clone, Deserialize)]
-#[allow(dead_code)] // deserialization shape
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResponseMeta {
     pub next: Option<String>,
     pub prev: Option<String>,

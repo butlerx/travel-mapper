@@ -70,6 +70,9 @@ impl AirLabsClient {
                         tokio::time::sleep(delay).await;
                         continue;
                     }
+                    if status == reqwest::StatusCode::TOO_MANY_REQUESTS {
+                        return Err(FlightStatusError::RateLimited);
+                    }
                     resp.error_for_status_ref()?;
                     let body = resp.bytes().await?;
                     return Ok(serde_json::from_slice(&body)?);
