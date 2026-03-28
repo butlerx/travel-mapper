@@ -72,7 +72,11 @@ pub async fn create_handler(
             if format == super::ResponseFormat::Html {
                 Redirect::to("/settings").into_response()
             } else {
-                let response = ShareTokenResponse { id, token, label };
+                let response = ShareTokenResponse {
+                    id,
+                    token: token_hash,
+                    label,
+                };
                 ShareTokenResponse::single_format_response(&response, format, StatusCode::CREATED)
             }
         }

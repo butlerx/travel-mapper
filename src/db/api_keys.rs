@@ -44,6 +44,59 @@ impl GetUserIdByHash<'_> {
     }
 }
 
+/// A single API key row for listing in the settings UI.
+pub struct Row {
+    pub id: i64,
+    pub label: String,
+    pub created_at: String,
+}
+
+/// List all API keys for a user.
+pub struct GetByUserId {
+    pub user_id: i64,
+}
+
+impl GetByUserId {
+    /// # Errors
+    ///
+    /// Returns an error if the query fails.
+    pub async fn execute(&self, pool: &SqlitePool) -> Result<Vec<Row>, sqlx::Error> {
+        let rows = sqlx::query_as!(
+            Row,
+            r#"SELECT id as "id!: i64", label, created_at
+               FROM api_keys
+               WHERE user_id = ?
+               ORDER BY created_at DESC"#,
+            self.user_id,
+        )
+        .fetch_all(pool)
+        .await?;
+        Ok(rows)
+    }
+}
+
+/// Delete an API key by ID, scoped to the owning user.
+pub struct Delete {
+    pub id: i64,
+    pub user_id: i64,
+}
+
+impl Delete {
+    /// # Errors
+    ///
+    /// Returns an error if the delete fails.
+    pub async fn execute(&self, pool: &SqlitePool) -> Result<bool, sqlx::Error> {
+        let result = sqlx::query!(
+            "DELETE FROM api_keys WHERE id = ? AND user_id = ?",
+            self.id,
+            self.user_id,
+        )
+        .execute(pool)
+        .await?;
+        Ok(result.rows_affected() > 0)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -72,6 +125,28 @@ mod tests {
             .expect("api key should resolve");
         assert_eq!(resolved_user_id, user_id);
 
+        let keys = GetByUserId { user_id }
+            .execute(&pool)
+            .await
+            .expect("api key list failed");
+        assert_eq!(keys.len(), 1);
+        assert_eq!(keys[0].label, "default");
+
+        let deleted = Delete {
+            id: api_key_id,
+            user_id,
+        }
+        .execute(&pool)
+        .await
+        .expect("api key delete failed");
+        assert!(deleted);
+
+        let after_delete = GetUserIdByHash { key_hash: "hash1" }
+            .execute(&pool)
+            .await
+            .expect("api key lookup failed");
+        assert!(after_delete.is_none());
+
         Upsert {
             user_id,
             access_token_enc: &[1, 2, 3],
@@ -92,5 +167,38 @@ mod tests {
         assert_eq!(creds.access_token_secret_enc, vec![4, 5, 6]);
         assert_eq!(creds.nonce_token, vec![7; 12]);
         assert_eq!(creds.nonce_secret, vec![8; 12]);
+    }
+
+    #[tokio::test]
+    async fn api_key_delete_scoped_to_user() {
+        let pool = test_pool().await;
+        let alice_id = test_user(&pool, "alice").await;
+        let bob_id = test_user(&pool, "bob").await;
+
+        let api_key_id = Create {
+            user_id: alice_id,
+            key_hash: "alice_hash",
+            label: "alice key",
+        }
+        .execute(&pool)
+        .await
+        .expect("create failed");
+
+        let not_deleted = Delete {
+            id: api_key_id,
+            user_id: bob_id,
+        }
+        .execute(&pool)
+        .await
+        .expect("delete failed");
+        assert!(!not_deleted);
+
+        let still_exists = GetUserIdByHash {
+            key_hash: "alice_hash",
+        }
+        .execute(&pool)
+        .await
+        .expect("lookup failed");
+        assert!(still_exists.is_some());
     }
 }

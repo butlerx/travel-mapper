@@ -4,7 +4,6 @@ use crate::{
     server::{
         AppState,
         pages::stats::{StatsQuery, compute_detailed_stats},
-        session::sha256_hex,
     },
 };
 use axum::{
@@ -15,12 +14,10 @@ use axum::{
 
 pub async fn handler(
     State(state): State<AppState>,
-    Path(token): Path<String>,
+    Path(token_hash): Path<String>,
     Query(query): Query<StatsQuery>,
     headers: HeaderMap,
 ) -> Response {
-    let token_hash = sha256_hex(&token);
-
     let user_id = match (db::share_tokens::GetUserIdByHash {
         token_hash: &token_hash,
     })
@@ -46,11 +43,15 @@ pub async fn handler(
         }
     };
 
-    let detailed = compute_detailed_stats(&all_rows, query.year.as_deref());
+    let detailed = compute_detailed_stats(
+        &all_rows,
+        query.year.as_deref(),
+        query.travel_type.as_deref(),
+    );
 
     let format = negotiate_format(&headers);
     if format == ResponseFormat::Html {
-        crate::server::pages::stats::render_share_page(detailed, &token)
+        crate::server::pages::stats::render_share_page(detailed, &token_hash)
     } else {
         let response = super::stats::StatsResponse::from(detailed);
         super::stats::StatsResponse::single_format_response(&response, format, StatusCode::OK)
@@ -64,7 +65,7 @@ mod tests {
             self,
             hops::{Create, FlightDetail, TravelType},
         },
-        server::{create_router, session::sha256_hex, test_helpers::*},
+        server::{create_router, test_helpers::*},
     };
     use axum::{
         body::Body,
@@ -111,11 +112,10 @@ mod tests {
         .await
         .expect("insert hops failed");
 
-        let token = "share-test-token-abc123";
-        let token_hash = sha256_hex(token);
+        let token_hash = "share_hash_abc123";
         db::share_tokens::Create {
             user_id,
-            token_hash: &token_hash,
+            token_hash,
             label: "test",
         }
         .execute(&pool)
@@ -127,7 +127,7 @@ mod tests {
         let response = app
             .oneshot(
                 Request::builder()
-                    .uri(format!("/share/{token}"))
+                    .uri(format!("/share/{token_hash}"))
                     .header(header::ACCEPT, "text/html")
                     .body(Body::empty())
                     .expect("failed to build request"),
@@ -147,11 +147,10 @@ mod tests {
         let pool = test_pool().await;
         let user_id = db::tests::test_user(&pool, "bob").await;
 
-        let token = "share-json-token";
-        let token_hash = sha256_hex(token);
+        let token_hash = "share_hash_json";
         db::share_tokens::Create {
             user_id,
-            token_hash: &token_hash,
+            token_hash,
             label: "json test",
         }
         .execute(&pool)
@@ -163,7 +162,7 @@ mod tests {
         let response = app
             .oneshot(
                 Request::builder()
-                    .uri(format!("/share/{token}"))
+                    .uri(format!("/share/{token_hash}"))
                     .header(header::ACCEPT, "application/json")
                     .body(Body::empty())
                     .expect("failed to build request"),
@@ -201,11 +200,10 @@ mod tests {
         .await
         .expect("insert 2023 failed");
 
-        let token = "share-year-filter-token";
-        let token_hash = sha256_hex(token);
+        let token_hash = "share_hash_year_filter";
         db::share_tokens::Create {
             user_id,
-            token_hash: &token_hash,
+            token_hash,
             label: "year filter",
         }
         .execute(&pool)
@@ -217,7 +215,7 @@ mod tests {
         let response = app
             .oneshot(
                 Request::builder()
-                    .uri(format!("/share/{token}?year=2024"))
+                    .uri(format!("/share/{token_hash}?year=2024"))
                     .header(header::ACCEPT, "application/json")
                     .body(Body::empty())
                     .expect("failed to build request"),

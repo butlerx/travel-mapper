@@ -16,6 +16,7 @@ use std::fmt::Write;
 #[derive(Deserialize, Default, schemars::JsonSchema)]
 pub struct StatsQuery {
     pub year: Option<String>,
+    pub travel_type: Option<String>,
 }
 
 /// An item label paired with its occurrence count.
@@ -35,6 +36,7 @@ pub struct DetailedStats {
     pub total_transport: usize,
     pub total_distance_km: u64,
     pub unique_airports: usize,
+    pub unique_stations: usize,
     pub unique_countries: usize,
     pub top_airlines: Vec<CountedItem>,
     pub top_aircraft: Vec<CountedItem>,
@@ -42,9 +44,17 @@ pub struct DetailedStats {
     pub cabin_class_breakdown: Vec<CountedItem>,
     pub seat_type_breakdown: Vec<CountedItem>,
     pub flight_reason_breakdown: Vec<CountedItem>,
+    pub top_rail_carriers: Vec<CountedItem>,
+    pub top_train_numbers: Vec<CountedItem>,
+    pub rail_service_class_breakdown: Vec<CountedItem>,
+    pub top_ships: Vec<CountedItem>,
+    pub boat_cabin_type_breakdown: Vec<CountedItem>,
+    pub top_transport_carriers: Vec<CountedItem>,
+    pub transport_vehicle_breakdown: Vec<CountedItem>,
     pub countries: Vec<CountedItem>,
     pub available_years: Vec<String>,
     pub selected_year: Option<String>,
+    pub selected_travel_type: Option<String>,
     pub first_year: Option<String>,
     pub last_year: Option<String>,
     pub spending_summary: Vec<String>,
@@ -161,6 +171,15 @@ fn miles_section_view(miles_summary: Vec<String>) -> AnyView {
     }
 }
 
+/// Render a `TopList` section only when `items` is non-empty; otherwise render nothing.
+fn optional_top_list(title: &'static str, items: Vec<CountedItem>) -> AnyView {
+    if items.is_empty() {
+        ().into_any()
+    } else {
+        view! { <TopList title=title items=items /> }.into_any()
+    }
+}
+
 fn sorted_available_years(all_rows: &[StatsRow]) -> Vec<String> {
     let mut year_set: HashSet<String> = HashSet::new();
     for row in all_rows {
@@ -173,14 +192,36 @@ fn sorted_available_years(all_rows: &[StatsRow]) -> Vec<String> {
     available_years
 }
 
-fn selected_rows<'a>(all_rows: &'a [StatsRow], year_filter: Option<&str>) -> Vec<&'a StatsRow> {
-    if let Some(y) = year_filter {
+fn matches_travel_type_filter(row: &StatsRow, travel_type_filter: &str) -> bool {
+    matches!(
+        (&row.travel_type, travel_type_filter),
+        (TravelType::Air, "air")
+            | (TravelType::Rail, "rail")
+            | (TravelType::Boat, "boat")
+            | (TravelType::Transport, "transport")
+    )
+}
+
+fn selected_rows<'a>(
+    all_rows: &'a [StatsRow],
+    year_filter: Option<&str>,
+    travel_type_filter: Option<&str>,
+) -> Vec<&'a StatsRow> {
+    let rows: Vec<&StatsRow> = if let Some(y) = year_filter {
         all_rows
             .iter()
             .filter(|r| extract_year(&r.start_date) == Some(y))
             .collect()
     } else {
         all_rows.iter().collect()
+    };
+
+    if let Some(t) = travel_type_filter {
+        rows.into_iter()
+            .filter(|r| matches_travel_type_filter(r, t))
+            .collect()
+    } else {
+        rows
     }
 }
 
@@ -208,29 +249,161 @@ fn add_row_miles(miles_by_program: &mut HashMap<String, f64>, row: &StatsRow) {
     }
 }
 
-/// Compute aggregated travel statistics from the provided journey list.
-pub fn compute_detailed_stats(all_rows: &[StatsRow], year_filter: Option<&str>) -> DetailedStats {
+#[derive(Default)]
+struct Accumulators<'a> {
+    airports: HashSet<String>,
+    stations: HashSet<String>,
+    countries: HashMap<String, usize>,
+    airlines: HashMap<String, usize>,
+    aircraft: HashMap<String, usize>,
+    routes: HashMap<String, usize>,
+    cabin_classes: HashMap<String, usize>,
+    seat_types: HashMap<String, usize>,
+    flight_reasons: HashMap<String, usize>,
+    rail_carriers: HashMap<String, usize>,
+    train_numbers: HashMap<String, usize>,
+    rail_service_classes: HashMap<String, usize>,
+    ships: HashMap<String, usize>,
+    boat_cabin_types: HashMap<String, usize>,
+    transport_carriers: HashMap<String, usize>,
+    vehicle_types: HashMap<String, usize>,
+    spending: HashMap<String, f64>,
+    miles_by_program: HashMap<String, f64>,
+    years: Vec<&'a str>,
+}
+
+fn accumulate_row<'a>(acc: &mut Accumulators<'a>, row: &'a StatsRow, distance_km: &mut u64) {
+    if row.origin_lat != 0.0 || row.origin_lng != 0.0 || row.dest_lat != 0.0 || row.dest_lng != 0.0
+    {
+        let km = haversine_km(row.origin_lat, row.origin_lng, row.dest_lat, row.dest_lng);
+        if km.is_finite() && km > 0.0 {
+            *distance_km += positive_km_to_u64(km);
+        }
+    }
+
+    match row.travel_type {
+        TravelType::Air => {
+            acc.airports.insert(row.origin_name.clone());
+            acc.airports.insert(row.dest_name.clone());
+        }
+        TravelType::Rail => {
+            acc.stations.insert(row.origin_name.clone());
+            acc.stations.insert(row.dest_name.clone());
+            if let Some(v) = &row.rail_carrier {
+                increment(&mut acc.rail_carriers, v);
+            }
+            if let Some(v) = &row.train_number {
+                increment(&mut acc.train_numbers, v);
+            }
+            if let Some(v) = &row.service_class {
+                increment(&mut acc.rail_service_classes, v);
+            }
+        }
+        TravelType::Boat => {
+            if let Some(v) = &row.ship_name {
+                increment(&mut acc.ships, v);
+            }
+            if let Some(v) = &row.boat_cabin_type {
+                increment(&mut acc.boat_cabin_types, v);
+            }
+        }
+        TravelType::Transport => {
+            if let Some(v) = &row.transport_carrier {
+                increment(&mut acc.transport_carriers, v);
+            }
+            if let Some(v) = &row.vehicle_description {
+                increment(&mut acc.vehicle_types, v);
+            }
+        }
+    }
+
+    count_journey_countries(row, &mut acc.countries);
+
+    if let Some(a) = &row.airline {
+        increment(&mut acc.airlines, a);
+    }
+    if let Some(a) = &row.aircraft_type {
+        increment(&mut acc.aircraft, a);
+    }
+    if let Some(c) = &row.cabin_class {
+        increment(&mut acc.cabin_classes, c);
+    }
+    if let Some(s) = &row.seat_type {
+        increment(&mut acc.seat_types, s);
+    }
+    if let Some(r) = &row.flight_reason {
+        increment(&mut acc.flight_reasons, r);
+    }
+
+    if let Some(amount) = row.cost_amount {
+        let currency = row.cost_currency.clone().unwrap_or_default();
+        let key = if currency.is_empty() {
+            "???".to_owned()
+        } else {
+            currency
+        };
+        *acc.spending.entry(key).or_insert(0.0) += amount;
+    }
+
+    add_row_miles(&mut acc.miles_by_program, row);
+
+    let route = format!("{}\u{2192}{}", row.origin_name, row.dest_name);
+    *acc.routes.entry(route).or_insert(0) += 1;
+
+    if let Some(y) = extract_year(&row.start_date) {
+        acc.years.push(y);
+    }
+}
+
+fn finalize_stats(acc: Accumulators<'_>, stats: &mut DetailedStats) {
+    stats.unique_airports = acc.airports.len();
+    stats.unique_stations = acc.stations.len();
+    stats.unique_countries = acc.countries.len();
+    stats.countries = top_n(&acc.countries, 100);
+    stats.top_airlines = top_n(&acc.airlines, 10);
+    stats.top_aircraft = top_n(&acc.aircraft, 10);
+    stats.top_routes = top_n(&acc.routes, 10);
+    stats.cabin_class_breakdown = top_n(&acc.cabin_classes, 10);
+    stats.seat_type_breakdown = top_n(&acc.seat_types, 10);
+    stats.flight_reason_breakdown = top_n(&acc.flight_reasons, 10);
+    stats.top_rail_carriers = top_n(&acc.rail_carriers, 10);
+    stats.top_train_numbers = top_n(&acc.train_numbers, 10);
+    stats.rail_service_class_breakdown = top_n(&acc.rail_service_classes, 10);
+    stats.top_ships = top_n(&acc.ships, 10);
+    stats.boat_cabin_type_breakdown = top_n(&acc.boat_cabin_types, 10);
+    stats.top_transport_carriers = top_n(&acc.transport_carriers, 10);
+    stats.transport_vehicle_breakdown = top_n(&acc.vehicle_types, 10);
+
+    let mut years = acc.years;
+    years.sort_unstable();
+    stats.first_year = years.first().map(|y| (*y).to_owned());
+    stats.last_year = years.last().map(|y| (*y).to_owned());
+    stats.spending_summary = summarize_spending(acc.spending);
+    let mut miles_entries: Vec<(String, f64)> = acc.miles_by_program.into_iter().collect();
+    miles_entries.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+    stats.miles_by_program.clone_from(&miles_entries);
+    stats.miles_summary = summarize_miles(miles_entries.into_iter().collect::<HashMap<_, _>>());
+}
+
+pub fn compute_detailed_stats(
+    all_rows: &[StatsRow],
+    year_filter: Option<&str>,
+    travel_type_filter: Option<&str>,
+) -> DetailedStats {
+    let year_filter = year_filter.filter(|v| !v.is_empty());
+    let travel_type_filter = travel_type_filter.filter(|v| !v.is_empty());
     let available_years = sorted_available_years(all_rows);
-    let rows = selected_rows(all_rows, year_filter);
+    let rows = selected_rows(all_rows, year_filter, travel_type_filter);
 
     let mut stats = DetailedStats {
         total_journeys: rows.len(),
         available_years,
         selected_year: year_filter.map(str::to_owned),
+        selected_travel_type: travel_type_filter.map(str::to_owned),
         ..Default::default()
     };
 
-    let mut airports: HashSet<String> = HashSet::new();
-    let mut countries: HashMap<String, usize> = HashMap::new();
-    let mut airlines: HashMap<String, usize> = HashMap::new();
-    let mut aircraft: HashMap<String, usize> = HashMap::new();
-    let mut routes: HashMap<String, usize> = HashMap::new();
-    let mut cabin_classes: HashMap<String, usize> = HashMap::new();
-    let mut seat_types: HashMap<String, usize> = HashMap::new();
-    let mut flight_reasons: HashMap<String, usize> = HashMap::new();
-    let mut spending: HashMap<String, f64> = HashMap::new();
-    let mut miles_by_program: HashMap<String, f64> = HashMap::new();
-    let mut years: Vec<&str> = Vec::new();
+    let mut acc = Accumulators::default();
 
     for row in &rows {
         match row.travel_type {
@@ -239,80 +412,10 @@ pub fn compute_detailed_stats(all_rows: &[StatsRow], year_filter: Option<&str>) 
             TravelType::Boat => stats.total_boat += 1,
             TravelType::Transport => stats.total_transport += 1,
         }
-
-        if row.origin_lat != 0.0
-            || row.origin_lng != 0.0
-            || row.dest_lat != 0.0
-            || row.dest_lng != 0.0
-        {
-            let km = haversine_km(row.origin_lat, row.origin_lng, row.dest_lat, row.dest_lng);
-            if km.is_finite() && km > 0.0 {
-                stats.total_distance_km += positive_km_to_u64(km);
-            }
-        }
-
-        if row.travel_type == TravelType::Air {
-            airports.insert(row.origin_name.clone());
-            airports.insert(row.dest_name.clone());
-        }
-
-        count_journey_countries(row, &mut countries);
-
-        if let Some(a) = &row.airline {
-            increment(&mut airlines, a);
-        }
-        if let Some(a) = &row.aircraft_type {
-            increment(&mut aircraft, a);
-        }
-        if let Some(c) = &row.cabin_class {
-            increment(&mut cabin_classes, c);
-        }
-        if let Some(s) = &row.seat_type {
-            increment(&mut seat_types, s);
-        }
-        if let Some(r) = &row.flight_reason {
-            increment(&mut flight_reasons, r);
-        }
-
-        if let Some(amount) = row.cost_amount {
-            let currency = row.cost_currency.clone().unwrap_or_default();
-            let key = if currency.is_empty() {
-                "???".to_owned()
-            } else {
-                currency
-            };
-            *spending.entry(key).or_insert(0.0) += amount;
-        }
-
-        add_row_miles(&mut miles_by_program, row);
-
-        let route = format!("{}\u{2192}{}", row.origin_name, row.dest_name);
-        *routes.entry(route).or_insert(0) += 1;
-
-        if let Some(y) = extract_year(&row.start_date) {
-            years.push(y);
-        }
+        accumulate_row(&mut acc, row, &mut stats.total_distance_km);
     }
 
-    stats.unique_airports = airports.len();
-    stats.unique_countries = countries.len();
-    stats.countries = top_n(&countries, 100);
-    stats.top_airlines = top_n(&airlines, 10);
-    stats.top_aircraft = top_n(&aircraft, 10);
-    stats.top_routes = top_n(&routes, 10);
-    stats.cabin_class_breakdown = top_n(&cabin_classes, 10);
-    stats.seat_type_breakdown = top_n(&seat_types, 10);
-    stats.flight_reason_breakdown = top_n(&flight_reasons, 10);
-
-    years.sort_unstable();
-    stats.first_year = years.first().map(|y| (*y).to_owned());
-    stats.last_year = years.last().map(|y| (*y).to_owned());
-    stats.spending_summary = summarize_spending(spending);
-    let mut miles_entries: Vec<(String, f64)> = miles_by_program.into_iter().collect();
-    miles_entries.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
-    stats.miles_by_program.clone_from(&miles_entries);
-    stats.miles_summary = summarize_miles(miles_entries.into_iter().collect::<HashMap<_, _>>());
-
+    finalize_stats(acc, &mut stats);
     stats
 }
 
@@ -366,6 +469,9 @@ fn countries_json(countries: &[CountedItem]) -> String {
 
 #[component]
 fn OverviewCards(stats: DetailedStats, distance: String, year_range: String) -> impl IntoView {
+    let show_airports = stats.unique_airports > 0;
+    let show_stations = stats.unique_stations > 0;
+
     view! {
         <div class="stats-overview">
             <div class="stat-row">
@@ -385,10 +491,28 @@ fn OverviewCards(stats: DetailedStats, distance: String, year_range: String) -> 
                     <div class="stat-label">"Distance"</div>
                     <div class="stat-value">{distance}</div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-label">"Airports"</div>
-                    <div class="stat-value">{stats.unique_airports}</div>
-                </div>
+                {if show_airports {
+                    view! {
+                        <div class="stat-card">
+                            <div class="stat-label">"Airports"</div>
+                            <div class="stat-value">{stats.unique_airports}</div>
+                        </div>
+                    }
+                    .into_any()
+                } else {
+                    ().into_any()
+                }}
+                {if show_stations {
+                    view! {
+                        <div class="stat-card">
+                            <div class="stat-label">"Stations"</div>
+                            <div class="stat-value">{stats.unique_stations}</div>
+                        </div>
+                    }
+                    .into_any()
+                } else {
+                    ().into_any()
+                }}
                 <div class="stat-card">
                     <div class="stat-label">"Countries"</div>
                     <div class="stat-value">{stats.unique_countries}</div>
@@ -433,31 +557,57 @@ fn TopList(title: &'static str, items: Vec<CountedItem>) -> impl IntoView {
 }
 
 #[component]
-fn YearFilter(
+fn StatsFilters(
     available_years: Vec<String>,
     selected_year: Option<String>,
+    selected_travel_type: Option<String>,
     #[prop(default = "/stats".to_owned())] action: String,
 ) -> impl IntoView {
-    if available_years.is_empty() {
-        return ().into_any();
-    }
-
     view! {
-        <form method="get" action=action class="stats-year-filter">
-            <label for="year-filter">"Filter by year: "</label>
-            <select name="year" id="year-filter" onchange="this.form.submit()">
-                <option value="" selected=selected_year.is_none()>"All years"</option>
-                {available_years.into_iter().rev().map(|y| {
-                    let is_selected = selected_year.as_ref() == Some(&y);
-                    let display = y.clone();
-                    view! {
-                        <option value={y} selected=is_selected>{display}</option>
-                    }
-                }).collect::<Vec<_>>()}
-            </select>
+        <form method="get" action=action class="stats-filters">
+            {if available_years.is_empty() {
+                ().into_any()
+            } else {
+                let sel = selected_year.clone();
+                view! {
+                    <div class="stats-filter-group">
+                        <label for="year-filter">"Year:"</label>
+                        <select name="year" id="year-filter" onchange="this.form.submit()">
+                            <option value="" selected=sel.is_none()>"All"</option>
+                            {available_years.into_iter().rev().map(|y| {
+                                let is_selected = sel.as_ref() == Some(&y);
+                                let display = y.clone();
+                                view! {
+                                    <option value={y} selected=is_selected>{display}</option>
+                                }
+                            }).collect::<Vec<_>>()}
+                        </select>
+                    </div>
+                }.into_any()
+            }}
+            <div class="stats-filter-group">
+                <label for="travel-type-filter">"Type:"</label>
+                <select name="travel_type" id="travel-type-filter" onchange="this.form.submit()">
+                    <option value="" selected=selected_travel_type.is_none()>"All"</option>
+                    <option value="air" selected=selected_travel_type.as_deref() == Some("air")>
+                        "Flights"
+                    </option>
+                    <option value="rail" selected=selected_travel_type.as_deref() == Some("rail")>
+                        "Rail"
+                    </option>
+                    <option value="boat" selected=selected_travel_type.as_deref() == Some("boat")>
+                        "Boat"
+                    </option>
+                    <option
+                        value="transport"
+                        selected=selected_travel_type.as_deref() == Some("transport")
+                    >
+                        "Transport"
+                    </option>
+                </select>
+            </div>
         </form>
     }
-    .into_any()
 }
 
 #[allow(clippy::must_use_candidate, clippy::needless_pass_by_value)]
@@ -469,16 +619,26 @@ fn StatsPage(stats: DetailedStats) -> impl IntoView {
 
     let available_years = stats.available_years.clone();
     let selected_year = stats.selected_year.clone();
+    let selected_travel_type = stats.selected_travel_type.clone();
     let top_airlines = stats.top_airlines.clone();
     let top_aircraft = stats.top_aircraft.clone();
     let top_routes = stats.top_routes.clone();
     let cabin_class = stats.cabin_class_breakdown.clone();
     let seat_type = stats.seat_type_breakdown.clone();
     let flight_reason = stats.flight_reason_breakdown.clone();
+    let top_rail_carriers = stats.top_rail_carriers.clone();
+    let top_train_numbers = stats.top_train_numbers.clone();
+    let rail_service_class = stats.rail_service_class_breakdown.clone();
+    let top_ships = stats.top_ships.clone();
+    let boat_cabin_types = stats.boat_cabin_type_breakdown.clone();
+    let top_transport_carriers = stats.top_transport_carriers.clone();
+    let transport_vehicle_types = stats.transport_vehicle_breakdown.clone();
     let countries = stats.countries.clone();
     let spending_summary = stats.spending_summary.clone();
     let miles_summary = stats.miles_summary.clone();
     let country_counts_json = countries_json(&countries);
+    let filters_selected_year = selected_year.clone();
+    let filters_selected_travel_type = selected_travel_type.clone();
 
     view! {
         <Shell title="Stats".to_owned() body_class="stats-layout">
@@ -487,15 +647,26 @@ fn StatsPage(stats: DetailedStats) -> impl IntoView {
             {if has_data {
                 view! {
                     <main class="stats-page">
-                        <YearFilter available_years=available_years selected_year=selected_year />
+                        <StatsFilters
+                            available_years=available_years
+                            selected_year=filters_selected_year
+                            selected_travel_type=filters_selected_travel_type
+                        />
                         <OverviewCards stats=stats distance=distance year_range=year_range />
                         <div class="stats-grid">
-                            <TopList title="Top Airlines" items=top_airlines />
-                            <TopList title="Top Aircraft" items=top_aircraft />
-                            <TopList title="Top Routes" items=top_routes />
-                            <TopList title="Cabin Class" items=cabin_class />
-                            <TopList title="Seat Type" items=seat_type />
-                            <TopList title="Flight Reason" items=flight_reason />
+                            {optional_top_list("Top Airlines", top_airlines)}
+                            {optional_top_list("Top Aircraft", top_aircraft)}
+                            {optional_top_list("Top Routes", top_routes)}
+                            {optional_top_list("Cabin Class", cabin_class)}
+                            {optional_top_list("Seat Type", seat_type)}
+                            {optional_top_list("Flight Reason", flight_reason)}
+                            {optional_top_list("Top Rail Carriers", top_rail_carriers)}
+                            {optional_top_list("Top Train Numbers", top_train_numbers)}
+                            {optional_top_list("Rail Service Class", rail_service_class)}
+                            {optional_top_list("Top Ships", top_ships)}
+                            {optional_top_list("Boat Cabin Type", boat_cabin_types)}
+                            {optional_top_list("Top Transport Carriers", top_transport_carriers)}
+                            {optional_top_list("Transport Vehicle Types", transport_vehicle_types)}
                             <TopList title="Countries Visited" items=countries />
                             {spending_section_view(spending_summary)}
                             {miles_section_view(miles_summary)}
@@ -572,16 +743,26 @@ fn ShareStatsPage(stats: DetailedStats, token: String) -> impl IntoView {
 
     let available_years = stats.available_years.clone();
     let selected_year = stats.selected_year.clone();
+    let selected_travel_type = stats.selected_travel_type.clone();
     let top_airlines = stats.top_airlines.clone();
     let top_aircraft = stats.top_aircraft.clone();
     let top_routes = stats.top_routes.clone();
     let cabin_class = stats.cabin_class_breakdown.clone();
     let seat_type = stats.seat_type_breakdown.clone();
     let flight_reason = stats.flight_reason_breakdown.clone();
+    let top_rail_carriers = stats.top_rail_carriers.clone();
+    let top_train_numbers = stats.top_train_numbers.clone();
+    let rail_service_class = stats.rail_service_class_breakdown.clone();
+    let top_ships = stats.top_ships.clone();
+    let boat_cabin_types = stats.boat_cabin_type_breakdown.clone();
+    let top_transport_carriers = stats.top_transport_carriers.clone();
+    let transport_vehicle_types = stats.transport_vehicle_breakdown.clone();
     let countries = stats.countries.clone();
     let spending_summary = stats.spending_summary.clone();
     let miles_summary = stats.miles_summary.clone();
     let country_counts_json = countries_json(&countries);
+    let filters_selected_year = selected_year.clone();
+    let filters_selected_travel_type = selected_travel_type.clone();
 
     view! {
         <Shell
@@ -592,19 +773,27 @@ fn ShareStatsPage(stats: DetailedStats, token: String) -> impl IntoView {
             {if has_data {
                 view! {
                     <main class="stats-page">
-                        <YearFilter
+                        <StatsFilters
                             available_years=available_years
-                            selected_year=selected_year
+                            selected_year=filters_selected_year
+                            selected_travel_type=filters_selected_travel_type
                             action=share_action
                         />
                         <OverviewCards stats=stats distance=distance year_range=year_range />
                         <div class="stats-grid">
-                            <TopList title="Top Airlines" items=top_airlines />
-                            <TopList title="Top Aircraft" items=top_aircraft />
-                            <TopList title="Top Routes" items=top_routes />
-                            <TopList title="Cabin Class" items=cabin_class />
-                            <TopList title="Seat Type" items=seat_type />
-                            <TopList title="Flight Reason" items=flight_reason />
+                            {optional_top_list("Top Airlines", top_airlines)}
+                            {optional_top_list("Top Aircraft", top_aircraft)}
+                            {optional_top_list("Top Routes", top_routes)}
+                            {optional_top_list("Cabin Class", cabin_class)}
+                            {optional_top_list("Seat Type", seat_type)}
+                            {optional_top_list("Flight Reason", flight_reason)}
+                            {optional_top_list("Top Rail Carriers", top_rail_carriers)}
+                            {optional_top_list("Top Train Numbers", top_train_numbers)}
+                            {optional_top_list("Rail Service Class", rail_service_class)}
+                            {optional_top_list("Top Ships", top_ships)}
+                            {optional_top_list("Boat Cabin Type", boat_cabin_types)}
+                            {optional_top_list("Top Transport Carriers", top_transport_carriers)}
+                            {optional_top_list("Transport Vehicle Types", transport_vehicle_types)}
                             <TopList title="Countries Visited" items=countries />
                             {spending_section_view(spending_summary)}
                             {miles_section_view(miles_summary)}
@@ -814,9 +1003,71 @@ mod tests {
         );
     }
 
+    #[tokio::test]
+    async fn stats_page_filters_by_travel_type() {
+        let pool = test_pool().await;
+        let cookie = auth_cookie_for_user(&pool, "alice").await;
+        let user = db::users::GetByUsername { username: "alice" }
+            .execute(&pool)
+            .await
+            .expect("lookup failed")
+            .expect("missing user");
+
+        let mut air_journey = sample_hop(TravelType::Air, "DUB", "LHR", "2024-06-15", "2024-06-15");
+        air_journey.flight_detail = Some(FlightDetail {
+            airline: "Aer Lingus".to_string(),
+            ..Default::default()
+        });
+
+        let rail_journey = sample_hop(
+            TravelType::Rail,
+            "Paris",
+            "London",
+            "2024-07-01",
+            "2024-07-01",
+        );
+
+        db::hops::Create {
+            trip_id: "trip-air",
+            user_id: user.id,
+            hops: &[air_journey],
+        }
+        .execute(&pool)
+        .await
+        .expect("insert air failed");
+
+        db::hops::Create {
+            trip_id: "trip-rail",
+            user_id: user.id,
+            hops: &[rail_journey],
+        }
+        .execute(&pool)
+        .await
+        .expect("insert rail failed");
+
+        let app = create_router(test_app_state(pool));
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/stats?travel_type=rail")
+                    .header(header::COOKIE, cookie)
+                    .header(header::ACCEPT, "text/html")
+                    .body(Body::empty())
+                    .expect("failed to build request"),
+            )
+            .await
+            .expect("router request failed");
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = body_text(response).await;
+        assert!(!body.contains("Aer Lingus"));
+        assert!(body.contains("Stations"));
+    }
+
     #[test]
     fn compute_detailed_stats_empty_input() {
-        let stats = compute_detailed_stats(&[], None);
+        let stats = compute_detailed_stats(&[], None, None);
         assert_eq!(stats.total_journeys, 0);
         assert_eq!(stats.total_flights, 0);
         assert_eq!(stats.unique_airports, 0);
@@ -843,6 +1094,13 @@ mod tests {
                 cabin_class: Some("Economy".to_string()),
                 seat_type: Some("Window".to_string()),
                 flight_reason: Some("Leisure".to_string()),
+                rail_carrier: None,
+                train_number: None,
+                service_class: None,
+                ship_name: None,
+                boat_cabin_type: None,
+                transport_carrier: None,
+                vehicle_description: None,
                 cost_amount: None,
                 cost_currency: None,
                 loyalty_program: None,
@@ -865,6 +1123,13 @@ mod tests {
                 cabin_class: None,
                 seat_type: None,
                 flight_reason: None,
+                rail_carrier: Some("Eurostar".to_string()),
+                train_number: Some("ES9026".to_string()),
+                service_class: Some("Standard Premier".to_string()),
+                ship_name: None,
+                boat_cabin_type: None,
+                transport_carrier: None,
+                vehicle_description: None,
                 cost_amount: None,
                 cost_currency: None,
                 loyalty_program: None,
@@ -872,11 +1137,12 @@ mod tests {
             },
         ];
 
-        let stats = compute_detailed_stats(&rows, None);
+        let stats = compute_detailed_stats(&rows, None, None);
         assert_eq!(stats.total_journeys, 2);
         assert_eq!(stats.total_flights, 1);
         assert_eq!(stats.total_rail, 1);
         assert_eq!(stats.unique_airports, 2);
+        assert_eq!(stats.unique_stations, 2);
         assert_eq!(stats.unique_countries, 3);
         assert_eq!(stats.countries.len(), 3);
         // GB appears in both journeys (DUB→LHR and Paris→London), IE in 1, FR in 1
@@ -884,6 +1150,13 @@ mod tests {
         assert_eq!(stats.countries[0].count, 2);
         assert_eq!(stats.top_airlines.len(), 1);
         assert_eq!(stats.top_airlines[0].name, "Aer Lingus");
+        assert_eq!(stats.top_rail_carriers.len(), 1);
+        assert_eq!(stats.top_rail_carriers[0].name, "Eurostar");
+        assert_eq!(stats.top_train_numbers[0].name, "ES9026");
+        assert_eq!(
+            stats.rail_service_class_breakdown[0].name,
+            "Standard Premier"
+        );
     }
 
     #[test]
@@ -905,16 +1178,94 @@ mod tests {
             cabin_class: None,
             seat_type: None,
             flight_reason: None,
+            rail_carrier: None,
+            train_number: None,
+            service_class: None,
+            ship_name: None,
+            boat_cabin_type: None,
+            transport_carrier: None,
+            vehicle_description: None,
             cost_amount: None,
             cost_currency: None,
             loyalty_program: None,
             miles_earned: None,
         }];
 
-        let stats = compute_detailed_stats(&rows, None);
+        let stats = compute_detailed_stats(&rows, None, None);
         assert_eq!(stats.unique_countries, 1);
         assert_eq!(stats.countries.len(), 1);
         assert_eq!(stats.countries[0].name, "US");
         assert_eq!(stats.countries[0].count, 1);
+    }
+
+    #[test]
+    fn compute_detailed_stats_filters_by_travel_type() {
+        let rows = vec![
+            StatsRow {
+                travel_type: TravelType::Air,
+                origin_name: "DUB".to_string(),
+                origin_lat: 53.4,
+                origin_lng: -6.3,
+                origin_country: Some("ie".to_string()),
+                dest_name: "LHR".to_string(),
+                dest_lat: 51.5,
+                dest_lng: -0.5,
+                dest_country: Some("gb".to_string()),
+                start_date: "2024-06-01".to_string(),
+                end_date: "2024-06-01".to_string(),
+                airline: Some("Aer Lingus".to_string()),
+                aircraft_type: None,
+                cabin_class: None,
+                seat_type: None,
+                flight_reason: None,
+                rail_carrier: None,
+                train_number: None,
+                service_class: None,
+                ship_name: None,
+                boat_cabin_type: None,
+                transport_carrier: None,
+                vehicle_description: None,
+                cost_amount: None,
+                cost_currency: None,
+                loyalty_program: None,
+                miles_earned: None,
+            },
+            StatsRow {
+                travel_type: TravelType::Rail,
+                origin_name: "Paris".to_string(),
+                origin_lat: 48.9,
+                origin_lng: 2.3,
+                origin_country: Some("fr".to_string()),
+                dest_name: "London".to_string(),
+                dest_lat: 51.5,
+                dest_lng: -0.1,
+                dest_country: Some("gb".to_string()),
+                start_date: "2024-07-01".to_string(),
+                end_date: "2024-07-01".to_string(),
+                airline: None,
+                aircraft_type: None,
+                cabin_class: None,
+                seat_type: None,
+                flight_reason: None,
+                rail_carrier: Some("Eurostar".to_string()),
+                train_number: None,
+                service_class: None,
+                ship_name: None,
+                boat_cabin_type: None,
+                transport_carrier: None,
+                vehicle_description: None,
+                cost_amount: None,
+                cost_currency: None,
+                loyalty_program: None,
+                miles_earned: None,
+            },
+        ];
+
+        let stats = compute_detailed_stats(&rows, None, Some("rail"));
+        assert_eq!(stats.total_journeys, 1);
+        assert_eq!(stats.total_flights, 0);
+        assert_eq!(stats.total_rail, 1);
+        assert_eq!(stats.selected_travel_type.as_deref(), Some("rail"));
+        assert_eq!(stats.top_rail_carriers.len(), 1);
     }
 }

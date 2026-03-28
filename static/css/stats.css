@@ -24,21 +24,24 @@
   overflow: visible;
 }
 
-.stats-year-filter {
+.stats-filters {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
+  gap: var(--space-lg);
   margin-bottom: var(--space-lg);
   font-size: var(--text-sm);
 }
 
-.stats-year-filter label {
+.stats-filters label {
+  display: inline;
   margin-bottom: 0;
   white-space: nowrap;
   color: var(--color-text-secondary);
 }
 
-.stats-year-filter select {
+.stats-filters select {
+  width: auto;
+  margin-bottom: 0;
   padding: var(--space-xs) var(--space-sm);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -55,14 +58,20 @@
   transition: border-color 0.15s;
 }
 
-.stats-year-filter select:hover {
+.stats-filters select:hover {
   border-color: var(--color-text-muted);
 }
 
-.stats-year-filter select:focus {
+.stats-filters select:focus {
   outline: none;
   border-color: var(--color-focus);
   box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+}
+
+.stats-filter-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
 }
 
 .stats-grid {

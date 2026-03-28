@@ -20,7 +20,7 @@ pub fn Shell(
                 <meta name="apple-mobile-web-app-capable" content="yes" />
                 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
                 <title>{format!("{title} — {APP_NAME}")}</title>
-                <link rel="icon" type="image/svg+xml" href="/static/logo.svg" />
+                <link rel="icon" type="image/svg+xml" href="/static/icons/logo.svg" />
                 <link rel="apple-touch-icon" href="/static/logo.svg" />
                 <link rel="manifest" href="/manifest.json" />
                 <link rel="stylesheet" href="/static/style.css" />

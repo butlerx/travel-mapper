@@ -44,6 +44,7 @@ pub struct StatsResponse {
     pub total_transport: usize,
     pub total_distance_km: u64,
     pub unique_airports: usize,
+    pub unique_stations: usize,
     pub unique_countries: usize,
     pub top_airlines: Vec<RankedItem>,
     pub top_aircraft: Vec<RankedItem>,
@@ -51,9 +52,17 @@ pub struct StatsResponse {
     pub cabin_class_breakdown: Vec<RankedItem>,
     pub seat_type_breakdown: Vec<RankedItem>,
     pub flight_reason_breakdown: Vec<RankedItem>,
+    pub top_rail_carriers: Vec<RankedItem>,
+    pub top_train_numbers: Vec<RankedItem>,
+    pub rail_service_class_breakdown: Vec<RankedItem>,
+    pub top_ships: Vec<RankedItem>,
+    pub boat_cabin_type_breakdown: Vec<RankedItem>,
+    pub top_transport_carriers: Vec<RankedItem>,
+    pub transport_vehicle_breakdown: Vec<RankedItem>,
     pub countries: Vec<RankedItem>,
     pub available_years: Vec<String>,
     pub selected_year: Option<String>,
+    pub selected_travel_type: Option<String>,
     pub first_year: Option<String>,
     pub last_year: Option<String>,
 }
@@ -68,6 +77,7 @@ impl MultiFormatResponse for StatsResponse {
         "total_transport",
         "total_distance_km",
         "unique_airports",
+        "unique_stations",
         "unique_countries",
     ];
 
@@ -80,6 +90,7 @@ impl MultiFormatResponse for StatsResponse {
             self.total_transport.to_string(),
             self.total_distance_km.to_string(),
             self.unique_airports.to_string(),
+            self.unique_stations.to_string(),
             self.unique_countries.to_string(),
         ]
     }
@@ -99,6 +110,7 @@ impl From<crate::server::pages::stats::DetailedStats> for StatsResponse {
             total_transport: s.total_transport,
             total_distance_km: s.total_distance_km,
             unique_airports: s.unique_airports,
+            unique_stations: s.unique_stations,
             unique_countries: s.unique_countries,
             top_airlines: convert_items(s.top_airlines),
             top_aircraft: convert_items(s.top_aircraft),
@@ -106,9 +118,17 @@ impl From<crate::server::pages::stats::DetailedStats> for StatsResponse {
             cabin_class_breakdown: convert_items(s.cabin_class_breakdown),
             seat_type_breakdown: convert_items(s.seat_type_breakdown),
             flight_reason_breakdown: convert_items(s.flight_reason_breakdown),
+            top_rail_carriers: convert_items(s.top_rail_carriers),
+            top_train_numbers: convert_items(s.top_train_numbers),
+            rail_service_class_breakdown: convert_items(s.rail_service_class_breakdown),
+            top_ships: convert_items(s.top_ships),
+            boat_cabin_type_breakdown: convert_items(s.boat_cabin_type_breakdown),
+            top_transport_carriers: convert_items(s.top_transport_carriers),
+            transport_vehicle_breakdown: convert_items(s.transport_vehicle_breakdown),
             countries: convert_items(s.countries),
             available_years: s.available_years,
             selected_year: s.selected_year,
+            selected_travel_type: s.selected_travel_type,
             first_year: s.first_year,
             last_year: s.last_year,
         }
@@ -133,7 +153,11 @@ pub async fn handler(
         Err(err) => return AppError::from(err).into_format_response(format),
     };
 
-    let detailed = compute_detailed_stats(&all_rows, query.year.as_deref());
+    let detailed = compute_detailed_stats(
+        &all_rows,
+        query.year.as_deref(),
+        query.travel_type.as_deref(),
+    );
 
     if format == super::ResponseFormat::Html {
         crate::server::pages::stats::render_page(detailed)

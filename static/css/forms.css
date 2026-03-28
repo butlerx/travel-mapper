@@ -8,6 +8,7 @@ label {
 }
 
 input[type='text'],
+input[type='email'],
 input[type='password'],
 input[type='date'],
 input[type='number'],
@@ -43,6 +44,7 @@ select {
 }
 
 input[type='text']::placeholder,
+input[type='email']::placeholder,
 input[type='password']::placeholder,
 input[type='date']::placeholder,
 input[type='number']::placeholder,
@@ -52,6 +54,7 @@ select::placeholder {
 }
 
 input[type='text']:hover,
+input[type='email']:hover,
 input[type='password']:hover,
 input[type='date']:hover,
 input[type='number']:hover,
@@ -61,6 +64,7 @@ select:hover {
 }
 
 input[type='text']:focus,
+input[type='email']:focus,
 input[type='password']:focus,
 input[type='date']:focus,
 input[type='number']:focus,
@@ -72,6 +76,7 @@ select:focus {
 }
 
 input[type='text']:invalid:not(:placeholder-shown):not(:focus),
+input[type='email']:invalid:not(:placeholder-shown):not(:focus),
 input[type='password']:invalid:not(:placeholder-shown):not(:focus),
 input[type='date']:invalid:not(:placeholder-shown):not(:focus),
 input[type='number']:invalid:not(:placeholder-shown):not(:focus) {

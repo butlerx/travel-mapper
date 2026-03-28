@@ -14,38 +14,36 @@ pub(super) fn EmailSection(email: String, email_verified: bool) -> impl IntoView
         (false, false) => "badge badge-warning",
     };
 
+    let placeholder = if email.is_empty() {
+        "you@example.com"
+    } else {
+        &email
+    };
+
     view! {
         <section class="card">
             <h2>"Email"</h2>
-            <p>
-                "Status: "
-                <span class=status_class>{status_text}</span>
-                {(!email.is_empty()).then(|| {
-                    let e = email.clone();
-                    view! {
-                        <span class="ml-sm">{format!("({e})")}</span>
-                    }
+            <div class="status-row">
+                <p>"Status: "<span class=status_class>{status_text}</span></p>
+                {(!email_verified && !email.is_empty()).then(|| view! {
+                    <form method="post" action="/auth/resend-verification">
+                        <button type="submit" class="btn btn-sm btn-warning">"Resend Verification"</button>
+                    </form>
                 })}
-            </p>
-
-            {(!email_verified && !email.is_empty()).then(|| view! {
-                <form method="post" action="/auth/resend-verification" class="mt-sm">
-                    <button type="submit" class="btn btn-sm">"Resend Verification Email"</button>
-                </form>
-            })}
+            </div>
 
             <h3 class="mt-sm">"Update Email"</h3>
             <form method="post" action="/auth/email" class="mt-sm">
-                <label>
-                    "Email address"
+                <label>"Email address"</label>
+                <div class="input-group">
                     <input
                         type="email"
                         name="email"
-                        placeholder="you@example.com"
+                        placeholder={placeholder.to_string()}
                         value=email
                     />
-                </label>
-                <button type="submit" class="btn mt-sm">"Save Email"</button>
+                    <button type="submit" class="btn">"Save"</button>
+                </div>
             </form>
         </section>
     }

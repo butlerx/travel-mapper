@@ -89,7 +89,6 @@ run         = "sqlx database create"
 description = "Run database migrations"
 run         = "sqlx migrate run"
 depends     = ["db:create"]
-sources     = ["migrations/*.sql"]
 
 [tasks."db:reset"]
 description = "Drop and recreate the database, then run migrations"

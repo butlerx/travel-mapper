@@ -1,6 +1,6 @@
 use sqlx::SqlitePool;
 
-/// Store a new feed token hash for a user.
+/// Store a new feed token for a user
 pub struct Create<'a> {
     pub user_id: i64,
     pub token_hash: &'a str,
@@ -47,6 +47,7 @@ impl GetUserIdByHash<'_> {
 /// A single feed token row for listing in the settings UI.
 pub struct Row {
     pub id: i64,
+    pub token_hash: String,
     pub label: String,
     pub created_at: String,
 }
@@ -63,7 +64,7 @@ impl GetByUserId {
     pub async fn execute(&self, pool: &SqlitePool) -> Result<Vec<Row>, sqlx::Error> {
         let rows = sqlx::query_as!(
             Row,
-            r#"SELECT id as "id!: i64", label, created_at
+            r#"SELECT id as "id!: i64", token_hash, label, created_at
                FROM feed_tokens
                WHERE user_id = ?
                ORDER BY created_at DESC"#,
@@ -140,6 +141,7 @@ mod tests {
             .expect("feed token list failed");
         assert_eq!(tokens.len(), 1);
         assert_eq!(tokens[0].label, "my calendar");
+        assert_eq!(tokens[0].token_hash, "feed_hash_1");
 
         let deleted = Delete {
             id: token_id,

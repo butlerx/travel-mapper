@@ -377,6 +377,11 @@ pub(super) fn auth_api_routes() -> ApiRouter<super::AppState> {
             post_with(api_keys::handler, api_keys::handler_docs),
         )
         .api_route(
+            "/api-keys/{id}",
+            delete_with(api_keys::delete_handler, api_keys::delete_handler_docs)
+                .post_with(api_keys::delete_handler, api_keys::delete_handler_docs),
+        )
+        .api_route(
             "/email",
             post_with(email::update_handler, email::update_handler_docs),
         )
@@ -410,6 +415,10 @@ pub(super) fn auth_api_routes() -> ApiRouter<super::AppState> {
             delete_with(
                 feed_tokens::delete_handler,
                 feed_tokens::delete_handler_docs,
+            )
+            .post_with(
+                feed_tokens::delete_handler,
+                feed_tokens::delete_handler_docs,
             ),
         )
         .api_route(
@@ -422,6 +431,10 @@ pub(super) fn auth_api_routes() -> ApiRouter<super::AppState> {
         .api_route(
             "/share-tokens/{id}",
             delete_with(
+                share_tokens::delete_handler,
+                share_tokens::delete_handler_docs,
+            )
+            .post_with(
                 share_tokens::delete_handler,
                 share_tokens::delete_handler_docs,
             ),

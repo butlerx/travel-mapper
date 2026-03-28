@@ -1,28 +1,48 @@
+use crate::db;
 use leptos::prelude::*;
 
 #[component]
-pub(super) fn FeedSection() -> impl IntoView {
+pub(super) fn FeedSection(tokens: Vec<db::feed_tokens::Row>, base_url: String) -> impl IntoView {
     view! {
         <section class="card">
             <h2>"Calendar Feed"</h2>
-            <p>"Subscribe to your travel schedule in any calendar app (Google Calendar, Apple Calendar, Outlook, etc.)."</p>
-
-            <h3 class="mt-sm">"Create a Feed Token"</h3>
+            <p>"Subscribe to your travel schedule in any calendar app."</p>
             <form method="post" action="/auth/feed-tokens" class="mt-sm">
-                <label>
-                    "Label (optional)"
-                    <input type="text" name="label" placeholder="e.g. My iPhone" />
-                </label>
-                <button type="submit" class="btn mt-sm">"Generate Feed URL"</button>
+                <label>"Label"</label>
+                <div class="input-group">
+                    <input type="text" name="label" placeholder="e.g. My iPhone" required />
+                    <button type="submit" class="btn">"Generate Feed URL"</button>
+                </div>
             </form>
 
-            <h3 class="mt-sm">"How to Subscribe"</h3>
-            <ol class="mt-sm">
-                <li>"Create a feed token above (or via "<code>"POST /auth/feed-tokens"</code>")."</li>
-                <li>"Copy the token from the response."</li>
-                <li>"Add this URL to your calendar app: "<code>"/feed/TOKEN.ics"</code></li>
-            </ol>
-            <p class="mt-sm">"To revoke a feed, delete its token via "<code>"DELETE /auth/feed-tokens/:id"</code>"."</p>
+            {if tokens.is_empty() {
+                view! { <p class="mt-sm text-muted">"No feed tokens yet."</p> }.into_any()
+            } else {
+                view! {
+                    <ul class="token-list mt-sm">
+                        {tokens.into_iter().map(|t| {
+                            let delete_url = format!("/auth/feed-tokens/{}", t.id);
+                            let full_url = format!("{base_url}/feed/{}.ics", t.token_hash);
+                            view! {
+                                <li class="token-list-item">
+                                    <div class="token-info">
+                                        <span class="token-label">{if t.label.is_empty() { "(no label)".to_owned() } else { t.label }}</span>
+                                    </div>
+                                    <div class="token-actions">
+                                        <span class="new-token-value">
+                                            <code data-copy-value=full_url style="display:none"></code>
+                                            <button type="button" class="btn btn-sm btn-primary" data-copy-trigger>"Copy URL"</button>
+                                        </span>
+                                        <form method="post" action=delete_url>
+                                            <button type="submit" class="btn btn-sm btn-danger">"Revoke"</button>
+                                        </form>
+                                    </div>
+                                </li>
+                            }
+                        }).collect_view()}
+                    </ul>
+                }.into_any()
+            }}
         </section>
     }
 }

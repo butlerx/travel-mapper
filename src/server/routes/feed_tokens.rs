@@ -72,7 +72,11 @@ pub async fn create_handler(
             if format == super::ResponseFormat::Html {
                 Redirect::to("/settings").into_response()
             } else {
-                let response = FeedTokenResponse { id, token, label };
+                let response = FeedTokenResponse {
+                    id,
+                    token: token_hash,
+                    label,
+                };
                 FeedTokenResponse::single_format_response(&response, format, StatusCode::CREATED)
             }
         }

@@ -48,6 +48,7 @@ static_handler!(
         include_str!("../../../static/css/pages.css"),
         include_str!("../../../static/css/stats.css"),
         include_str!("../../../static/css/journey-detail.css"),
+        include_str!("../../../static/css/settings.css"),
         include_str!("../../../static/css/utilities.css"),
     ),
     "text/css; charset=utf-8"

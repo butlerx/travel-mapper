@@ -1,0 +1,273 @@
+/* ===== Settings Page ===== */
+.settings-page {
+  max-width: 800px;
+  margin: var(--space-xl) auto;
+  padding: 0 var(--space-md);
+}
+
+.settings-page-header {
+  margin-bottom: var(--space-xl);
+}
+
+.settings-page-header h1 {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0 0 var(--space-xs);
+}
+
+.settings-page-header p {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  margin: 0;
+}
+
+/* Section groups */
+.settings-group {
+  margin-bottom: var(--space-xl);
+}
+
+.settings-group-heading {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: var(--space-md);
+}
+
+/* Two-column grid for compact cards */
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-md);
+}
+
+/* Clean up cards within settings */
+.settings-group .card {
+  margin-bottom: var(--space-md);
+}
+
+.settings-group .card h2 {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  margin-bottom: var(--space-sm);
+}
+
+.settings-group .card h3 {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-xs);
+}
+
+.settings-group .card p {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.settings-group .card ol {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  padding-left: var(--space-lg);
+  margin: 0;
+}
+
+.settings-group .card code {
+  font-size: var(--text-xs);
+  background: var(--color-surface-raised);
+  padding: 1px var(--space-xs);
+  border-radius: var(--radius-sm);
+  color: var(--color-primary);
+}
+
+/* Inline badges (email verification status, etc.) */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-sm);
+  border-radius: 9999px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.badge-success {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+  border: 1px solid var(--color-success-border);
+}
+
+.badge-warning {
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  border: 1px solid var(--color-warning-border);
+}
+
+.badge-muted {
+  background: var(--color-surface-raised);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+}
+
+.token-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.token-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-sm) 0;
+  border-bottom: 1px solid var(--color-border, #e2e8f0);
+}
+
+.token-list-item:last-child {
+  border-bottom: none;
+}
+
+.token-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.token-label {
+  font-weight: 500;
+}
+
+.token-date {
+  font-size: 0.85rem;
+  color: var(--color-text-muted, #64748b);
+}
+
+.token-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm, 0.5rem);
+}
+
+.text-muted {
+  color: var(--color-text-muted, #64748b);
+}
+
+/* New-token banner (shown once after creation) */
+.new-token-banner {
+  background: var(--color-success-bg, #f0fdf4);
+  border: 1px solid var(--color-success-border, #bbf7d0);
+  border-radius: var(--radius-md, 0.5rem);
+  padding: var(--space-sm) var(--space-md);
+}
+
+.new-token-heading {
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--color-success-text, #166534);
+  margin-bottom: var(--space-xs);
+}
+
+.new-token-value {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.new-token-value code {
+  flex: 1;
+  word-break: break-all;
+  font-size: var(--text-xs);
+  background: var(--color-surface, #fff);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm, 0.25rem);
+  border: 1px solid var(--color-border, #e2e8f0);
+  color: var(--color-text);
+}
+
+.copy-btn {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.settings-group .form-inline label {
+  margin-bottom: var(--space-xs);
+}
+
+.settings-group .input-group {
+  display: flex;
+}
+
+.settings-group .input-group input {
+  flex: 1;
+  min-width: 0;
+  margin-bottom: 0;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  border-right: none;
+}
+
+.settings-group .input-group button {
+  flex-shrink: 0;
+  white-space: nowrap;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--text-sm);
+  line-height: 1.4;
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+  border-color: var(--color-primary);
+}
+
+.settings-group .input-group button:hover {
+  background: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+}
+
+/* Right-aligned button row for multi-field forms */
+.settings-group .form-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--space-sm);
+}
+
+/* Card header with action button inline (e.g. TripIt heading + Sync Now) */
+.card-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+
+.card-header-actions h2 {
+  margin-bottom: 0;
+}
+
+/* Inline status row: badge + action button (e.g. email status + resend) */
+.status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.status-row p {
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .settings-page {
+    padding: 0 var(--space-sm);
+    margin: var(--space-lg) auto;
+  }
+
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
+}

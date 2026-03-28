@@ -1,7 +1,4 @@
-use crate::{
-    db,
-    server::{AppState, session::sha256_hex},
-};
+use crate::{db, server::AppState};
 use axum::{
     extract::{Path, State},
     http::{StatusCode, header},
@@ -9,15 +6,12 @@ use axum::{
 };
 use icalendar::{Calendar, Component, Event, EventLike};
 
-pub async fn handler(State(state): State<AppState>, Path(token): Path<String>) -> Response {
-    let token = token.strip_suffix(".ics").unwrap_or(&token);
-    let token_hash = sha256_hex(token);
+pub async fn handler(State(state): State<AppState>, Path(token_hash): Path<String>) -> Response {
+    let token_hash = token_hash.strip_suffix(".ics").unwrap_or(&token_hash);
 
-    let user_id = match (db::feed_tokens::GetUserIdByHash {
-        token_hash: &token_hash,
-    })
-    .execute(&state.db)
-    .await
+    let user_id = match (db::feed_tokens::GetUserIdByHash { token_hash })
+        .execute(&state.db)
+        .await
     {
         Ok(Some(id)) => id,
         Ok(None) => return StatusCode::NOT_FOUND.into_response(),
@@ -145,11 +139,10 @@ mod tests {
         .await
         .expect("insert hops failed");
 
-        let token = "test-feed-token-abc123";
-        let token_hash = crate::server::session::sha256_hex(token);
+        let token_hash = "feed_hash_abc123";
         db::feed_tokens::Create {
             user_id,
-            token_hash: &token_hash,
+            token_hash,
             label: "test",
         }
         .execute(&pool)
@@ -161,7 +154,7 @@ mod tests {
         let response = app
             .oneshot(
                 Request::builder()
-                    .uri(format!("/feed/{token}.ics"))
+                    .uri(format!("/feed/{token_hash}.ics"))
                     .body(Body::empty())
                     .expect("failed to build request"),
             )
@@ -216,11 +209,10 @@ mod tests {
         let pool = test_pool().await;
         let user_id = db::tests::test_user(&pool, "bob").await;
 
-        let token = "bob-feed-token";
-        let token_hash = crate::server::session::sha256_hex(token);
+        let token_hash = "bob-feed-hash";
         db::feed_tokens::Create {
             user_id,
-            token_hash: &token_hash,
+            token_hash,
             label: "empty",
         }
         .execute(&pool)
@@ -232,7 +224,7 @@ mod tests {
         let response = app
             .oneshot(
                 Request::builder()
-                    .uri(format!("/feed/{token}.ics"))
+                    .uri(format!("/feed/{token_hash}.ics"))
                     .body(Body::empty())
                     .expect("failed to build request"),
             )

@@ -11,9 +11,7 @@ mod profile_section;
 mod push_section;
 /// Shareable stats link section.
 mod share_section;
-/// Sync status and trigger section.
-mod sync_section;
-/// `TripIt` connection section.
+/// `TripIt` connection and sync status section.
 mod tripit_section;
 
 use crate::{
@@ -33,7 +31,6 @@ use profile_section::ProfileSection;
 use push_section::PushSection;
 use serde::Deserialize;
 use share_section::ShareSection;
-use sync_section::SyncSection;
 use tripit_section::TripitSection;
 
 /// Flash feedback messages displayed on the settings page after user actions.
@@ -44,6 +41,8 @@ pub struct SettingsFeedback {
     pub csv: Option<String>,
     pub email: Option<String>,
     pub profile: Option<String>,
+    /// Raw API key shown once after creation (not persisted).
+    pub new_api_key: Option<String>,
 }
 
 /// User profile fields submitted from the settings form.
@@ -52,37 +51,45 @@ pub struct UserProfileData {
     pub email_verified: bool,
     pub first_name: String,
     pub last_name: String,
+    pub vapid_public_key: Option<String>,
+}
+
+/// All data needed to render the settings page.
+pub struct PageData {
+    pub has_tripit: bool,
+    pub sync_state: Option<db::sync_state::Row>,
+    pub feedback: SettingsFeedback,
+    pub profile: UserProfileData,
+    pub feed_tokens: Vec<db::feed_tokens::Row>,
+    pub share_tokens: Vec<db::share_tokens::Row>,
+    pub api_keys: Vec<db::api_keys::Row>,
+    pub base_url: String,
 }
 
 /// Render the full settings page with all sections populated from the database.
-///
-/// # Errors
-///
-/// Returns an error if any database query for user settings fails.
-pub fn render_page(
-    has_tripit: bool,
-    sync_state: Option<&db::sync_state::Row>,
-    feedback: SettingsFeedback,
-    profile: UserProfileData,
-    vapid_public_key: Option<String>,
-) -> Response {
+pub fn render_page(data: PageData) -> Response {
     let html = view! {
         <Settings
-            has_tripit=has_tripit
-            sync_status=sync_state.map(|s| s.sync_status.clone())
-            last_sync_at=sync_state.and_then(|s| s.last_sync_at.clone())
-            trips_fetched=sync_state.map(|s| s.trips_fetched)
-            hops_fetched=sync_state.map(|s| s.hops_fetched)
-            error=feedback.error
-            tripit_connected=feedback.tripit
-            csv_imported=feedback.csv
-            email_feedback=feedback.email
-            profile_feedback=feedback.profile
-            email=profile.email
-            email_verified=profile.email_verified
-            first_name=profile.first_name
-            last_name=profile.last_name
-            vapid_public_key=vapid_public_key
+            has_tripit=data.has_tripit
+            sync_status=data.sync_state.as_ref().map(|s| s.sync_status.clone())
+            last_sync_at=data.sync_state.as_ref().and_then(|s| s.last_sync_at.clone())
+            trips_fetched=data.sync_state.as_ref().map(|s| s.trips_fetched)
+            hops_fetched=data.sync_state.map(|s| s.hops_fetched)
+            error=data.feedback.error
+            tripit_connected=data.feedback.tripit
+            csv_imported=data.feedback.csv
+            email_feedback=data.feedback.email
+            profile_feedback=data.feedback.profile
+            email=data.profile.email
+            email_verified=data.profile.email_verified
+            first_name=data.profile.first_name
+            last_name=data.profile.last_name
+            vapid_public_key=data.profile.vapid_public_key
+            feed_tokens=data.feed_tokens
+            share_tokens=data.share_tokens
+            api_keys=data.api_keys
+            new_api_key=data.feedback.new_api_key
+            base_url=data.base_url
         />
     };
     (StatusCode::OK, axum::response::Html(html.to_html())).into_response()
@@ -105,6 +112,11 @@ fn Settings(
     first_name: String,
     last_name: String,
     #[prop(optional_no_strip)] vapid_public_key: Option<String>,
+    feed_tokens: Vec<db::feed_tokens::Row>,
+    share_tokens: Vec<db::share_tokens::Row>,
+    api_keys: Vec<db::api_keys::Row>,
+    #[prop(optional_no_strip)] new_api_key: Option<String>,
+    base_url: String,
 ) -> impl IntoView {
     let email_alert = email_feedback
         .as_deref()
@@ -127,7 +139,7 @@ fn Settings(
     view! {
         <Shell title="Settings".to_owned()>
             <NavBar current="settings" />
-            <main class="container">
+            <main class="settings-page">
                 {error.map(|e| view! {
                     <div class="alert alert-error" role="alert">{e}</div>
                 })}
@@ -146,29 +158,46 @@ fn Settings(
                     <div class="alert alert-success" role="status">{msg}</div>
                 })}
 
-                <ProfileSection first_name=first_name last_name=last_name />
+                <div class="settings-group">
+                    <h2 class="settings-group-heading">"Account"</h2>
+                    <div class="settings-grid">
+                        <ProfileSection first_name=first_name last_name=last_name />
+                        <EmailSection email=email email_verified=email_verified />
+                    </div>
+                </div>
 
-                <EmailSection email=email email_verified=email_verified />
+                <div class="settings-group">
+                    <h2 class="settings-group-heading">"Data Sources"</h2>
+                    <TripitSection
+                        has_tripit=has_tripit
+                        sync_status=sync_status
+                        last_sync_at=last_sync_at
+                        trips_fetched=trips_fetched
+                        hops_fetched=hops_fetched
+                    />
+                    <CsvImportSection />
+                </div>
 
-                <TripitSection has_tripit=has_tripit />
+                <div class="settings-group">
+                    <h2 class="settings-group-heading">"Access & Sharing"</h2>
+                    <FeedSection tokens=feed_tokens base_url=base_url.clone() />
+                    <ShareSection tokens=share_tokens base_url=base_url />
+                    <ApiKeysSection keys=api_keys new_key=new_api_key />
+                    <PushSection vapid_public_key=vapid_public_key />
+                </div>
 
-                <SyncSection
-                    has_tripit=has_tripit
-                    sync_status=sync_status
-                    last_sync_at=last_sync_at
-                    trips_fetched=trips_fetched
-                    hops_fetched=hops_fetched
-                />
-
-                <CsvImportSection />
-
-                <ApiKeysSection />
-
-                <FeedSection />
-
-                <ShareSection />
-
-                <PushSection vapid_public_key=vapid_public_key />
+                <script>
+                    "document.querySelectorAll('[data-copy-trigger]').forEach(function(btn){"
+                    "btn.addEventListener('click',function(){"
+                    "var code=btn.closest('.new-token-value').querySelector('[data-copy-value]');"
+                    "var text=code.getAttribute('data-copy-value');"
+                    "navigator.clipboard.writeText(text).then(function(){"
+                    "btn.textContent='Copied!';"
+                    "setTimeout(function(){btn.textContent='Copy';},2000);"
+                    "});"
+                    "});"
+                    "});"
+                </script>
             </main>
         </Shell>
     }
@@ -209,11 +238,10 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
         let body = body_text(response).await;
         assert!(body.contains("Settings"));
-        assert!(body.contains("TripIt Connection"));
+        assert!(body.contains("TripIt"));
         assert!(body.contains("Not Connected"));
         assert!(body.contains("Connect TripIt"));
         assert!(body.contains("/auth/tripit/connect"));
-        assert!(body.contains("Sync Status"));
         assert!(body.contains("API Keys"));
     }
 

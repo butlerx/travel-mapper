@@ -17,6 +17,10 @@ path = "src/bin/sync_worker.rs"
 name = "seed"
 path = "src/bin/seed.rs"
 
+[[bin]]
+name = "create-user"
+path = "src/bin/create_user.rs"
+
 [dependencies]
 aes-gcm = "0.10"
 airport-data = "1.0"
@@ -54,6 +58,7 @@ leptos_meta = { version = "0.8" }
 leptos_router = { version = "0.8" }
 percent-encoding = "2"
 rand = "0.8"
+rpassword = "5"
 regex = "1"
 reqwest = { version = "0.12", features = ["json"] }
 schemars = { version = "0.9", features = ["uuid1"] }

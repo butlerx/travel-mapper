@@ -1,7 +1,6 @@
 use super::{TravelType, parse_travel_type};
 use sqlx::SqlitePool;
 
-/// Database row for stats computation — joins hops with flight details.
 #[derive(Debug, Clone)]
 pub struct StatsRow {
     pub travel_type: TravelType,
@@ -20,6 +19,13 @@ pub struct StatsRow {
     pub cabin_class: Option<String>,
     pub seat_type: Option<String>,
     pub flight_reason: Option<String>,
+    pub rail_carrier: Option<String>,
+    pub train_number: Option<String>,
+    pub service_class: Option<String>,
+    pub ship_name: Option<String>,
+    pub boat_cabin_type: Option<String>,
+    pub transport_carrier: Option<String>,
+    pub vehicle_description: Option<String>,
     pub cost_amount: Option<f64>,
     pub cost_currency: Option<String>,
     pub loyalty_program: Option<String>,
@@ -44,6 +50,13 @@ struct StatsHopRow {
     cabin_class: Option<String>,
     seat_type: Option<String>,
     flight_reason: Option<String>,
+    rail_carrier: Option<String>,
+    train_number: Option<String>,
+    service_class: Option<String>,
+    ship_name: Option<String>,
+    boat_cabin_type: Option<String>,
+    transport_carrier: Option<String>,
+    vehicle_description: Option<String>,
     cost_amount: Option<f64>,
     cost_currency: Option<String>,
     loyalty_program: Option<String>,
@@ -76,6 +89,13 @@ impl TryFrom<StatsHopRow> for StatsRow {
             cabin_class: non_empty(row.cabin_class),
             seat_type: non_empty(row.seat_type),
             flight_reason: non_empty(row.flight_reason),
+            rail_carrier: non_empty(row.rail_carrier),
+            train_number: non_empty(row.train_number),
+            service_class: non_empty(row.service_class),
+            ship_name: non_empty(row.ship_name),
+            boat_cabin_type: non_empty(row.boat_cabin_type),
+            transport_carrier: non_empty(row.transport_carrier),
+            vehicle_description: non_empty(row.vehicle_description),
             cost_amount: row.cost_amount,
             cost_currency: non_empty(row.cost_currency),
             loyalty_program: non_empty(row.loyalty_program),
@@ -84,7 +104,6 @@ impl TryFrom<StatsHopRow> for StatsRow {
     }
 }
 
-/// Fetch all hops with joined flight details for stats computation.
 pub struct GetAllForStats {
     pub user_id: i64,
 }
@@ -113,12 +132,22 @@ impl GetAllForStats {
                    fd.cabin_class,
                    fd.seat_type,
                    fd.flight_reason,
+                   rd.carrier AS rail_carrier,
+                   rd.train_number,
+                   rd.service_class,
+                   bd.ship_name,
+                   bd.cabin_type AS boat_cabin_type,
+                   td.carrier_name AS transport_carrier,
+                   td.vehicle_description,
                    h.cost_amount,
                    h.cost_currency,
                    h.loyalty_program,
                    h.miles_earned
                 FROM hops h
                LEFT JOIN flight_details fd ON fd.hop_id = h.id
+               LEFT JOIN rail_details rd ON rd.hop_id = h.id
+               LEFT JOIN boat_details bd ON bd.hop_id = h.id
+               LEFT JOIN transport_details td ON td.hop_id = h.id
                WHERE h.user_id = ?
                ORDER BY h.start_date ASC",
             self.user_id,
@@ -133,7 +162,7 @@ impl GetAllForStats {
 #[cfg(test)]
 mod tests {
     use crate::db::{
-        hops::{Create, FlightDetail, TravelType, sample_hop},
+        hops::{Create, FlightDetail, RailDetail, TravelType, sample_hop},
         tests::{test_pool, test_user},
     };
 
@@ -172,6 +201,9 @@ mod tests {
         assert_eq!(stats[0].airline.as_deref(), Some("BA"));
         assert_eq!(stats[0].aircraft_type.as_deref(), Some("777"));
         assert_eq!(stats[0].cabin_class.as_deref(), Some("economy"));
+        assert!(stats[0].rail_carrier.is_none());
+        assert!(stats[0].ship_name.is_none());
+        assert!(stats[0].transport_carrier.is_none());
     }
 
     #[tokio::test]
@@ -204,5 +236,47 @@ mod tests {
         assert!(stats[0].airline.is_none());
         assert!(stats[0].aircraft_type.is_none());
         assert!(stats[0].cabin_class.is_none());
+        assert!(stats[0].rail_carrier.is_none());
+        assert!(stats[0].ship_name.is_none());
+        assert!(stats[0].transport_carrier.is_none());
+    }
+
+    #[tokio::test]
+    async fn get_all_for_stats_joins_rail_details() {
+        let pool = test_pool().await;
+        let user_id = test_user(&pool, "alice").await;
+
+        let mut hop = sample_hop(
+            TravelType::Rail,
+            "Paris",
+            "London",
+            "2024-06-02",
+            "2024-06-02",
+        );
+        hop.rail_detail = Some(RailDetail {
+            carrier: "Eurostar".to_string(),
+            train_number: "ES9026".to_string(),
+            service_class: "Standard Premier".to_string(),
+            ..Default::default()
+        });
+
+        Create {
+            trip_id: "trip-rail-detail-stats",
+            user_id,
+            hops: &[hop],
+        }
+        .execute(&pool)
+        .await
+        .expect("insert failed");
+
+        let stats = GetAllForStats { user_id }
+            .execute(&pool)
+            .await
+            .expect("stats query failed");
+
+        assert_eq!(stats.len(), 1);
+        assert_eq!(stats[0].rail_carrier.as_deref(), Some("Eurostar"));
+        assert_eq!(stats[0].train_number.as_deref(), Some("ES9026"));
+        assert_eq!(stats[0].service_class.as_deref(), Some("Standard Premier"));
     }
 }

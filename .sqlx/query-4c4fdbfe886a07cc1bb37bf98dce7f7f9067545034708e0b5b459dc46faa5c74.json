@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id as \"id!: i64\", label, created_at\n               FROM share_tokens\n               WHERE user_id = ?\n               ORDER BY created_at DESC",
+  "query": "SELECT id as \"id!: i64\", label, created_at\n               FROM api_keys\n               WHERE user_id = ?\n               ORDER BY created_at DESC",
   "describe": {
     "columns": [
       {
@@ -28,5 +28,5 @@
       false
     ]
   },
-  "hash": "95f75e97a49a6596813e42168a778c3dc382acaa58f759b2e61c5f308cf91fe9"
+  "hash": "4c4fdbfe886a07cc1bb37bf98dce7f7f9067545034708e0b5b459dc46faa5c74"
 }

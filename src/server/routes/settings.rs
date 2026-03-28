@@ -10,6 +10,7 @@ use axum::{
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
 };
+use axum_extra::extract::Host;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -42,11 +43,19 @@ pub struct SyncStatus {
 
 pub async fn handler(
     State(state): State<AppState>,
+    Host(host): Host,
     auth: AuthUser,
     Query(feedback): Query<pages::settings::SettingsFeedback>,
     headers: HeaderMap,
 ) -> Response {
     let format = negotiate_format(&headers);
+
+    let scheme = if host.contains("localhost") || host.contains("127.0.0.1") {
+        "http"
+    } else {
+        "https"
+    };
+    let base_url = format!("{scheme}://{host}");
 
     let has_tripit = db::credentials::Has {
         user_id: auth.user_id,
@@ -68,23 +77,48 @@ pub async fn handler(
         .ok()
         .flatten();
 
+    let feed_tokens = db::feed_tokens::GetByUserId {
+        user_id: auth.user_id,
+    }
+    .execute(&state.db)
+    .await
+    .unwrap_or_default();
+
+    let share_tokens = db::share_tokens::GetByUserId {
+        user_id: auth.user_id,
+    }
+    .execute(&state.db)
+    .await
+    .unwrap_or_default();
+
+    let api_keys = db::api_keys::GetByUserId {
+        user_id: auth.user_id,
+    }
+    .execute(&state.db)
+    .await
+    .unwrap_or_default();
+
     let (email, email_verified, first_name, last_name) = user
         .map(|u| (u.email, u.email_verified, u.first_name, u.last_name))
         .unwrap_or_default();
 
     match format {
-        ResponseFormat::Html => pages::settings::render_page(
+        ResponseFormat::Html => pages::settings::render_page(pages::settings::PageData {
             has_tripit,
-            sync_state.as_ref(),
+            sync_state,
             feedback,
-            pages::settings::UserProfileData {
+            profile: pages::settings::UserProfileData {
                 email,
                 email_verified,
                 first_name,
                 last_name,
+                vapid_public_key: state.vapid_public_key.clone(),
             },
-            state.vapid_public_key.clone(),
-        ),
+            feed_tokens,
+            share_tokens,
+            api_keys,
+            base_url,
+        }),
         ResponseFormat::Json => {
             let response = SettingsResponse {
                 tripit_connected: has_tripit,
@@ -287,7 +321,7 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
         let body = body_text(response).await;
         assert!(body.contains("Settings"));
-        assert!(body.contains("TripIt Connection"));
+        assert!(body.contains("TripIt"));
     }
 
     #[tokio::test]

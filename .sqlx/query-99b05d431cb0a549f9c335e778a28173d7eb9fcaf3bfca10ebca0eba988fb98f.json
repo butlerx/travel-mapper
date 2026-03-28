@@ -1,0 +1,176 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT\n                   h.travel_type,\n                   h.origin_name,\n                   h.origin_lat,\n                   h.origin_lng,\n                   h.origin_country,\n                   h.dest_name,\n                   h.dest_lat,\n                   h.dest_lng,\n                   h.dest_country,\n                   h.start_date,\n                   h.end_date,\n                   fd.airline,\n                   fd.aircraft_type,\n                   fd.cabin_class,\n                   fd.seat_type,\n                   fd.flight_reason,\n                   rd.carrier AS rail_carrier,\n                   rd.train_number,\n                   rd.service_class,\n                   bd.ship_name,\n                   bd.cabin_type AS boat_cabin_type,\n                   td.carrier_name AS transport_carrier,\n                   td.vehicle_description,\n                   h.cost_amount,\n                   h.cost_currency,\n                   h.loyalty_program,\n                   h.miles_earned\n                FROM hops h\n               LEFT JOIN flight_details fd ON fd.hop_id = h.id\n               LEFT JOIN rail_details rd ON rd.hop_id = h.id\n               LEFT JOIN boat_details bd ON bd.hop_id = h.id\n               LEFT JOIN transport_details td ON td.hop_id = h.id\n               WHERE h.user_id = ?\n               ORDER BY h.start_date ASC",
+  "describe": {
+    "columns": [
+      {
+        "name": "travel_type",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "origin_name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "origin_lat",
+        "ordinal": 2,
+        "type_info": "Float"
+      },
+      {
+        "name": "origin_lng",
+        "ordinal": 3,
+        "type_info": "Float"
+      },
+      {
+        "name": "origin_country",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "dest_name",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "dest_lat",
+        "ordinal": 6,
+        "type_info": "Float"
+      },
+      {
+        "name": "dest_lng",
+        "ordinal": 7,
+        "type_info": "Float"
+      },
+      {
+        "name": "dest_country",
+        "ordinal": 8,
+        "type_info": "Text"
+      },
+      {
+        "name": "start_date",
+        "ordinal": 9,
+        "type_info": "Text"
+      },
+      {
+        "name": "end_date",
+        "ordinal": 10,
+        "type_info": "Text"
+      },
+      {
+        "name": "airline",
+        "ordinal": 11,
+        "type_info": "Text"
+      },
+      {
+        "name": "aircraft_type",
+        "ordinal": 12,
+        "type_info": "Text"
+      },
+      {
+        "name": "cabin_class",
+        "ordinal": 13,
+        "type_info": "Text"
+      },
+      {
+        "name": "seat_type",
+        "ordinal": 14,
+        "type_info": "Text"
+      },
+      {
+        "name": "flight_reason",
+        "ordinal": 15,
+        "type_info": "Text"
+      },
+      {
+        "name": "rail_carrier",
+        "ordinal": 16,
+        "type_info": "Text"
+      },
+      {
+        "name": "train_number",
+        "ordinal": 17,
+        "type_info": "Text"
+      },
+      {
+        "name": "service_class",
+        "ordinal": 18,
+        "type_info": "Text"
+      },
+      {
+        "name": "ship_name",
+        "ordinal": 19,
+        "type_info": "Text"
+      },
+      {
+        "name": "boat_cabin_type",
+        "ordinal": 20,
+        "type_info": "Text"
+      },
+      {
+        "name": "transport_carrier",
+        "ordinal": 21,
+        "type_info": "Text"
+      },
+      {
+        "name": "vehicle_description",
+        "ordinal": 22,
+        "type_info": "Text"
+      },
+      {
+        "name": "cost_amount",
+        "ordinal": 23,
+        "type_info": "Float"
+      },
+      {
+        "name": "cost_currency",
+        "ordinal": 24,
+        "type_info": "Text"
+      },
+      {
+        "name": "loyalty_program",
+        "ordinal": 25,
+        "type_info": "Text"
+      },
+      {
+        "name": "miles_earned",
+        "ordinal": 26,
+        "type_info": "Float"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "99b05d431cb0a549f9c335e778a28173d7eb9fcaf3bfca10ebca0eba988fb98f"
+}
