@@ -36,6 +36,7 @@ fn extension_for_content_type(ct: &str) -> &'static str {
     }
 }
 
+/// JSON response for a file attachment.
 #[derive(Debug, Serialize, JsonSchema)]
 pub struct AttachmentResponse {
     pub id: i64,
@@ -202,6 +203,7 @@ async fn serve_inner(
         .into_response())
 }
 
+/// `OpenAPI` metadata for the download attachment endpoint.
 pub fn serve_handler_docs(op: TransformOperation) -> TransformOperation {
     op.summary("Download an attachment")
         .description("Serve the raw file for a specific attachment.")
@@ -269,6 +271,7 @@ async fn delete_inner(
     }
 }
 
+/// `OpenAPI` metadata for the delete attachment endpoint.
 pub fn delete_handler_docs(op: TransformOperation) -> TransformOperation {
     op.summary("Delete an attachment")
         .description("Remove an attachment and its file from storage.")
@@ -307,6 +310,7 @@ async fn list_inner(
     Ok((StatusCode::OK, Json(response)).into_response())
 }
 
+/// `OpenAPI` metadata for the list attachments endpoint.
 pub fn list_handler_docs(op: TransformOperation) -> TransformOperation {
     op.summary("List attachments for a journey")
         .description("Return all attachments associated with a journey.")

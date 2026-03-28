@@ -365,6 +365,7 @@ impl MultiFormatResponse for JourneyResponse {
     }
 }
 
+/// Query parameters for filtering journey lists.
 #[derive(Deserialize, JsonSchema)]
 pub struct JourneyQuery {
     #[serde(rename = "type")]
@@ -453,6 +454,7 @@ pub async fn handler(
     JourneyResponse::into_format_response(&responses, format, StatusCode::OK)
 }
 
+/// `OpenAPI` metadata for the list journeys endpoint.
 pub fn handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
         op.description("List travel journeys for the authenticated user.")
@@ -543,6 +545,7 @@ pub async fn get_journey_handler(
     }
 }
 
+/// `OpenAPI` metadata for the get journey by ID endpoint.
 pub fn get_journey_handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
         op.description("Get a single journey by ID.")
@@ -814,6 +817,7 @@ pub async fn create_handler(
     }
 }
 
+/// `OpenAPI` metadata for the create journey endpoint.
 pub fn create_handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
         op.description(
@@ -826,6 +830,7 @@ pub fn create_handler_docs(op: TransformOperation) -> TransformOperation {
     .tag("journeys")
 }
 
+/// Request body for updating an existing journey.
 #[derive(Default, Deserialize, JsonSchema)]
 pub struct UpdateJourneyRequest {
     pub travel_type: JourneyTravelType,
@@ -999,6 +1004,7 @@ impl UpdateJourneyRequest {
     }
 }
 
+/// JSON response after updating a journey.
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct UpdateJourneyResponse {
     pub updated: bool,
@@ -1111,6 +1117,7 @@ pub async fn update_handler(
     }
 }
 
+/// `OpenAPI` metadata for the update journey endpoint.
 pub fn update_handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
         op.description("Update an existing journey by ID. Accepts JSON or form-encoded body.")

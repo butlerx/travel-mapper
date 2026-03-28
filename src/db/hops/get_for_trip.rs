@@ -1,6 +1,7 @@
 use super::SummaryRow;
 use sqlx::SqlitePool;
 
+/// Fetch hop summaries for a specific trip.
 pub struct GetForTrip {
     pub user_id: i64,
     pub trip_id: i64,

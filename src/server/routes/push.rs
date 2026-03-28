@@ -16,12 +16,14 @@ use axum::{
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+/// Push subscription encryption keys for Web Push notifications.
 #[derive(Debug, Deserialize, Default, JsonSchema)]
 pub struct SubscriptionKeys {
     pub p256dh: String,
     pub auth: String,
 }
 
+/// Request body for subscribing to Web Push notifications.
 #[derive(Debug, Deserialize, Default, JsonSchema)]
 pub struct SubscribeRequest {
     pub endpoint: String,
@@ -37,11 +39,13 @@ impl MultiFormatResponse for VapidPublicKeyResponse {
     }
 }
 
+/// Request body for unsubscribing from Web Push notifications.
 #[derive(Debug, Deserialize, Default, JsonSchema)]
 pub struct UnsubscribeRequest {
     pub endpoint: String,
 }
 
+/// JSON response containing the server's VAPID public key.
 #[derive(Debug, Serialize, Default, JsonSchema)]
 pub struct VapidPublicKeyResponse {
     pub key: String,
@@ -89,6 +93,7 @@ pub async fn subscribe_handler(
     }
 }
 
+/// `OpenAPI` metadata for the subscribe to push notifications endpoint.
 pub fn subscribe_handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
         op.description("Store or update a Web Push subscription for the authenticated user."),
@@ -135,6 +140,7 @@ pub async fn unsubscribe_handler(
     }
 }
 
+/// `OpenAPI` metadata for the unsubscribe from push notifications endpoint.
 pub fn unsubscribe_handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
         op.description("Delete a Web Push subscription for the authenticated user."),
@@ -150,6 +156,7 @@ pub async fn vapid_key_handler(State(state): State<AppState>, _auth: AuthUser) -
     }
 }
 
+/// `OpenAPI` metadata for the VAPID public key endpoint.
 pub fn vapid_key_handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
         op.description("Get the configured VAPID public key used for browser push subscriptions."),

@@ -70,6 +70,7 @@ pub async fn handler(
     }
 }
 
+/// `OpenAPI` metadata for the store `TripIt` credentials endpoint.
 pub fn handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
         op.description("Store TripIt OAuth access tokens (encrypted at rest)."),

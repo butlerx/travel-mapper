@@ -1,7 +1,7 @@
 use super::{TravelType, parse_travel_type};
 use sqlx::SqlitePool;
 
-/// A denormalised row for stats computation — joins hops with flight details.
+/// Database row for stats computation — joins hops with flight details.
 #[derive(Debug, Clone)]
 pub struct StatsRow {
     pub travel_type: TravelType,
@@ -84,7 +84,7 @@ impl TryFrom<StatsHopRow> for StatsRow {
     }
 }
 
-/// Fetch all hops with flight detail fields for stats computation.
+/// Fetch all hops with joined flight details for stats computation.
 pub struct GetAllForStats {
     pub user_id: i64,
 }

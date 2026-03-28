@@ -10,6 +10,7 @@ use argon2::{
     password_hash::{PasswordHasher, SaltString},
 };
 
+/// Errors returned by AES-256-GCM encryption and decryption operations.
 #[derive(Debug, thiserror::Error)]
 pub enum CryptoError {
     #[error("encryption failed")]

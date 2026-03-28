@@ -68,6 +68,7 @@ pub async fn handler(
     Redirect::temporary(&authorize_url).into_response()
 }
 
+/// `OpenAPI` metadata for the `TripIt` OAuth connect endpoint.
 pub fn handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
         op.description("Start TripIt OAuth flow — redirects to TripIt authorization page.")

@@ -1,7 +1,7 @@
 use super::scoped_trip_id;
 use sqlx::SqlitePool;
 
-/// Remove hops for `TripIt` trips that no longer exist in the API response.
+/// Delete hops for `TripIt` trips that no longer exist in the API response.
 pub struct DeleteStaleTripItTrips<'a> {
     pub user_id: i64,
     pub active_trip_ids: &'a [String],

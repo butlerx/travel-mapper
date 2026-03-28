@@ -1,5 +1,6 @@
 use sqlx::SqlitePool;
 
+/// Insert a new user.
 pub struct Create<'a> {
     pub username: &'a str,
     pub password_hash: &'a str,
@@ -27,6 +28,7 @@ impl Create<'_> {
     }
 }
 
+/// Database row for a user.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Row {
     pub id: i64,
@@ -39,6 +41,7 @@ pub struct Row {
     pub last_name: String,
 }
 
+/// Fetch a user by username.
 pub struct GetByUsername<'a> {
     pub username: &'a str,
 }
@@ -67,6 +70,7 @@ impl GetByUsername<'_> {
     }
 }
 
+/// Fetch a user by ID.
 pub struct GetById {
     pub id: i64,
 }
@@ -95,6 +99,7 @@ impl GetById {
     }
 }
 
+/// Update a user's email address and reset verification status.
 pub struct UpdateEmail<'a> {
     pub user_id: i64,
     pub email: &'a str,
@@ -116,6 +121,7 @@ impl UpdateEmail<'_> {
     }
 }
 
+/// Update a user's profile (first name and last name).
 pub struct UpdateProfile<'a> {
     pub user_id: i64,
     pub first_name: &'a str,
@@ -139,6 +145,7 @@ impl UpdateProfile<'_> {
     }
 }
 
+/// Mark a user's email as verified.
 pub struct SetEmailVerified {
     pub user_id: i64,
 }

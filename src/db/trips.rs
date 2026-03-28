@@ -1,5 +1,6 @@
 use sqlx::SqlitePool;
 
+/// Database row for a named trip group.
 pub struct Row {
     pub id: i64,
     pub user_id: i64,
@@ -11,6 +12,7 @@ pub struct Row {
     pub updated_at: String,
 }
 
+/// Insert a new trip.
 pub struct Create<'a> {
     pub user_id: i64,
     pub name: &'a str,
@@ -32,6 +34,7 @@ impl Create<'_> {
     }
 }
 
+/// Fetch all trips for a user.
 pub struct GetAll {
     pub user_id: i64,
 }
@@ -64,6 +67,7 @@ impl GetAll {
     }
 }
 
+/// Fetch a trip by ID and user.
 pub struct GetById {
     pub id: i64,
     pub user_id: i64,
@@ -97,6 +101,7 @@ impl GetById {
     }
 }
 
+/// Update a trip's name.
 pub struct Update<'a> {
     pub id: i64,
     pub user_id: i64,
@@ -122,6 +127,7 @@ impl Update<'_> {
     }
 }
 
+/// Delete a trip.
 pub struct Delete {
     pub id: i64,
     pub user_id: i64,
@@ -143,6 +149,7 @@ impl Delete {
     }
 }
 
+/// Automatically group unassigned hops into trips based on date gaps.
 pub struct AutoGroup {
     pub user_id: i64,
     pub gap_days: i64,
@@ -216,6 +223,7 @@ impl AutoGroup {
     }
 }
 
+/// Assign a hop to a trip.
 pub struct AssignHop {
     pub hop_id: i64,
     pub trip_id: i64,
@@ -264,6 +272,7 @@ impl AssignHop {
     }
 }
 
+/// Unassign a hop from its trip.
 pub struct UnassignHop {
     pub hop_id: i64,
     pub user_id: i64,

@@ -9,6 +9,7 @@ use axum::{
 use schemars::JsonSchema;
 use serde::Serialize;
 
+/// JSON response for the health check endpoint.
 #[derive(Debug, Default, Serialize, JsonSchema)]
 pub struct HealthResponse {
     pub status: String,
@@ -44,6 +45,7 @@ pub async fn handler(State(state): State<AppState>, headers: HeaderMap) -> impl 
     HealthResponse::single_format_response(&response, format, StatusCode::OK).into_response()
 }
 
+/// `OpenAPI` metadata for the health check endpoint.
 pub fn handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
         op.description("Check server health and last sync timestamp."),

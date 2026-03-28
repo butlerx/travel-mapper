@@ -1,6 +1,7 @@
 use super::SummaryRow;
 use sqlx::SqlitePool;
 
+/// Fetch hop summaries for unassigned hops (no trip).
 pub struct GetUnassigned {
     pub user_id: i64,
 }

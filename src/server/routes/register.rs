@@ -222,6 +222,7 @@ async fn create_and_authenticate(
     }
 }
 
+/// `OpenAPI` metadata for the register endpoint.
 pub fn handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
         op.description("Register a new user account. Accepts JSON or form-encoded body.")

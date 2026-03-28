@@ -4,7 +4,7 @@ use super::{
 };
 use sqlx::SqlitePool;
 
-/// Atomically replace all hops for a trip: delete existing + insert new in one transaction.
+/// Replace all hops for a trip in a single transaction (delete existing, insert new).
 pub struct ReplaceForTrip<'a> {
     pub trip_id: &'a str,
     pub user_id: i64,

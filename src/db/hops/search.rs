@@ -1,6 +1,7 @@
 use super::{HopRow, Row};
 use sqlx::SqlitePool;
 
+/// Search hops with optional filters across all travel types.
 pub struct Search<'a> {
     pub user_id: i64,
     pub travel_type: Option<&'a str>,

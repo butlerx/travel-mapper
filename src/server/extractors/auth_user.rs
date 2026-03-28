@@ -16,6 +16,7 @@ use indexmap::IndexMap;
 use serde_json::json;
 use sha2::{Digest, Sha256};
 
+/// Authenticated user extracted from the session cookie or API key.
 #[derive(Debug, Clone, Copy)]
 pub struct AuthUser {
     pub user_id: i64,

@@ -18,6 +18,7 @@ use axum::{
 use schemars::JsonSchema;
 use serde::Deserialize;
 
+/// Request body for updating user profile.
 #[derive(Default, Deserialize, JsonSchema)]
 pub struct UpdateProfileRequest {
     pub first_name: String,
@@ -61,6 +62,7 @@ pub async fn handler(
     }
 }
 
+/// `OpenAPI` metadata for the update profile endpoint.
 pub fn handler_docs(op: TransformOperation) -> TransformOperation {
     op.description("Update the authenticated user's profile (first and last name).")
         .input::<FormOrJson<UpdateProfileRequest>>()

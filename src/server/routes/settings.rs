@@ -111,6 +111,7 @@ pub async fn handler(
     }
 }
 
+/// `OpenAPI` metadata for the settings endpoint.
 pub fn handler_docs(op: TransformOperation) -> TransformOperation {
     op.description("Account settings state for the authenticated user.")
         .response::<200, Json<SettingsResponse>>()

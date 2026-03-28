@@ -22,6 +22,7 @@ use leptos::prelude::*;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+/// JSON response for a single trip.
 #[derive(Debug, Default, Serialize, JsonSchema)]
 pub struct TripResponse {
     pub id: i64,
@@ -113,6 +114,7 @@ pub async fn handler(
     }
 }
 
+/// `OpenAPI` metadata for the list trips endpoint.
 pub fn handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
         op.description("List trips for the authenticated user.")
@@ -191,6 +193,7 @@ pub async fn get_trip_handler(
     }
 }
 
+/// `OpenAPI` metadata for the get trip by ID endpoint.
 pub fn get_trip_handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
         op.description("Get a single trip by ID.")
@@ -203,27 +206,32 @@ pub fn get_trip_handler_docs(op: TransformOperation) -> TransformOperation {
     .tag("trips")
 }
 
+/// Request body for creating a new trip.
 #[derive(Deserialize, JsonSchema, Default)]
 pub struct CreateTripRequest {
     pub name: String,
 }
 
+/// Request body for updating a trip name.
 #[derive(Deserialize, JsonSchema, Default)]
 pub struct UpdateTripRequest {
     pub name: String,
 }
 
+/// Request body for auto-grouping journeys into trips by date proximity.
 #[derive(Deserialize, JsonSchema, Default)]
 pub struct AutoGroupRequest {
     pub gap_days: Option<i64>,
 }
 
+/// Request body for assigning a journey to a trip.
 #[derive(Deserialize, JsonSchema, Default)]
 pub struct AssignJourneyRequest {
     #[serde(alias = "hop_id")]
     pub journey_id: i64,
 }
 
+/// JSON response after auto-grouping journeys into trips.
 #[derive(Debug, Default, Serialize, JsonSchema)]
 pub struct AutoGroupResponse {
     pub created: u64,
@@ -287,6 +295,7 @@ pub async fn create_handler(
     }
 }
 
+/// `OpenAPI` metadata for the create trip endpoint.
 pub fn create_handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
         op.description("Create a named trip for the authenticated user.")
@@ -339,6 +348,7 @@ pub async fn update_handler(
     }
 }
 
+/// `OpenAPI` metadata for the update trip endpoint.
 pub fn update_handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
         op.description("Update a trip name.")
@@ -380,6 +390,7 @@ pub async fn delete_handler(
     }
 }
 
+/// `OpenAPI` metadata for the delete trip endpoint.
 pub fn delete_handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
         op.description("Delete a trip. Assigned journeys are unassigned via FK set null."),
@@ -421,6 +432,7 @@ pub async fn auto_group_handler(
     }
 }
 
+/// `OpenAPI` metadata for the auto-group journeys endpoint.
 pub fn auto_group_handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
         op.description("Automatically group unassigned journeys into trips by date proximity.")
@@ -476,6 +488,7 @@ pub async fn assign_journey_handler(
     }
 }
 
+/// `OpenAPI` metadata for the assign journey to trip endpoint.
 pub fn assign_journey_handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
         op.description("Assign a journey to a trip.")
@@ -538,6 +551,7 @@ pub async fn unassign_journey_handler(
     }
 }
 
+/// `OpenAPI` metadata for the unassign journey from trip endpoint.
 pub fn unassign_journey_handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
         op.description("Remove a journey from a trip."),

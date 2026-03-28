@@ -1,17 +1,22 @@
 //! Application state, router setup, and request handling.
 
+/// Shared Leptos SSR components — navbar, shell, error pages.
 pub(crate) mod components;
 /// Email delivery for verification and notification messages.
 pub(crate) mod email;
+/// Error response types for content-negotiated error handling.
 pub(crate) mod error;
 /// Axum extractors for request authentication and authorization.
 pub(crate) mod extractors;
 /// Tower middleware for HTTP request tracing and diagnostics.
 pub(crate) mod middleware;
+/// Leptos SSR page components — dashboard, settings, stats, and more.
 pub(crate) mod pages;
 /// Web Push notification delivery.
 pub(crate) mod push;
+/// Route handlers — one file per HTTP endpoint group.
 pub(crate) mod routes;
+/// Cookie-based session management.
 pub(crate) mod session;
 mod state;
 

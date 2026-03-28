@@ -6,7 +6,7 @@ use crate::geocode::airports;
 use sqlx::SqlitePool;
 use uuid::Uuid;
 
-/// Create a single manually-entered hop with type-specific details.
+/// Insert a single manually-entered hop with type-specific details.
 pub struct CreateManual<'a> {
     pub user_id: i64,
     pub origin: String,

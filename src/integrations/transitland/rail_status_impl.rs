@@ -6,6 +6,7 @@ use sqlx::SqlitePool;
 
 const OVAPI_TRIP_UPDATES_URL: &str = "https://gtfs.openov.nl/gtfs-rt/tripUpdates.pb";
 
+/// Transitland-backed rail status client using GTFS-RT feeds.
 pub struct TransitlandRailClient {
     client: TransitlandClient,
     cache: GtfsCache,

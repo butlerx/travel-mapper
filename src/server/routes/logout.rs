@@ -45,6 +45,7 @@ pub async fn handler(
     )
 }
 
+/// `OpenAPI` metadata for the logout endpoint.
 pub fn handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
         op.description("Log out and invalidate the current session."),

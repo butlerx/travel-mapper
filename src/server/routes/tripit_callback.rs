@@ -121,6 +121,7 @@ pub async fn handler(
     Redirect::to("/settings?tripit=connected").into_response()
 }
 
+/// `OpenAPI` metadata for the `TripIt` OAuth callback endpoint.
 pub fn handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
         op.description("TripIt OAuth callback — exchanges request token for access token.")

@@ -1,5 +1,6 @@
 use sqlx::SqlitePool;
 
+/// Check if a hop exists within a specific trip.
 pub struct ExistsInTrip {
     pub hop_id: i64,
     pub user_id: i64,

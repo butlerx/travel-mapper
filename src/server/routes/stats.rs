@@ -143,6 +143,7 @@ pub async fn handler(
     }
 }
 
+/// `OpenAPI` metadata for the stats endpoint.
 pub fn handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
         op.description("Aggregated travel statistics for the authenticated user.")

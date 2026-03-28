@@ -5,7 +5,7 @@ use crate::{
 };
 use sqlx::SqlitePool;
 
-/// Insert or replace travel hops from a generic CSV import in a single transaction.
+/// Insert or replace hops from a generic CSV import (Flighty, myFlightradar24, `OpenFlights`, App in the Air).
 pub struct CreateFromCsv<'a> {
     pub user_id: i64,
     pub rows: &'a [GenericRow],

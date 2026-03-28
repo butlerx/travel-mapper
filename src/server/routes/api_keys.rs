@@ -15,11 +15,13 @@ use rand::RngCore;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+/// Request body for creating an API key.
 #[derive(Deserialize, JsonSchema)]
 pub struct ApiKeyRequest {
     pub label: Option<String>,
 }
 
+/// JSON response after creating an API key.
 #[derive(Debug, Default, Serialize, JsonSchema)]
 pub struct ApiKeyResponse {
     pub id: i64,
@@ -68,6 +70,7 @@ pub async fn handler(
     }
 }
 
+/// `OpenAPI` metadata for the create API key endpoint.
 pub fn handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
         op.description("Create a new API key for programmatic access."),

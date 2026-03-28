@@ -31,6 +31,7 @@ struct TokenResponse {
     expires_in: u64,
 }
 
+/// Errors returned by the `OpenSky` Network API client.
 #[derive(Debug, thiserror::Error)]
 pub enum OpenSkyError {
     #[error("HTTP request failed: {0}")]
@@ -52,6 +53,7 @@ pub enum OpenSkyError {
     RateLimited,
 }
 
+/// A single flight departure record returned by the `OpenSky` API.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FlightRecord {
@@ -69,6 +71,7 @@ pub struct FlightRecord {
     pub arrival_airport_candidates_count: Option<i64>,
 }
 
+/// Result of verifying a flight route against `OpenSky` ADS-B data.
 #[derive(Debug, Clone, Serialize)]
 pub struct FlightVerification {
     pub operated: bool,
@@ -80,6 +83,7 @@ pub struct FlightVerification {
     pub raw_json: String,
 }
 
+/// HTTP client for the `OpenSky` Network REST API.
 #[derive(Clone)]
 pub struct OpenSkyClient {
     client_id: String,
@@ -92,6 +96,7 @@ pub struct OpenSkyClient {
 }
 
 impl OpenSkyClient {
+    /// Create a new client using the default `OpenSky` API base URL.
     #[must_use]
     pub fn new(client_id: String, client_secret: String) -> Self {
         Self::with_urls(
@@ -103,6 +108,7 @@ impl OpenSkyClient {
         )
     }
 
+    /// Create a new client with custom base URLs for the flight and route endpoints.
     #[must_use]
     pub fn with_urls(
         client_id: String,
@@ -122,6 +128,7 @@ impl OpenSkyClient {
         }
     }
 
+    /// Return the number of HTTP requests made by this client.
     #[must_use]
     pub fn requests_made(&self) -> u32 {
         self.daily_requests.load(Ordering::Relaxed)
@@ -661,6 +668,7 @@ const AIRPORT_IATA_TO_ICAO: [(&str, &str); 175] = [
     ("ZRH", "LSZH"),
 ];
 
+/// Convert a two-letter IATA airline prefix to its three-letter ICAO callsign.
 #[must_use]
 pub fn iata_to_icao_callsign(flight_iata: &str) -> String {
     let normalized = flight_iata.trim().to_ascii_uppercase();
@@ -678,6 +686,7 @@ pub fn iata_to_icao_callsign(flight_iata: &str) -> String {
     format!("{prefix}{suffix}")
 }
 
+/// Convert a three-letter IATA airport code to its four-letter ICAO code.
 #[must_use]
 pub fn iata_to_icao_airport(iata: &str) -> Option<&'static str> {
     let key = iata.trim().to_ascii_uppercase();

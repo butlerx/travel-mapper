@@ -12,17 +12,20 @@ use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
 
+/// Query parameters for filtering the stats page by year.
 #[derive(Deserialize, Default, schemars::JsonSchema)]
 pub struct StatsQuery {
     pub year: Option<String>,
 }
 
+/// An item label paired with its occurrence count.
 #[derive(Default, Clone)]
 pub struct CountedItem {
     pub name: String,
     pub count: usize,
 }
 
+/// Aggregated travel statistics computed from a user's journey history.
 #[derive(Default, Clone)]
 pub struct DetailedStats {
     pub total_journeys: usize,
@@ -205,6 +208,7 @@ fn add_row_miles(miles_by_program: &mut HashMap<String, f64>, row: &StatsRow) {
     }
 }
 
+/// Compute aggregated travel statistics from the provided journey list.
 pub fn compute_detailed_stats(all_rows: &[StatsRow], year_filter: Option<&str>) -> DetailedStats {
     let available_years = sorted_available_years(all_rows);
     let rows = selected_rows(all_rows, year_filter);

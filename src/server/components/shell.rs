@@ -1,6 +1,7 @@
 use crate::server::{APP_NAME, THEME_COLOR};
 use leptos::prelude::*;
 
+/// HTML document shell wrapping page content with head metadata and scripts.
 #[component]
 pub fn Shell(
     title: String,

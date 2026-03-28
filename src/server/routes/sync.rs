@@ -137,6 +137,7 @@ pub async fn handler(
     }
 }
 
+/// `OpenAPI` metadata for the sync endpoint.
 pub fn handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
         op.description("Trigger a TripIt sync for the authenticated user."),

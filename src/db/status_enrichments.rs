@@ -1,5 +1,6 @@
 use sqlx::SqlitePool;
 
+/// Database row for flight or rail status enrichment data.
 #[derive(Debug, Clone, PartialEq, Eq, sqlx::FromRow)]
 pub struct Row {
     pub id: i64,
@@ -17,6 +18,7 @@ pub struct Row {
     pub fetched_at: String,
 }
 
+/// Insert or update status enrichment data.
 pub struct Upsert<'a> {
     pub hop_id: i64,
     pub provider: &'a str,
@@ -71,6 +73,7 @@ impl Upsert<'_> {
     }
 }
 
+/// Fetch the most recent status enrichment for a hop.
 pub struct GetByHopId {
     pub hop_id: i64,
 }
@@ -107,6 +110,7 @@ impl GetByHopId {
     }
 }
 
+/// Fetch the most recent status enrichments for multiple hops.
 pub struct GetByHopIds {
     pub hop_ids: Vec<i64>,
 }
@@ -153,6 +157,7 @@ impl GetByHopIds {
     }
 }
 
+/// Fetch the most recent status enrichment for a hop from a specific provider.
 pub struct GetByHopIdAndProvider<'a> {
     pub hop_id: i64,
     pub provider: &'a str,
@@ -191,6 +196,7 @@ impl GetByHopIdAndProvider<'_> {
     }
 }
 
+/// Fetch status enrichments for multiple hops from a specific provider.
 pub struct GetByHopIdsAndProvider<'a> {
     pub hop_ids: Vec<i64>,
     pub provider: &'a str,
@@ -233,6 +239,7 @@ impl GetByHopIdsAndProvider<'_> {
     }
 }
 
+/// Delete all status enrichments for a hop.
 pub struct DeleteByHopId {
     pub hop_id: i64,
 }

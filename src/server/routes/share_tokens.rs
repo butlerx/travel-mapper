@@ -15,11 +15,13 @@ use rand::RngCore;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+/// Request body for creating a share token.
 #[derive(Deserialize, Default, JsonSchema)]
 pub struct ShareTokenRequest {
     pub label: Option<String>,
 }
 
+/// JSON response after creating a share token.
 #[derive(Debug, Default, Serialize, JsonSchema)]
 pub struct ShareTokenResponse {
     pub id: i64,
@@ -81,6 +83,7 @@ pub async fn create_handler(
     }
 }
 
+/// `OpenAPI` metadata for the create share token endpoint.
 pub fn create_handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
         op.description("Create a new share token for public stats access."),
@@ -122,6 +125,7 @@ pub async fn delete_handler(
     }
 }
 
+/// `OpenAPI` metadata for the delete share token endpoint.
 pub fn delete_handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
         op.description("Revoke a share token."),

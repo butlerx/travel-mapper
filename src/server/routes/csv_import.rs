@@ -21,11 +21,13 @@ const QUERY_ENCODE_SET: &AsciiSet = &NON_ALPHANUMERIC
     .remove(b'.')
     .remove(b'~');
 
+/// JSON response after importing a CSV file.
 #[derive(Debug, Serialize, JsonSchema)]
 pub struct ImportResponse {
     pub imported: u64,
 }
 
+/// Query parameters for CSV import format override.
 #[derive(Debug, Deserialize, Default)]
 pub struct ImportParams {
     pub format: Option<String>,

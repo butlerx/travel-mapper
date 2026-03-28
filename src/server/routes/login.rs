@@ -107,6 +107,7 @@ pub async fn handler(
     )
 }
 
+/// `OpenAPI` metadata for the login endpoint.
 pub fn handler_docs(op: TransformOperation) -> TransformOperation {
     multi_format_docs!(
         op.description("Log in with username and password. Accepts JSON or form-encoded body.")

@@ -1,6 +1,7 @@
 use super::shell::Shell;
 use leptos::prelude::*;
 
+/// Styled error page displaying a status code and message.
 #[component]
 pub fn ErrorPage(
     code: &'static str,

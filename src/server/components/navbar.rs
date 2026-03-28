@@ -1,6 +1,7 @@
 use crate::server::APP_NAME;
 use leptos::prelude::*;
 
+/// Top navigation bar with responsive hamburger menu.
 #[component]
 pub fn NavBar(#[prop(into)] current: String) -> impl IntoView {
     let aria = |name: &str| if current == name { Some("page") } else { None };

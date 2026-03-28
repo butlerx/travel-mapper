@@ -1,5 +1,6 @@
 use sqlx::SqlitePool;
 
+/// Database row for a Web Push subscription.
 pub struct Row {
     pub id: i64,
     pub user_id: i64,
@@ -9,6 +10,7 @@ pub struct Row {
     pub created_at: String,
 }
 
+/// Insert or replace a Web Push subscription.
 pub struct Create<'a> {
     pub user_id: i64,
     pub endpoint: &'a str,
@@ -34,6 +36,7 @@ impl Create<'_> {
     }
 }
 
+/// Fetch all Web Push subscriptions for a user.
 pub struct GetByUserId {
     pub user_id: i64,
 }
@@ -57,6 +60,7 @@ impl GetByUserId {
     }
 }
 
+/// Delete a Web Push subscription by user and endpoint.
 pub struct DeleteByUserAndEndpoint<'a> {
     pub user_id: i64,
     pub endpoint: &'a str,
@@ -78,6 +82,7 @@ impl DeleteByUserAndEndpoint<'_> {
     }
 }
 
+/// Delete a Web Push subscription by endpoint (any user).
 pub struct DeleteByEndpoint<'a> {
     pub endpoint: &'a str,
 }

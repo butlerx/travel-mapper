@@ -11,6 +11,7 @@ use axum::{
 use leptos::prelude::*;
 use serde::Deserialize;
 
+/// Flash feedback displayed after submitting the add-journey form.
 #[derive(Deserialize, Default)]
 pub struct AddHopFeedback {
     pub error: Option<String>,

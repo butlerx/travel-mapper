@@ -1,5 +1,6 @@
 use sqlx::SqlitePool;
 
+/// Database row for a cached railway station EVA number.
 pub struct Row {
     pub eva_number: i64,
     pub name: String,
@@ -8,6 +9,7 @@ pub struct Row {
     pub updated_at: String,
 }
 
+/// Insert or update a cached railway station EVA number.
 pub struct Upsert<'a> {
     pub eva_number: i64,
     pub name: &'a str,
@@ -39,6 +41,7 @@ impl Upsert<'_> {
     }
 }
 
+/// Fetch a cached railway station by name.
 pub struct GetByName<'a> {
     pub name: &'a str,
 }

@@ -3,6 +3,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 
+/// Render the 401 Unauthorized error page.
 #[must_use]
 pub fn page() -> Response {
     (

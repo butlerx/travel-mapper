@@ -21,6 +21,11 @@ impl<T> FormOrJson<T>
 where
     T: DeserializeOwned + Default,
 {
+    /// Deserialize the request body into `T` based on the `Content-Type` header.
+    ///
+    /// # Errors
+    ///
+    /// Returns an [`AppError`] if JSON or form deserialization fails.
     pub fn parse(headers: &HeaderMap, body: &[u8]) -> Result<T, AppError> {
         if body.is_empty() {
             return Ok(T::default());

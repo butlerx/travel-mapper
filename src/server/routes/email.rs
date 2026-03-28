@@ -100,6 +100,7 @@ pub async fn update_handler(
     }
 }
 
+/// `OpenAPI` metadata for the update email endpoint.
 pub fn update_handler_docs(op: TransformOperation) -> TransformOperation {
     op.description("Update the authenticated user's email address.")
         .input::<FormOrJson<UpdateEmailRequest>>()
@@ -183,6 +184,7 @@ pub async fn resend_handler(
     }
 }
 
+/// `OpenAPI` metadata for the resend verification email endpoint.
 pub fn resend_handler_docs(op: TransformOperation) -> TransformOperation {
     op.description("Resend the email verification link.")
         .response::<200, axum::Json<StatusResponse>>()

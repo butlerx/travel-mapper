@@ -17,12 +17,14 @@ pub struct AirLabsClient {
 }
 
 impl AirLabsClient {
+    /// Creates a new client with the given API key, using the default `AirLabs` base URL.
     #[must_use]
     pub fn new(api_key: String) -> Self {
         let client = reqwest::Client::new();
         Self::with_base_url(api_key, client, AIRLABS_API_BASE.to_string())
     }
 
+    /// Creates a new client with a custom base URL and HTTP client (useful for testing).
     #[must_use]
     pub fn with_base_url(api_key: String, client: reqwest::Client, base_url: String) -> Self {
         Self {

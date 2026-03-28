@@ -527,6 +527,7 @@ pub(super) fn toplevel_api_routes() -> ApiRouter<super::AppState> {
 }
 
 impl ErrorResponse {
+    /// Converts a message into an HTTP error response in the requested format.
     pub fn into_format_response(
         msg: impl Into<String>,
         format: ResponseFormat,

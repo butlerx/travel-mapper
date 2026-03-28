@@ -11,6 +11,7 @@ const GET_DEPARTURE_BOARD_ACTION: &str =
 const MAX_RETRIES: u32 = 3;
 const REQUEST_TIMEOUT_SECS: u64 = 30;
 
+/// HTTP client for the National Rail Darwin API (UK rail departures).
 pub struct DarwinClient {
     api_token: String,
     client: reqwest::Client,
@@ -29,12 +30,14 @@ struct DarwinService {
 }
 
 impl DarwinClient {
+    /// Creates a new client with the given API token, using the default Darwin base URL.
     #[must_use]
     pub fn new(api_token: String) -> Self {
         let client = reqwest::Client::new();
         Self::with_base_url(api_token, client, DARWIN_API_BASE.to_string())
     }
 
+    /// Creates a new client with a custom base URL and HTTP client (useful for testing).
     #[must_use]
     pub fn with_base_url(api_token: String, client: reqwest::Client, base_url: String) -> Self {
         let quota = Quota::per_hour(NonZeroU32::new(5_000).unwrap_or(NonZeroU32::MIN));

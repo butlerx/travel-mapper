@@ -19,6 +19,7 @@ use leptos::prelude::*;
 use serde::Deserialize;
 use travel_stats::{TravelStats, compute_stats, format_distance, format_year_range};
 
+/// Flash feedback messages displayed on the dashboard after user actions.
 #[derive(Deserialize, Default)]
 pub struct DashboardFeedback {
     pub error: Option<String>,

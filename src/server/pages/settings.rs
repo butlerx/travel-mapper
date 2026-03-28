@@ -36,6 +36,7 @@ use share_section::ShareSection;
 use sync_section::SyncSection;
 use tripit_section::TripitSection;
 
+/// Flash feedback messages displayed on the settings page after user actions.
 #[derive(Deserialize, Default, schemars::JsonSchema)]
 pub struct SettingsFeedback {
     pub error: Option<String>,
@@ -45,6 +46,7 @@ pub struct SettingsFeedback {
     pub profile: Option<String>,
 }
 
+/// User profile fields submitted from the settings form.
 pub struct UserProfileData {
     pub email: String,
     pub email_verified: bool,
@@ -52,6 +54,11 @@ pub struct UserProfileData {
     pub last_name: String,
 }
 
+/// Render the full settings page with all sections populated from the database.
+///
+/// # Errors
+///
+/// Returns an error if any database query for user settings fails.
 pub fn render_page(
     has_tripit: bool,
     sync_state: Option<&db::sync_state::Row>,

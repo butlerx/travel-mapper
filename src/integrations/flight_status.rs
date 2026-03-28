@@ -3,6 +3,7 @@
 use serde_json;
 use thiserror::Error;
 
+/// Errors returned by flight status API providers.
 #[derive(Debug, Error)]
 pub enum FlightStatusError {
     #[error("HTTP request failed: {0}")]
@@ -12,6 +13,7 @@ pub enum FlightStatusError {
     Json(#[from] serde_json::Error),
 }
 
+/// Live or historical status data for a single flight.
 #[derive(Debug, Clone)]
 pub struct FlightStatus {
     pub flight_status: String,
@@ -24,6 +26,7 @@ pub struct FlightStatus {
     pub raw_json: String,
 }
 
+/// Trait for querying real-time or historical flight status from external providers.
 #[async_trait::async_trait]
 pub trait FlightStatusApi: Send + Sync {
     /// # Errors

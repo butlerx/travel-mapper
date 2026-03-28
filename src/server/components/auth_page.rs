@@ -1,6 +1,7 @@
 use super::shell::Shell;
 use leptos::prelude::*;
 
+/// Shared layout for login and registration form pages.
 #[component]
 pub fn AuthFormPage(
     title: &'static str,
