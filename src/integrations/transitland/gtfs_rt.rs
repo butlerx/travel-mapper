@@ -13,9 +13,6 @@ pub enum GtfsRtError {
     #[error("Failed to decode protobuf: {0}")]
     DecodeError(#[from] prost::DecodeError),
 
-    #[error("Invalid trip descriptor: missing required field")]
-    InvalidTripDescriptor,
-
     #[error("No trip updates found in feed")]
     NoTripUpdates,
 }

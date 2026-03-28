@@ -14,7 +14,7 @@ use lettre::{
 /// # Errors
 ///
 /// Returns an error string if the SMTP send fails.
-pub async fn send_verification_email(
+pub(crate) async fn send_verification_email(
     smtp: Option<&SmtpConfig>,
     to_email: &str,
     token: &str,

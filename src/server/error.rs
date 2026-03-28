@@ -9,7 +9,7 @@ use super::routes::{ErrorResponse, ResponseFormat};
 
 /// Application-wide error type — each variant maps to an HTTP status code.
 #[derive(Debug, thiserror::Error)]
-pub enum AppError {
+pub(crate) enum AppError {
     #[error("invalid JSON: {0}")]
     InvalidJson(#[from] serde_json::Error),
 
@@ -36,6 +36,9 @@ pub enum AppError {
 
     #[error("{0}")]
     Conflict(&'static str),
+
+    #[error("{0}")]
+    TooManyRequests(String),
 
     #[error("password hashing failed: {0}")]
     PasswordHash(argon2::password_hash::Error),
@@ -68,7 +71,7 @@ pub enum AppError {
 impl AppError {
     /// Return the HTTP status code for this error variant.
     #[must_use]
-    pub const fn status(&self) -> StatusCode {
+    pub(crate) const fn status(&self) -> StatusCode {
         match self {
             Self::InvalidJson(_)
             | Self::InvalidForm(_)
@@ -78,6 +81,7 @@ impl AppError {
             Self::InvalidCredentials => StatusCode::UNAUTHORIZED,
             Self::Forbidden(_) => StatusCode::FORBIDDEN,
             Self::UsernameExists | Self::Conflict(_) => StatusCode::CONFLICT,
+            Self::TooManyRequests(_) => StatusCode::TOO_MANY_REQUESTS,
             Self::PayloadTooLarge(_) => StatusCode::PAYLOAD_TOO_LARGE,
             Self::UnsupportedMediaType(_) => StatusCode::UNSUPPORTED_MEDIA_TYPE,
             Self::StorageDisabled => StatusCode::NOT_IMPLEMENTED,
@@ -92,7 +96,7 @@ impl AppError {
 
     /// Convert this error into an HTTP response in the given format.
     #[must_use]
-    pub fn into_format_response(self, format: ResponseFormat) -> Response {
+    pub(crate) fn into_format_response(self, format: ResponseFormat) -> Response {
         let status = self.status();
         let msg = match &self {
             Self::Db(_)

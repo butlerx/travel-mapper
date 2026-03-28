@@ -8,7 +8,7 @@ use web_push::{
     WebPushError, WebPushMessageBuilder,
 };
 
-pub async fn send_to_user(
+pub(crate) async fn send_to_user(
     pool: &SqlitePool,
     vapid_key: &[u8],
     user_id: i64,

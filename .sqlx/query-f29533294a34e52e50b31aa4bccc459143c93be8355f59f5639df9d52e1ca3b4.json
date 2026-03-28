@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT (strftime('%s', datetime('now')) - strftime('%s', ?)) < ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "(strftime('%s', datetime('now')) - strftime('%s', ?)) < ?",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "f29533294a34e52e50b31aa4bccc459143c93be8355f59f5639df9d52e1ca3b4"
+}

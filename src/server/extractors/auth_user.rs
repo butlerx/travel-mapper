@@ -18,8 +18,8 @@ use sha2::{Digest, Sha256};
 
 /// Authenticated user extracted from the session cookie or API key.
 #[derive(Debug, Clone, Copy)]
-pub struct AuthUser {
-    pub user_id: i64,
+pub(crate) struct AuthUser {
+    pub(crate) user_id: i64,
 }
 
 impl OperationInput for AuthUser {

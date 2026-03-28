@@ -5,5 +5,5 @@ mod auth_user;
 /// Content-type-aware JSON / form body parsing.
 mod form_or_json;
 
-pub use auth_user::AuthUser;
-pub use form_or_json::FormOrJson;
+pub(crate) use auth_user::AuthUser;
+pub(crate) use form_or_json::FormOrJson;

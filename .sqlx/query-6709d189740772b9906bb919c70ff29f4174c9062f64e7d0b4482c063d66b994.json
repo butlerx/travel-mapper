@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO geocode_cache (query, lat, lng)\n               VALUES (?, ?, ?)\n               ON CONFLICT(query) DO UPDATE SET\n                   lat = excluded.lat,\n                   lng = excluded.lng,\n                   created_at = datetime('now')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "6709d189740772b9906bb919c70ff29f4174c9062f64e7d0b4482c063d66b994"
+}

@@ -19,17 +19,26 @@ use sqlx::SqlitePool;
 use std::time::Instant;
 use tokio::sync::watch;
 
+/// Default enrichment TTL for non-realtime data (24 hours).
+const ENRICHMENT_TTL_SECS: i64 = 24 * 60 * 60;
+/// Shorter TTL for flights departing within 1 day (2 hours).
+const REALTIME_TTL_SECS: i64 = 2 * 60 * 60;
+
+/// How often the worker runs a periodic enrichment sweep across all users.
+const PERIODIC_ENRICHMENT_INTERVAL: std::time::Duration =
+    std::time::Duration::from_secs(4 * 60 * 60);
+
 /// Result of a successful `TripIt` sync — counts and duration.
 #[derive(Debug)]
-pub struct SyncOutcome {
-    pub trips_fetched: u64,
-    pub hops_fetched: u64,
-    pub duration_ms: u64,
+pub(crate) struct SyncOutcome {
+    pub(crate) trips_fetched: u64,
+    pub(crate) hops_fetched: u64,
+    pub(crate) duration_ms: u64,
 }
 
 /// Errors that can occur during a `TripIt` sync.
 #[derive(Debug, thiserror::Error)]
-pub enum SyncError {
+pub(crate) enum SyncError {
     #[error("TripIt API error: {0}")]
     Fetch(#[from] FetchError),
 
@@ -46,7 +55,7 @@ pub enum SyncError {
 ///
 /// Returns [`SyncError::Fetch`] on `TripIt` API failures, [`SyncError::Database`]
 /// on database errors, or [`SyncError::CountOverflow`] if counts exceed `i64`.
-pub async fn sync_all(
+pub(crate) async fn sync_all(
     api: &dyn TripItApi,
     geocoder: &crate::geocode::Geocoder,
     pool: &SqlitePool,
@@ -75,8 +84,8 @@ pub async fn sync_all(
         let mut hops_fetched = 0_u64;
         let mut active_trip_ids = Vec::with_capacity(trips.len());
         for trip in &trips {
-            let tripit_trip_id = format!("tripit:{}", trip.trip_id);
-            active_trip_ids.push(trip.trip_id.clone());
+            let tripit_trip_id = format!("tripit:{}", trip.id);
+            active_trip_ids.push(trip.id.clone());
 
             let inserted = db::hops::ReplaceForTrip {
                 trip_id: &tripit_trip_id,
@@ -88,7 +97,7 @@ pub async fn sync_all(
             hops_fetched += inserted;
             tracing::debug!(
                 user_id,
-                trip_id = trip.trip_id,
+                trip_id = trip.id,
                 display_name = trip.display_name,
                 inserted,
                 "imported trip",
@@ -171,6 +180,43 @@ pub struct SyncWorkerConfig {
     pub vapid_private_key: Option<Vec<u8>>,
 }
 
+async fn is_enrichment_fresh(
+    pool: &SqlitePool,
+    hop_id: i64,
+    provider: &str,
+    start_date: &str,
+) -> bool {
+    let existing = (db::status_enrichments::GetByHopIdAndProvider { hop_id, provider })
+        .execute(pool)
+        .await;
+    let Some(Ok(Some(row))) = Some(existing) else {
+        return false;
+    };
+
+    let ttl = departure_aware_ttl(start_date);
+    let fresh = sqlx::query_scalar!(
+        "SELECT (strftime('%s', datetime('now')) - strftime('%s', ?)) < ?",
+        row.fetched_at,
+        ttl,
+    )
+    .fetch_one(pool)
+    .await;
+    matches!(fresh, Ok(1))
+}
+
+fn departure_aware_ttl(start_date: &str) -> i64 {
+    let Ok(dep) = chrono::NaiveDate::parse_from_str(start_date, "%Y-%m-%d") else {
+        return ENRICHMENT_TTL_SECS;
+    };
+    let today = chrono::Utc::now().date_naive();
+    let days_until = (dep - today).num_days();
+    if days_until <= 1 {
+        REALTIME_TTL_SECS
+    } else {
+        ENRICHMENT_TTL_SECS
+    }
+}
+
 /// Run the sync worker loop, polling for pending jobs until shutdown.
 ///
 /// # Errors
@@ -194,6 +240,10 @@ pub async fn run_sync_worker(
         );
     }
 
+    let mut last_enrichment_sweep = Instant::now()
+        .checked_sub(PERIODIC_ENRICHMENT_INTERVAL)
+        .unwrap_or_else(Instant::now);
+
     loop {
         tokio::select! {
             _ = shutdown.changed() => {
@@ -213,7 +263,36 @@ pub async fn run_sync_worker(
                 tracing::error!(error = %err, "failed to claim sync job");
             }
         }
+
+        if last_enrichment_sweep.elapsed() >= PERIODIC_ENRICHMENT_INTERVAL {
+            run_periodic_enrichment_sweep(&config).await;
+            last_enrichment_sweep = Instant::now();
+        }
     }
+}
+
+async fn run_periodic_enrichment_sweep(config: &SyncWorkerConfig) {
+    let user_ids = match db::sync_state::GetAllUserIds.execute(&config.pool).await {
+        Ok(ids) => ids,
+        Err(err) => {
+            tracing::error!(error = %err, "failed to fetch user ids for periodic enrichment");
+            return;
+        }
+    };
+
+    if user_ids.is_empty() {
+        return;
+    }
+
+    tracing::info!(users = user_ids.len(), "starting periodic enrichment sweep");
+
+    for user_id in &user_ids {
+        enrich_flight_statuses(config, *user_id).await;
+        verify_flight_routes(config, *user_id).await;
+        enrich_rail_statuses(config, *user_id).await;
+    }
+
+    tracing::info!(users = user_ids.len(), "periodic enrichment sweep complete");
 }
 
 async fn process_sync_job(config: &SyncWorkerConfig, job: &db::sync_jobs::Row) {
@@ -315,7 +394,7 @@ async fn build_client_and_sync(
     );
     let client = TripItClient::new(auth);
 
-    let geocoder = Geocoder::default();
+    let geocoder = Geocoder::new(config.pool.clone());
     Ok(sync_all(&client, &geocoder, &config.pool, job.user_id).await?)
 }
 
@@ -350,81 +429,100 @@ async fn enrich_flight_statuses(config: &SyncWorkerConfig, user_id: i64) {
     let mut enriched = 0_u64;
 
     for hop in &hops {
-        let detail = match (db::hops::GetById {
-            id: hop.id,
-            user_id,
-        })
-        .execute(&config.pool)
-        .await
-        {
-            Ok(Some(d)) => d,
-            Ok(None) => continue,
-            Err(err) => {
-                tracing::warn!(hop_id = hop.id, error = %err, "failed to fetch hop detail for enrichment");
-                continue;
-            }
-        };
-
-        let flight_number = detail
-            .flight_detail
-            .as_ref()
-            .map(|d| d.flight_number.as_str())
-            .unwrap_or_default();
-        if flight_number.is_empty() || hop.start_date.is_empty() {
-            continue;
-        }
-
-        match client
-            .get_flight_status(flight_number, &hop.start_date)
-            .await
-        {
-            Ok(Some(status)) => {
-                let delay = status.dep_delay_minutes.or(status.arr_delay_minutes);
-                if let Err(err) = (db::status_enrichments::Upsert {
-                    hop_id: hop.id,
-                    provider: "airlabs",
-                    status: &status.flight_status,
-                    delay_minutes: delay,
-                    dep_gate: &status.dep_gate,
-                    dep_terminal: &status.dep_terminal,
-                    arr_gate: &status.arr_gate,
-                    arr_terminal: &status.arr_terminal,
-                    dep_platform: "",
-                    arr_platform: "",
-                    raw_json: &status.raw_json,
-                })
-                .execute(&config.pool)
-                .await
-                {
-                    tracing::warn!(
-                        hop_id = hop.id,
-                        error = %err,
-                        "failed to upsert flight status enrichment",
-                    );
-                } else {
-                    enriched += 1;
-                }
-            }
-            Ok(None) => {
-                tracing::debug!(
-                    hop_id = hop.id,
-                    flight_number,
-                    "no flight status data returned",
-                );
-            }
-            Err(err) => {
-                tracing::warn!(
-                    hop_id = hop.id,
-                    flight_number,
-                    error = %err,
-                    "flight status API request failed",
-                );
-            }
+        if enrich_single_flight_hop(config, &client, user_id, hop).await {
+            enriched += 1;
         }
     }
 
     if enriched > 0 {
         tracing::info!(user_id, enriched, "flight status enrichment complete");
+    }
+}
+
+async fn enrich_single_flight_hop(
+    config: &SyncWorkerConfig,
+    client: &AirLabsClient,
+    user_id: i64,
+    hop: &db::hops::Row,
+) -> bool {
+    let detail = match (db::hops::GetById {
+        id: hop.id,
+        user_id,
+    })
+    .execute(&config.pool)
+    .await
+    {
+        Ok(Some(d)) => d,
+        Ok(None) => return false,
+        Err(err) => {
+            tracing::warn!(hop_id = hop.id, error = %err, "failed to fetch hop detail for enrichment");
+            return false;
+        }
+    };
+
+    let flight_number = detail
+        .flight_detail
+        .as_ref()
+        .map(|d| d.flight_number.as_str())
+        .unwrap_or_default();
+    if flight_number.is_empty() || hop.start_date.is_empty() {
+        return false;
+    }
+
+    if is_enrichment_fresh(&config.pool, hop.id, "airlabs", &hop.start_date).await {
+        tracing::debug!(hop_id = hop.id, "airlabs enrichment still fresh, skipping");
+        return false;
+    }
+
+    match client
+        .get_flight_status(flight_number, &hop.start_date)
+        .await
+    {
+        Ok(Some(status)) => {
+            let delay = status.dep_delay_minutes.or(status.arr_delay_minutes);
+            if let Err(err) = (db::status_enrichments::Upsert {
+                hop_id: hop.id,
+                provider: "airlabs",
+                status: &status.status,
+                delay_minutes: delay,
+                dep_gate: &status.dep_gate,
+                dep_terminal: &status.dep_terminal,
+                arr_gate: &status.arr_gate,
+                arr_terminal: &status.arr_terminal,
+                dep_platform: "",
+                arr_platform: "",
+                raw_json: &status.raw_json,
+            })
+            .execute(&config.pool)
+            .await
+            {
+                tracing::warn!(
+                    hop_id = hop.id,
+                    error = %err,
+                    "failed to upsert flight status enrichment",
+                );
+                false
+            } else {
+                true
+            }
+        }
+        Ok(None) => {
+            tracing::debug!(
+                hop_id = hop.id,
+                flight_number,
+                "no flight status data returned",
+            );
+            false
+        }
+        Err(err) => {
+            tracing::warn!(
+                hop_id = hop.id,
+                flight_number,
+                error = %err,
+                "flight status API request failed",
+            );
+            false
+        }
     }
 }
 
@@ -524,6 +622,11 @@ async fn verify_air_hop_route(
         .map(|d| d.flight_number.as_str())
         .unwrap_or_default();
     if flight_number.is_empty() || hop.start_date.is_empty() {
+        return RouteVerificationOutcome::Noop;
+    }
+
+    if is_enrichment_fresh(&config.pool, hop.id, "opensky", &hop.start_date).await {
+        tracing::debug!(hop_id = hop.id, "opensky enrichment still fresh, skipping");
         return RouteVerificationOutcome::Noop;
     }
 
@@ -688,6 +791,15 @@ async fn enrich_single_rail_hop(
             hop_id = hop.id,
             provider,
             "rail provider not configured, skipping",
+        );
+        return Some(RailEnrichResult::Skipped);
+    }
+
+    if is_enrichment_fresh(&config.pool, hop.id, provider, &hop.start_date).await {
+        tracing::debug!(
+            hop_id = hop.id,
+            provider,
+            "rail enrichment still fresh, skipping"
         );
         return Some(RailEnrichResult::Skipped);
     }

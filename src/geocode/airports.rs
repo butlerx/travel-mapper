@@ -8,6 +8,7 @@ static DB: LazyLock<AirportData> = LazyLock::new(AirportData::new);
 
 /// Enriched airport information from the embedded IATA database.
 #[derive(Debug, Clone)]
+#[allow(dead_code)] // fields populated from airport database; subset read by callers
 pub struct Airport {
     pub iata: String,
     pub name: String,

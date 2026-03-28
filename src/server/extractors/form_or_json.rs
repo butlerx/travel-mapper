@@ -15,7 +15,7 @@ use serde::de::DeserializeOwned;
 /// `application/x-www-form-urlencoded`, depending on the `Content-Type`
 /// header.  When the body is empty the extractor falls back to
 /// `T::default()`, matching the legacy `parse_payload` behaviour.
-pub struct FormOrJson<T>(pub T);
+pub(crate) struct FormOrJson<T>(pub(crate) T);
 
 impl<T> FormOrJson<T>
 where
@@ -26,7 +26,7 @@ where
     /// # Errors
     ///
     /// Returns an [`AppError`] if JSON or form deserialization fails.
-    pub fn parse(headers: &HeaderMap, body: &[u8]) -> Result<T, AppError> {
+    pub(crate) fn parse(headers: &HeaderMap, body: &[u8]) -> Result<T, AppError> {
         if body.is_empty() {
             return Ok(T::default());
         }

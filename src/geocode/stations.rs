@@ -12342,6 +12342,7 @@ static STATIONS: &[Station] = &[
 
 /// Looks up a UK CRS station code and returns the matching station name.
 #[must_use]
+#[allow(dead_code)]
 pub fn lookup_crs(code: &str) -> Option<&'static str> {
     if code.is_empty() {
         return None;

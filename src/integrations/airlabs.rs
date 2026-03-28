@@ -115,7 +115,7 @@ fn find_matching_schedule<'a>(schedules: &'a [Value], flight_date: &str) -> Opti
 
 /// Extract a [`FlightStatus`] from a single `AirLabs` schedule/flight JSON object.
 fn parse_flight_entry(entry: &Value) -> Result<FlightStatus, FlightStatusError> {
-    let flight_status = entry
+    let status = entry
         .get("status")
         .and_then(Value::as_str)
         .unwrap_or_default()
@@ -148,7 +148,7 @@ fn parse_flight_entry(entry: &Value) -> Result<FlightStatus, FlightStatusError> 
     let raw_json = serde_json::to_string(entry)?;
 
     Ok(FlightStatus {
-        flight_status,
+        status,
         dep_delay_minutes,
         arr_delay_minutes,
         dep_gate,
@@ -228,7 +228,7 @@ mod tests {
             .unwrap();
         let status = result.expect("expected a flight status record");
 
-        assert_eq!(status.flight_status, "landed");
+        assert_eq!(status.status, "landed");
         assert_eq!(status.dep_delay_minutes, Some(15));
         assert_eq!(status.arr_delay_minutes, Some(7));
         assert_eq!(status.dep_gate, "A1");
@@ -376,7 +376,7 @@ mod tests {
         )
         .unwrap();
         let status = parse_flight_entry(&entry).unwrap();
-        assert_eq!(status.flight_status, "scheduled");
+        assert_eq!(status.status, "scheduled");
         assert_eq!(status.dep_delay_minutes, None);
         assert_eq!(status.arr_delay_minutes, None);
         assert_eq!(status.dep_gate, "");

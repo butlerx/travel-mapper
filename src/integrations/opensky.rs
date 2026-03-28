@@ -136,23 +136,6 @@ impl OpenSkyClient {
 
     /// # Errors
     ///
-    /// Returns an error if authentication fails, the request fails, or the
-    /// response cannot be parsed.
-    pub async fn get_flights_for_aircraft(
-        &self,
-        icao24: &str,
-        begin: i64,
-        end: i64,
-    ) -> Result<Vec<FlightRecord>, OpenSkyError> {
-        let url = format!(
-            "{}/flights/aircraft?icao24={icao24}&begin={begin}&end={end}",
-            self.base_url,
-        );
-        self.get_flights(&url).await
-    }
-
-    /// # Errors
-    ///
     /// Returns an error if the window exceeds `OpenSky` limits, authentication
     /// fails, the request fails, or the response cannot be parsed.
     pub async fn get_flights_all(

@@ -14,6 +14,9 @@ use axum::{
 use schemars::JsonSchema;
 use serde::Serialize;
 
+/// Minimum interval between user-triggered syncs (15 minutes).
+const SYNC_COOLDOWN_SECS: i64 = 15 * 60;
+
 /// Response returned when a sync completes immediately.
 #[derive(Debug, Default, Serialize, JsonSchema)]
 pub struct SyncResponse {
@@ -85,7 +88,7 @@ pub async fn handler(
     let format = negotiate_format(&headers);
 
     if let Some(override_api) = &state.tripit_override {
-        let geocoder = Geocoder::default();
+        let geocoder = Geocoder::new(state.db.clone());
         let result = sync_all(override_api.as_ref(), &geocoder, &state.db, auth.user_id).await;
         return match result {
             Ok(r) => {
@@ -94,6 +97,40 @@ pub async fn handler(
             }
             Err(err) => AppError::from(err).into_format_response(format),
         };
+    }
+
+    match (db::sync_state::GetOrCreate {
+        user_id: auth.user_id,
+    })
+    .execute(&state.db)
+    .await
+    {
+        Ok(state_row) => {
+            if let Some(ref last_sync) = state_row.last_sync_at {
+                let too_soon = sqlx::query_scalar!(
+                    "SELECT (strftime('%s', datetime('now')) - strftime('%s', ?)) < ?",
+                    last_sync,
+                    SYNC_COOLDOWN_SECS,
+                )
+                .fetch_one(&state.db)
+                .await;
+                if matches!(too_soon, Ok(1)) {
+                    return if is_form {
+                        Redirect::to("/dashboard?error=Please+wait+before+syncing+again")
+                            .into_response()
+                    } else {
+                        AppError::TooManyRequests(
+                            "sync cooldown active — please wait 15 minutes between syncs"
+                                .to_string(),
+                        )
+                        .into_format_response(format)
+                    };
+                }
+            }
+        }
+        Err(err) => {
+            return AppError::from(err).into_format_response(format);
+        }
     }
 
     match (db::sync_jobs::HasPendingOrRunning {
@@ -143,7 +180,7 @@ pub fn handler_docs(op: TransformOperation) -> TransformOperation {
         op.description("Trigger a TripIt sync for the authenticated user."),
         200 => SyncResponse,
         202 => SyncQueuedResponse,
-        401 | 409 | 500 => ErrorResponse,
+        401 | 409 | 429 | 500 => ErrorResponse,
     )
     .tag("sync")
 }

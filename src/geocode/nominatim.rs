@@ -1,19 +1,38 @@
 //! Nominatim geocoding via the [`nominatim`] crate — forward search and
 //! reverse geocoding with IATA airport fallback via multi-strategy name
-//! cleaning.
+//! cleaning. Optionally backed by a SQLite cache to avoid repeated API calls.
 
 use super::{airports, sanitize};
+use crate::db;
+use sqlx::SqlitePool;
 use std::time::Duration;
 
 const USER_AGENT: &str = "TravelMapper/1.0 (github.com/butlerx/travel-export)";
 
-/// Nominatim-backed geocoder with embedded IATA airport fallback.
 pub struct Geocoder {
     client: nominatim::Client,
+    pool: Option<SqlitePool>,
 }
 
 impl Geocoder {
+    #[must_use]
+    pub fn new(pool: SqlitePool) -> Self {
+        Self {
+            client: nominatim::Client::new(nominatim::IdentificationMethod::from_user_agent(
+                USER_AGENT,
+            )),
+            pool: Some(pool),
+        }
+    }
+
     async fn geocode(&self, query: &str) -> Option<(f64, f64)> {
+        if let Some(ref pool) = self.pool
+            && let Ok(Some(cached)) = (db::geocode_cache::Get { query }).execute(pool).await
+        {
+            tracing::debug!(query, lat = cached.0, lng = cached.1, "geocode cache hit");
+            return Some(cached);
+        }
+
         let response = self.client.search(query).await;
         tokio::time::sleep(Duration::from_secs(1)).await;
 
@@ -47,6 +66,19 @@ impl Geocoder {
         };
 
         tracing::debug!(query, lat, lon, "nominatim geocode resolved");
+
+        if let Some(ref pool) = self.pool
+            && let Err(err) = (db::geocode_cache::Upsert {
+                query,
+                lat,
+                lng: lon,
+            })
+            .execute(pool)
+            .await
+        {
+            tracing::warn!(query, %err, "failed to cache geocode result");
+        }
+
         Some((lat, lon))
     }
 
@@ -99,6 +131,7 @@ impl Default for Geocoder {
             client: nominatim::Client::new(nominatim::IdentificationMethod::from_user_agent(
                 USER_AGENT,
             )),
+            pool: None,
         }
     }
 }

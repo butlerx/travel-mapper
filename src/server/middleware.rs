@@ -4,7 +4,7 @@ use axum::{body::Body, extract::MatchedPath, http::Request};
 use std::time::Duration;
 
 /// Build the tracing span for each incoming HTTP request.
-pub fn request_span(request: &Request<Body>) -> tracing::Span {
+pub(super) fn request_span(request: &Request<Body>) -> tracing::Span {
     let path = request.extensions().get::<MatchedPath>().map_or_else(
         || request.uri().path().to_owned(),
         |m| m.as_str().to_owned(),
@@ -17,7 +17,7 @@ pub fn request_span(request: &Request<Body>) -> tracing::Span {
 }
 
 /// Log the response status and latency when a request completes.
-pub fn on_response(
+pub(super) fn on_response(
     response: &axum::http::Response<Body>,
     latency: Duration,
     _span: &tracing::Span,

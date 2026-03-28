@@ -10,6 +10,8 @@ pub mod credentials;
 pub mod email_verifications;
 /// Query objects for the `feed_tokens` table — per-user calendar feed access tokens.
 pub mod feed_tokens;
+/// Query objects for the `geocode_cache` table — cached Nominatim geocoding results.
+pub mod geocode_cache;
 /// Query objects for the `hops` table — individual travel legs.
 pub mod hops;
 /// Query objects for the `oauth_request_tokens` table — temporary OAuth flow tokens.

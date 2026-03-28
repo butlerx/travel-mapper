@@ -509,6 +509,7 @@ impl GtfsCache {
 
 /// A stop matching result with similarity score.
 #[derive(Debug, Clone)]
+#[allow(dead_code)] // fields match query output shape for debugging context
 pub struct StopMatch {
     pub stop_id: String,
     pub stop_name: String,
@@ -519,6 +520,7 @@ pub struct StopMatch {
 
 /// A trip matching result.
 #[derive(Debug, Clone)]
+#[allow(dead_code)] // fields match query output shape for debugging context
 pub struct TripMatch {
     pub trip_id: String,
     pub route_id: String,

@@ -8,11 +8,11 @@ pub mod auth;
 /// Database layer — connection pool setup, migrations, and per-table query objects.
 pub mod db;
 /// Distance calculation utilities — haversine great-circle distance.
-pub mod distance;
+pub(crate) mod distance;
 /// Geocoding helpers — Nominatim lookups, IATA airport and CRS station resolution.
-pub mod geocode;
+pub(crate) mod geocode;
 /// Third-party travel data integrations — TripIt, flight status, rail status, CSV import.
-pub mod integrations;
+pub(crate) mod integrations;
 /// Axum web server — routing, pages, extractors, and middleware.
 pub mod server;
 /// Logging and tracing initialisation.

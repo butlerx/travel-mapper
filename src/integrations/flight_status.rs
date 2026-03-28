@@ -1,6 +1,5 @@
 //! Flight status API trait and shared types.
 
-use serde_json;
 use thiserror::Error;
 
 /// Errors returned by flight status API providers.
@@ -16,7 +15,7 @@ pub enum FlightStatusError {
 /// Live or historical status data for a single flight.
 #[derive(Debug, Clone)]
 pub struct FlightStatus {
-    pub flight_status: String,
+    pub status: String,
     pub dep_delay_minutes: Option<i64>,
     pub arr_delay_minutes: Option<i64>,
     pub dep_gate: String,

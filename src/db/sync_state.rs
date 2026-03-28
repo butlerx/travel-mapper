@@ -71,6 +71,21 @@ impl Update<'_> {
     }
 }
 
+/// Return all user IDs that have a sync state row.
+pub struct GetAllUserIds;
+
+impl GetAllUserIds {
+    /// # Errors
+    ///
+    /// Returns an error if the query fails.
+    pub async fn execute(&self, pool: &SqlitePool) -> Result<Vec<i64>, sqlx::Error> {
+        let rows = sqlx::query_scalar!("SELECT user_id FROM sync_state")
+            .fetch_all(pool)
+            .await?;
+        Ok(rows)
+    }
+}
+
 /// Return the sync state for a user, creating a default row if none exists.
 pub struct GetOrCreate {
     pub user_id: i64,
@@ -148,5 +163,29 @@ mod tests {
             .await
             .expect("sync state fetch after update failed");
         assert_eq!(state, updated);
+    }
+
+    #[tokio::test]
+    async fn get_all_user_ids_returns_synced_users() {
+        let pool = test_pool().await;
+        let alice = test_user(&pool, "alice").await;
+        let bob = test_user(&pool, "bob").await;
+
+        let _ = GetOrCreate { user_id: alice }
+            .execute(&pool)
+            .await
+            .expect("alice sync state setup failed");
+        let _ = GetOrCreate { user_id: bob }
+            .execute(&pool)
+            .await
+            .expect("bob sync state setup failed");
+
+        let mut ids = GetAllUserIds
+            .execute(&pool)
+            .await
+            .expect("get all user ids failed");
+        ids.sort_unstable();
+
+        assert_eq!(ids, vec![alice, bob]);
     }
 }

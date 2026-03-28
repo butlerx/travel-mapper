@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT lat, lng FROM geocode_cache WHERE query = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "lat",
+        "ordinal": 0,
+        "type_info": "Float"
+      },
+      {
+        "name": "lng",
+        "ordinal": 1,
+        "type_info": "Float"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "69e837d9cbfdffef98ab01d74ce057b7b4baa75396aa01364903ab64322c114f"
+}

@@ -82,21 +82,21 @@ pub(crate) use multi_format_docs;
 
 /// Generic error response returned by all endpoints on failure.
 #[derive(Debug, Default, Serialize, JsonSchema)]
-pub struct ErrorResponse {
+pub(crate) struct ErrorResponse {
     /// Human-readable error message describing what went wrong.
-    pub error: String,
+    pub(crate) error: String,
 }
 
 /// Generic success response with a status field.
 #[derive(Debug, Default, Serialize, JsonSchema)]
-pub struct StatusResponse {
+pub(crate) struct StatusResponse {
     /// Result status, typically `"ok"`.
-    pub status: String,
+    pub(crate) status: String,
 }
 
 /// Supported response formats for content negotiation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ResponseFormat {
+pub(crate) enum ResponseFormat {
     Json,
     Csv,
     Html,
@@ -105,7 +105,7 @@ pub enum ResponseFormat {
 /// Inspect the `Accept` header and return the best matching [`ResponseFormat`].
 ///
 /// Falls back to JSON when no recognised media type is present.
-pub fn negotiate_format(headers: &HeaderMap) -> ResponseFormat {
+pub(crate) fn negotiate_format(headers: &HeaderMap) -> ResponseFormat {
     let accept = headers
         .get(header::ACCEPT)
         .and_then(|v| v.to_str().ok())
@@ -129,7 +129,7 @@ pub fn negotiate_format(headers: &HeaderMap) -> ResponseFormat {
 /// Implement this on any `Serialize + Default` struct to gain multi-format
 /// responses via [`MultiFormatResponse::into_format_response`].
 /// `Default` is used to generate example output for the `OpenAPI` spec.
-pub trait MultiFormatResponse: Serialize + Default + Sized {
+pub(crate) trait MultiFormatResponse: Serialize + Default + Sized {
     /// Page title shown in the HTML response wrapper.
     const HTML_TITLE: &'static str;
 
@@ -274,7 +274,9 @@ fn build_html<T: MultiFormatResponse>(items: &[T]) -> Response {
 
 /// Add `text/csv` and `text/html` media types with derived examples to an
 /// `OpenAPI` response object.
-pub fn add_multi_format_docs<T: MultiFormatResponse>(response: &mut aide::openapi::Response) {
+pub(crate) fn add_multi_format_docs<T: MultiFormatResponse>(
+    response: &mut aide::openapi::Response,
+) {
     let string_schema = SchemaObject {
         json_schema: schemars::Schema::from(serde_json::Map::from_iter([(
             "type".to_owned(),
@@ -528,7 +530,7 @@ pub(super) fn toplevel_api_routes() -> ApiRouter<super::AppState> {
 
 impl ErrorResponse {
     /// Converts a message into an HTTP error response in the requested format.
-    pub fn into_format_response(
+    pub(crate) fn into_format_response(
         msg: impl Into<String>,
         format: ResponseFormat,
         status: StatusCode,

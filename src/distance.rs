@@ -1,7 +1,7 @@
 /// Compute the great-circle distance between two points in kilometres using
 /// the haversine formula.
 #[must_use]
-pub fn haversine_km(lat1: f64, lng1: f64, lat2: f64, lng2: f64) -> f64 {
+pub(crate) fn haversine_km(lat1: f64, lng1: f64, lat2: f64, lng2: f64) -> f64 {
     let r = 6_371.0_f64;
     let d_lat = (lat2 - lat1).to_radians();
     let d_lng = (lng2 - lng1).to_radians();
@@ -13,6 +13,6 @@ pub fn haversine_km(lat1: f64, lng1: f64, lat2: f64, lng2: f64) -> f64 {
 /// Compute the great-circle distance between two points in miles using the
 /// haversine formula.
 #[must_use]
-pub fn haversine_miles(lat1: f64, lng1: f64, lat2: f64, lng2: f64) -> f64 {
+pub(crate) fn haversine_miles(lat1: f64, lng1: f64, lat2: f64, lng2: f64) -> f64 {
     haversine_km(lat1, lng1, lat2, lng2) * 0.621_371
 }

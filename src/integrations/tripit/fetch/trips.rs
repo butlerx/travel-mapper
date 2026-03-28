@@ -70,7 +70,7 @@ async fn fetch_paginated(api: &dyn TripItApi, past: bool) -> Result<Vec<Value>, 
 #[derive(Debug, Clone)]
 pub struct Trip {
     /// The `TripIt` trip ID (numeric string from the API).
-    pub trip_id: String,
+    pub id: String,
     /// Human-readable trip name from `TripIt`.
     pub display_name: String,
     /// Resolved travel hops belonging to this trip.
@@ -139,7 +139,7 @@ pub async fn fetch_trips(
                     tracing::debug!(count, "found hops");
                 }
                 result.push(Trip {
-                    trip_id,
+                    id: trip_id,
                     display_name: trip_name,
                     hops,
                 });

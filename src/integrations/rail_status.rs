@@ -20,6 +20,7 @@ pub enum RailStatusError {
 
 /// Input query for rail status lookup — providers use whichever fields they need.
 #[derive(Debug, Clone)]
+#[allow(dead_code)] // providers use different field subsets
 pub struct RailStatusQuery<'a> {
     pub carrier: &'a str,
     pub train_number: &'a str,
@@ -56,6 +57,7 @@ pub struct RailStatus {
 #[async_trait::async_trait]
 pub trait RailStatusApi: Send + Sync {
     /// Provider name written to the `status_enrichments.provider` column.
+    #[allow(dead_code)]
     fn provider_name(&self) -> &'static str;
 
     /// Look up rail status for a journey.

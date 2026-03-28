@@ -48,7 +48,7 @@ pub fn encrypt_token(plaintext: &str, key: &[u8; 32]) -> Result<(Vec<u8>, Vec<u8
 /// Returns [`CryptoError::InvalidNonceLength`] if the nonce is not 12 bytes,
 /// [`CryptoError::Decrypt`] if decryption fails, or [`CryptoError::InvalidUtf8`]
 /// if the decrypted bytes are not valid UTF-8.
-pub fn decrypt_token(
+pub(crate) fn decrypt_token(
     ciphertext: &[u8],
     nonce: &[u8],
     key: &[u8; 32],
