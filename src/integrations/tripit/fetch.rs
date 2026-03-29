@@ -5,7 +5,7 @@ mod parsers;
 mod trips;
 
 pub use client::{FetchError, TripItApi, TripItClient};
-pub use trips::fetch_trips;
+pub use trips::{Trip, fetch_trips};
 
 use crate::db::hops::{
     BoatDetail, FlightDetail, RailDetail, Row as Hop, TransportDetail, TravelType,

@@ -36,6 +36,12 @@ pub(crate) struct SyncOutcome {
     pub(crate) duration_ms: u64,
 }
 
+fn trip_date_envelope(hops: &[crate::db::hops::Row]) -> (Option<String>, Option<String>) {
+    let start = hops.iter().map(|h| h.start_date.as_str()).min();
+    let end = hops.iter().map(|h| h.end_date.as_str()).max();
+    (start.map(String::from), end.map(String::from))
+}
+
 /// Errors that can occur during a `TripIt` sync.
 #[derive(Debug, thiserror::Error)]
 pub(crate) enum SyncError {
@@ -81,38 +87,7 @@ pub(crate) async fn sync_all(
         let trips_fetched = u64::try_from(trips.len()).unwrap_or(u64::MAX);
         tracing::info!(user_id, trips_fetched, "fetched trips from TripIt");
 
-        let mut hops_fetched = 0_u64;
-        let mut active_trip_ids = Vec::with_capacity(trips.len());
-        for trip in &trips {
-            let tripit_trip_id = format!("tripit:{}", trip.id);
-            active_trip_ids.push(trip.id.clone());
-
-            let inserted = db::hops::ReplaceForTrip {
-                trip_id: &tripit_trip_id,
-                user_id,
-                hops: &trip.hops,
-            }
-            .execute(pool)
-            .await?;
-            hops_fetched += inserted;
-            tracing::debug!(
-                user_id,
-                trip_id = trip.id,
-                display_name = trip.display_name,
-                inserted,
-                "imported trip",
-            );
-        }
-
-        let stale_deleted = db::hops::DeleteStaleTripItTrips {
-            user_id,
-            active_trip_ids: &active_trip_ids,
-        }
-        .execute(pool)
-        .await?;
-        if stale_deleted > 0 {
-            tracing::info!(user_id, stale_deleted, "removed stale tripit hops");
-        }
+        let hops_fetched = import_tripit_trips(pool, user_id, &trips).await?;
 
         let now = sqlx::query_scalar!("SELECT datetime('now')")
             .fetch_one(pool)
@@ -161,6 +136,82 @@ pub(crate) async fn sync_all(
     }
 
     sync_result
+}
+
+async fn import_tripit_trips(
+    pool: &SqlitePool,
+    user_id: i64,
+    trips: &[tripit::Trip],
+) -> Result<u64, SyncError> {
+    let mut hops_fetched = 0_u64;
+    let mut active_trip_ids = Vec::with_capacity(trips.len());
+
+    for trip in trips {
+        let tripit_trip_id = format!("tripit:{}", trip.id);
+        active_trip_ids.push(trip.id.clone());
+
+        let inserted = db::hops::ReplaceForTrip {
+            trip_id: &tripit_trip_id,
+            user_id,
+            hops: &trip.hops,
+        }
+        .execute(pool)
+        .await?;
+        hops_fetched += inserted;
+
+        let (start_date, end_date) = trip_date_envelope(&trip.hops);
+        let local_trip_id = db::trips::UpsertFromTripIt {
+            user_id,
+            tripit_id: &trip.id,
+            name: &trip.display_name,
+            start_date: start_date.as_deref(),
+            end_date: end_date.as_deref(),
+        }
+        .execute(pool)
+        .await?;
+
+        let scoped = format!("{user_id}:{tripit_trip_id}");
+        let assigned = db::trips::AssignHopsBySourceTrip {
+            user_id,
+            source_trip_id: &scoped,
+            local_trip_id,
+        }
+        .execute(pool)
+        .await?;
+
+        tracing::debug!(
+            user_id,
+            trip_id = trip.id,
+            display_name = trip.display_name,
+            inserted,
+            assigned,
+            local_trip_id,
+            "imported trip",
+        );
+    }
+
+    let stale_hops_deleted = db::hops::DeleteStaleTripItTrips {
+        user_id,
+        active_trip_ids: &active_trip_ids,
+    }
+    .execute(pool)
+    .await?;
+    let stale_trips_deleted = db::trips::DeleteStaleTripItTrips {
+        user_id,
+        active_tripit_ids: &active_trip_ids,
+    }
+    .execute(pool)
+    .await?;
+    if stale_hops_deleted > 0 || stale_trips_deleted > 0 {
+        tracing::info!(
+            user_id,
+            stale_hops_deleted,
+            stale_trips_deleted,
+            "removed stale tripit data",
+        );
+    }
+
+    Ok(hops_fetched)
 }
 
 /// Configuration for the long-running sync worker process.

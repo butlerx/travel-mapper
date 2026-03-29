@@ -149,6 +149,131 @@ impl Delete {
     }
 }
 
+/// Upsert a trip imported from `TripIt`.
+///
+/// If a trip with the given `tripit_id` already exists for this user, update its
+/// name and dates. Otherwise insert a new trip.
+pub struct UpsertFromTripIt<'a> {
+    pub user_id: i64,
+    pub tripit_id: &'a str,
+    pub name: &'a str,
+    pub start_date: Option<&'a str>,
+    pub end_date: Option<&'a str>,
+}
+
+impl UpsertFromTripIt<'_> {
+    /// # Errors
+    ///
+    /// Returns an error if the upsert fails.
+    pub async fn execute(&self, pool: &SqlitePool) -> Result<i64, sqlx::Error> {
+        let existing = sqlx::query_scalar!(
+            r#"SELECT id as "id!: i64"
+               FROM trips
+               WHERE user_id = ? AND tripit_id = ?"#,
+            self.user_id,
+            self.tripit_id,
+        )
+        .fetch_optional(pool)
+        .await?;
+
+        if let Some(trip_id) = existing {
+            sqlx::query!(
+                r"UPDATE trips
+                  SET name = ?, start_date = ?, end_date = ?, updated_at = datetime('now')
+                  WHERE id = ? AND user_id = ?",
+                self.name,
+                self.start_date,
+                self.end_date,
+                trip_id,
+                self.user_id,
+            )
+            .execute(pool)
+            .await?;
+            Ok(trip_id)
+        } else {
+            let result = sqlx::query!(
+                r"INSERT INTO trips (user_id, name, tripit_id, start_date, end_date)
+                  VALUES (?, ?, ?, ?, ?)",
+                self.user_id,
+                self.name,
+                self.tripit_id,
+                self.start_date,
+                self.end_date,
+            )
+            .execute(pool)
+            .await?;
+            Ok(result.last_insert_rowid())
+        }
+    }
+}
+
+/// Assign all hops from a `TripIt` source trip to a local trip.
+///
+/// Matches hops by their `trip_id` column (format `{user_id}:tripit:{tripit_id}`)
+/// and sets their `user_trip_id` to the given local trip ID.
+pub struct AssignHopsBySourceTrip<'a> {
+    pub user_id: i64,
+    pub source_trip_id: &'a str,
+    pub local_trip_id: i64,
+}
+
+impl AssignHopsBySourceTrip<'_> {
+    /// # Errors
+    ///
+    /// Returns an error if the update query fails.
+    pub async fn execute(&self, pool: &SqlitePool) -> Result<u64, sqlx::Error> {
+        let result = sqlx::query!(
+            r"UPDATE hops
+              SET user_trip_id = ?, updated_at = datetime('now')
+              WHERE user_id = ? AND trip_id = ?",
+            self.local_trip_id,
+            self.user_id,
+            self.source_trip_id,
+        )
+        .execute(pool)
+        .await?;
+        Ok(result.rows_affected())
+    }
+}
+
+/// Delete trips imported from `TripIt` that are no longer present in the API.
+pub struct DeleteStaleTripItTrips<'a> {
+    pub user_id: i64,
+    pub active_tripit_ids: &'a [String],
+}
+
+impl DeleteStaleTripItTrips<'_> {
+    /// # Errors
+    ///
+    /// Returns an error if the delete query fails.
+    pub async fn execute(&self, pool: &SqlitePool) -> Result<u64, sqlx::Error> {
+        if self.active_tripit_ids.is_empty() {
+            let result = sqlx::query!(
+                "DELETE FROM trips WHERE user_id = ? AND tripit_id IS NOT NULL",
+                self.user_id,
+            )
+            .execute(pool)
+            .await?;
+            return Ok(result.rows_affected());
+        }
+
+        let ids_json = serde_json::to_string(self.active_tripit_ids)
+            .map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
+
+        let result = sqlx::query!(
+            r"DELETE FROM trips
+              WHERE user_id = ?
+                AND tripit_id IS NOT NULL
+                AND tripit_id NOT IN (SELECT value FROM json_each(?))",
+            self.user_id,
+            ids_json,
+        )
+        .execute(pool)
+        .await?;
+        Ok(result.rows_affected())
+    }
+}
+
 /// Automatically group unassigned hops into trips based on date gaps.
 pub struct AutoGroup {
     pub user_id: i64,
@@ -192,19 +317,42 @@ impl AutoGroup {
         }
 
         let mut tx = pool.begin().await?;
+        let mut created = 0_u64;
         for group in &groups {
-            let name = trip_name_for_start_date(&group.start_date);
-            let insert = sqlx::query!(
-                r"INSERT INTO trips (user_id, name, start_date, end_date)
-                  VALUES (?, ?, ?, ?)",
+            let existing_trip_id = sqlx::query_scalar!(
+                r#"SELECT id as "id!: i64"
+                   FROM trips
+                   WHERE user_id = ?
+                     AND start_date IS NOT NULL
+                     AND end_date IS NOT NULL
+                     AND start_date <= ?
+                     AND end_date >= ?
+                   ORDER BY start_date ASC
+                   LIMIT 1"#,
                 self.user_id,
-                name,
-                group.start_date,
                 group.end_date,
+                group.start_date,
             )
-            .execute(&mut *tx)
+            .fetch_optional(&mut *tx)
             .await?;
-            let trip_id = insert.last_insert_rowid();
+
+            let trip_id = if let Some(id) = existing_trip_id {
+                id
+            } else {
+                let name = trip_name_for_start_date(&group.start_date);
+                let insert = sqlx::query!(
+                    r"INSERT INTO trips (user_id, name, start_date, end_date)
+                      VALUES (?, ?, ?, ?)",
+                    self.user_id,
+                    name,
+                    group.start_date,
+                    group.end_date,
+                )
+                .execute(&mut *tx)
+                .await?;
+                created += 1;
+                insert.last_insert_rowid()
+            };
 
             for hop_id in &group.hop_ids {
                 sqlx::query!(
@@ -216,10 +364,12 @@ impl AutoGroup {
                 .execute(&mut *tx)
                 .await?;
             }
+
+            refresh_trip_dates(&mut tx, self.user_id, trip_id).await?;
         }
         tx.commit().await?;
 
-        Ok(groups.len() as u64)
+        Ok(created)
     }
 }
 
