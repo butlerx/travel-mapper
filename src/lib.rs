@@ -5,6 +5,8 @@
 
 /// Encryption and password-hashing helpers — AES-256-GCM and Argon2.
 pub mod auth;
+/// CLI subcommands — serve, worker, create-user, seed.
+pub mod commands;
 /// Database layer — connection pool setup, migrations, and per-table query objects.
 pub mod db;
 /// Distance calculation utilities — haversine great-circle distance.
@@ -19,3 +21,12 @@ pub mod server;
 pub mod telemetry;
 /// Background sync worker — polls for pending sync jobs and runs imports.
 pub mod worker;
+
+/// Wait for a ctrl-c signal, logging any failure to install the handler.
+pub async fn shutdown_signal() {
+    if let Err(error) = tokio::signal::ctrl_c().await {
+        tracing::error!(error = %error, "failed to install ctrl+c handler");
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+    tracing::info!("shutdown signal received");
+}

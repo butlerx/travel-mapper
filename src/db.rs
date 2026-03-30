@@ -42,9 +42,12 @@ pub mod users;
 /// Returns an error if the pool cannot be created, pragmas cannot be applied,
 /// or migrations fail.
 pub async fn create_pool(database_url: &str) -> Result<sqlx::SqlitePool, sqlx::Error> {
+    let options = database_url
+        .parse::<sqlx::sqlite::SqliteConnectOptions>()?
+        .create_if_missing(true);
     let pool = sqlx::sqlite::SqlitePoolOptions::new()
         .max_connections(5)
-        .connect(database_url)
+        .connect_with(options)
         .await?;
 
     sqlx::query("PRAGMA journal_mode=WAL")

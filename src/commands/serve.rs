@@ -1,10 +1,10 @@
-use clap::Parser;
+use crate::auth::{CryptoError, parse_encryption_key};
+use clap::Args as ClapArgs;
 use leptos::prelude::LeptosOptions;
-use std::{path::PathBuf, time::Duration};
+use std::path::PathBuf;
 
-#[derive(Parser)]
-#[command(about = "Run the travel-export Axum server")]
-struct Cli {
+#[derive(ClapArgs)]
+pub struct Args {
     #[arg(long, env = "TRIPIT_CONSUMER_KEY")]
     consumer_key: String,
 
@@ -63,16 +63,16 @@ struct Cli {
     email_from: Option<String>,
 
     #[arg(long, env = "VAPID_PRIVATE_KEY_PATH")]
-    vapid_private_key_path: Option<std::path::PathBuf>,
+    vapid_private_key_path: Option<PathBuf>,
 
     #[arg(long, env = "VAPID_PUBLIC_KEY")]
     vapid_public_key: Option<String>,
 }
 
 #[derive(Debug, thiserror::Error)]
-enum ServerError {
-    #[error("invalid ENCRYPTION_KEY: expected exactly 32 bytes hex")]
-    InvalidEncryptionKey,
+pub enum Error {
+    #[error("{0}")]
+    Crypto(#[from] CryptoError),
 
     #[error("failed to create database pool: {0}")]
     Database(#[from] sqlx::Error),
@@ -81,35 +81,25 @@ enum ServerError {
     Bind(#[from] std::io::Error),
 }
 
-fn parse_encryption_key(hex: &str) -> Result<[u8; 32], ServerError> {
-    if hex.len() != 64 {
-        return Err(ServerError::InvalidEncryptionKey);
-    }
-
-    let mut out = [0_u8; 32];
-    for (idx, chunk) in hex.as_bytes().chunks(2).enumerate() {
-        let pair = std::str::from_utf8(chunk).map_err(|_| ServerError::InvalidEncryptionKey)?;
-        out[idx] = u8::from_str_radix(pair, 16).map_err(|_| ServerError::InvalidEncryptionKey)?;
-    }
-    Ok(out)
-}
-
-async fn run() -> Result<(), ServerError> {
-    let cli = Cli::parse();
-
-    let encryption_key = parse_encryption_key(&cli.encryption_key)?;
-    let pool = travel_mapper::db::create_pool(&cli.database_url).await?;
+/// Start the web server, binding to the configured address and serving all routes.
+///
+/// # Errors
+///
+/// Returns an error if database access, TCP binding, or server startup fails.
+pub async fn run(args: Args) -> Result<(), Error> {
+    let encryption_key = parse_encryption_key(&args.encryption_key)?;
+    let pool = crate::db::create_pool(&args.database_url).await?;
 
     let smtp_config = match (
-        cli.smtp_host,
-        cli.smtp_username,
-        cli.smtp_password,
-        cli.email_from,
+        args.smtp_host,
+        args.smtp_username,
+        args.smtp_password,
+        args.email_from,
     ) {
         (Some(host), Some(username), Some(password), Some(from)) => {
-            Some(travel_mapper::server::SmtpConfig {
+            Some(crate::server::SmtpConfig {
                 host,
-                port: cli.smtp_port,
+                port: args.smtp_port,
                 username,
                 password,
                 from,
@@ -118,72 +108,54 @@ async fn run() -> Result<(), ServerError> {
         _ => None,
     };
 
-    let vapid_private_key = cli
+    let vapid_private_key = args
         .vapid_private_key_path
         .as_ref()
         .map(std::fs::read)
         .transpose()
-        .map_err(ServerError::Bind)?;
+        .map_err(Error::Bind)?;
 
     // Registration requires working email verification, so disable it when
     // SMTP is not configured — even if the operator explicitly enabled it.
-    let registration_enabled = cli.registration_enabled && smtp_config.is_some();
-    if cli.registration_enabled && smtp_config.is_none() {
+    let registration_enabled = args.registration_enabled && smtp_config.is_some();
+    if args.registration_enabled && smtp_config.is_none() {
         tracing::warn!(
             "REGISTRATION_ENABLED is true but SMTP is not configured — registration disabled"
         );
     }
 
-    let state = travel_mapper::server::AppState {
+    let state = crate::server::AppState {
         leptos_options: LeptosOptions::builder()
             .output_name(env!("CARGO_PKG_NAME"))
             .build(),
         db: pool,
         encryption_key,
-        tripit_consumer_key: cli.consumer_key,
-        tripit_consumer_secret: cli.consumer_secret,
+        tripit_consumer_key: args.consumer_key,
+        tripit_consumer_secret: args.consumer_secret,
         tripit_override: None,
         registration_enabled,
-        airlabs_api_key: cli.airlabs_api_key,
-        opensky_client_id: cli.opensky_client_id,
-        opensky_client_secret: cli.opensky_client_secret,
-        darwin_api_token: cli.darwin_api_token,
-        db_ris_api_key: cli.db_ris_api_key,
-        db_ris_client_id: cli.db_ris_client_id,
-        transitland_api_key: cli.transitland_api_key,
-        storage_path: cli.storage_path,
+        airlabs_api_key: args.airlabs_api_key,
+        opensky_client_id: args.opensky_client_id,
+        opensky_client_secret: args.opensky_client_secret,
+        darwin_api_token: args.darwin_api_token,
+        db_ris_api_key: args.db_ris_api_key,
+        db_ris_client_id: args.db_ris_client_id,
+        transitland_api_key: args.transitland_api_key,
+        storage_path: args.storage_path,
         smtp_config,
         vapid_private_key,
-        vapid_public_key: cli.vapid_public_key,
+        vapid_public_key: args.vapid_public_key,
     };
-    let app = travel_mapper::server::create_router(state);
+    let app = crate::server::create_router(state);
 
-    let address = format!("0.0.0.0:{}", cli.port);
+    let address = format!("0.0.0.0:{}", args.port);
     let listener = tokio::net::TcpListener::bind(&address).await?;
     tracing::info!(address, "listening");
 
     axum::serve(listener, app)
-        .with_graceful_shutdown(shutdown_signal())
+        .with_graceful_shutdown(crate::shutdown_signal())
         .await
-        .map_err(ServerError::Bind)?;
+        .map_err(Error::Bind)?;
 
     Ok(())
-}
-
-async fn shutdown_signal() {
-    if let Err(error) = tokio::signal::ctrl_c().await {
-        tracing::error!(error = %error, "failed to install ctrl+c handler");
-        tokio::time::sleep(Duration::from_millis(100)).await;
-    }
-    tracing::info!("shutdown signal received");
-}
-
-#[tokio::main]
-async fn main() {
-    travel_mapper::telemetry::init();
-
-    if let Err(error) = run().await {
-        tracing::error!(%error, "server failed");
-        std::process::exit(1);
-    }
 }

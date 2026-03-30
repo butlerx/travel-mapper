@@ -5,22 +5,6 @@ edition     = "2024"
 description = "TripIt travel history web server with API and SQLite storage"
 license     = "Apache-2.0"
 
-[[bin]]
-name = "server"
-path = "src/bin/server.rs"
-
-[[bin]]
-name = "sync-worker"
-path = "src/bin/sync_worker.rs"
-
-[[bin]]
-name = "seed"
-path = "src/bin/seed.rs"
-
-[[bin]]
-name = "create-user"
-path = "src/bin/create_user.rs"
-
 [dependencies]
 aes-gcm = "0.10"
 airport-data = "1.0"

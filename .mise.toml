@@ -19,7 +19,7 @@ usage       = 'arg "[args]" var=#true help="Additional arguments passed to cargo
 run         = "cargo build ${usage_args:-}"
 alias       = "b"
 sources     = ["Cargo.lock", "Cargo.toml", "src/**/*.rs"]
-outputs     = ["target/debug/server"]
+outputs     = ["target/debug/travel-mapper"]
 
 
 [tasks."build:release"]
@@ -27,7 +27,7 @@ description = "Build release binary"
 usage       = 'arg "[args]" var=#true help="Additional arguments passed to cargo build"'
 run         = "cargo build --release ${usage_args:-}"
 sources     = ["Cargo.lock", "Cargo.toml", "src/**/*.rs"]
-outputs     = ["target/release/server"]
+outputs     = ["target/release/travel-mapper"]
 
 [tasks.dev]
 description = "Start server and sync worker together"
@@ -36,11 +36,11 @@ wait_for    = []
 
 [tasks.serve]
 description = "Start the server with auto-reload on changes"
-run         = "cargo watch -x 'run --bin server'"
+run         = "cargo watch -x 'run -- serve'"
 
 [tasks.worker]
 description = "Start the background sync worker"
-run         = "cargo run --bin sync-worker"
+run         = "cargo run -- worker"
 
 [tasks.lint]
 description = "Lint code with clippy"
@@ -103,7 +103,7 @@ outputs     = [".sqlx/*.json"]
 
 [tasks.seed]
 description = "Seed the database with test users for local development"
-run         = "cargo run --bin seed"
+run         = "cargo run -- seed"
 depends     = ["db:migrate"]
 
 [tasks.clean]
