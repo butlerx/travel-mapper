@@ -131,15 +131,21 @@ impl JourneyTravelType {
             Self::Transport => "🚗",
         }
     }
+
+    /// All variants for rendering the type filter dropdown.
+    #[must_use]
+    pub fn all() -> &'static [Self] {
+        &[Self::Air, Self::Rail, Self::Boat, Self::Transport]
+    }
 }
 
 impl std::fmt::Display for JourneyTravelType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Air => write!(f, "air"),
-            Self::Rail => write!(f, "rail"),
-            Self::Boat => write!(f, "boat"),
-            Self::Transport => write!(f, "transport"),
+            Self::Air => write!(f, "Flights"),
+            Self::Rail => write!(f, "Rail"),
+            Self::Boat => write!(f, "Boat"),
+            Self::Transport => write!(f, "Transport"),
         }
     }
 }
@@ -319,7 +325,7 @@ impl MultiFormatResponse for JourneyResponse {
     fn csv_row(&self) -> Vec<String> {
         vec![
             self.id.to_string(),
-            self.travel_type.to_string(),
+            self.travel_type.as_str().to_owned(),
             self.origin_name.clone(),
             self.origin_lat.to_string(),
             self.origin_lng.to_string(),
@@ -351,14 +357,14 @@ impl MultiFormatResponse for JourneyResponse {
     fn html_card(&self) -> AnyView {
         let href = format!("/journeys/{}", self.id);
         let emoji = self.travel_type.emoji();
-        let travel_type = self.travel_type.as_str();
-        let badge_class = format!("journey-card-badge badge-{travel_type}");
-        let badge_text = format!("{emoji} {travel_type}");
+        let travel_type_key = self.travel_type.as_str();
+        let badge_class = format!("journey-card-badge badge-{travel_type_key}");
+        let badge_text = format!("{emoji} {}", self.travel_type);
         let origin = self.origin_name.clone();
         let dest = self.dest_name.clone();
         let date = self.start_date.clone();
         let carrier = self.carrier.clone().unwrap_or_default();
-        let travel_type_str = travel_type.to_owned();
+        let travel_type_str = travel_type_key.to_owned();
 
         let status_badge = self.status.as_ref().map(|s| {
             let css_class = format!("status-badge status-{}", s.to_lowercase().replace(' ', "-"));
@@ -586,10 +592,14 @@ pub async fn handler(
         return JourneyResponse::into_format_response(&responses, format, StatusCode::OK);
     }
 
-    build_journey_list_html(&responses, sort)
+    build_journey_list_html(&responses, sort, query.travel_type.as_ref())
 }
 
-fn build_journey_list_html(responses: &[JourneyResponse], sort: JourneySort) -> Response {
+fn build_journey_list_html(
+    responses: &[JourneyResponse],
+    sort: JourneySort,
+    type_filter: Option<&JourneyTravelType>,
+) -> Response {
     let total = responses.len();
 
     let sort_options: Vec<AnyView> = JourneySort::all()
@@ -601,6 +611,22 @@ fn build_journey_list_html(responses: &[JourneyResponse], sort: JourneySort) -> 
             view! { <option value=value selected=selected>{label}</option> }.into_any()
         })
         .collect();
+
+    let type_options: Vec<AnyView> = {
+        let mut opts = vec![
+            view! {
+                <option value="" selected=type_filter.is_none()>"All types"</option>
+            }
+            .into_any(),
+        ];
+        opts.extend(JourneyTravelType::all().iter().map(|variant| {
+            let value = variant.as_str();
+            let label = format!("{} {variant}", variant.emoji());
+            let selected = type_filter == Some(variant);
+            view! { <option value=value selected=selected>{label}</option> }.into_any()
+        }));
+        opts
+    };
 
     let mut groups: Vec<(String, Vec<AnyView>)> = Vec::new();
     for resp in responses {
@@ -635,11 +661,19 @@ fn build_journey_list_html(responses: &[JourneyResponse], sort: JourneySort) -> 
                 <div class="data-page-header">
                     <h1>{title}</h1>
                     <span class="data-page-count">{format!("{total} records")}</span>
-                    <form class="sort-control" method="get" action="/journeys">
-                        <label for="sort-select" class="sort-label">"Sort"</label>
-                        <select id="sort-select" name="sort" onchange="this.form.submit()">
-                            {sort_options}
-                        </select>
+                    <form class="journey-controls" method="get" action="/journeys">
+                        <div class="journey-control">
+                            <label for="type-select" class="control-label">"Type"</label>
+                            <select id="type-select" name="type" onchange="this.form.submit()">
+                                {type_options}
+                            </select>
+                        </div>
+                        <div class="journey-control">
+                            <label for="sort-select" class="control-label">"Sort"</label>
+                            <select id="sort-select" name="sort" onchange="this.form.submit()">
+                                {sort_options}
+                            </select>
+                        </div>
                     </form>
                 </div>
                 {content}

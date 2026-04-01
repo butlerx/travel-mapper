@@ -15,7 +15,10 @@ use crate::{
         hops::{DetailRow, TravelType},
         status_enrichments,
     },
-    server::components::{CarrierIcon, NavBar, Shell},
+    server::{
+        components::{CarrierIcon, NavBar, Shell},
+        routes::journeys::JourneyTravelType,
+    },
 };
 use axum::{
     http::StatusCode,
@@ -169,7 +172,7 @@ fn JourneyDetailPage(
         "journey-detail-badge {}",
         travel_type_class(&journey.travel_type)
     );
-    let type_label = travel_type_str.clone();
+    let type_label = JourneyTravelType::from(journey.travel_type.clone()).to_string();
 
     let dates = if journey.start_date == journey.end_date {
         journey.start_date.clone()
