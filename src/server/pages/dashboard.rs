@@ -115,7 +115,10 @@ fn MapControls(journey_count: usize) -> impl IntoView {
             <div class="search-bar">
                 <input type="text" id="search-q" placeholder="Search destinations, airlines..." />
             </div>
-            <div class="filter-panel" id="filter-panel">
+            <button type="button" class="filter-toggle" id="filter-toggle" aria-expanded="false" aria-controls="filter-panel">
+                <span class="filter-toggle-label">"Filters"</span>
+            </button>
+            <div class="filter-panel collapsed" id="filter-panel">
                 <div class="filter-row">
                     <label for="filter-type">{"\u{1F3F7}\u{FE0F} Type"}</label>
                     <select id="filter-type">

@@ -854,6 +854,16 @@ dateInputs.forEach((id) => {
 const clearBtn = document.getElementById('filter-clear');
 if (clearBtn) clearBtn.addEventListener('click', clearFilters);
 
+const filterToggle = document.getElementById('filter-toggle');
+const filterPanel = document.getElementById('filter-panel');
+if (filterToggle && filterPanel) {
+  filterToggle.addEventListener('click', () => {
+    const expanded = filterToggle.getAttribute('aria-expanded') === 'true';
+    filterToggle.setAttribute('aria-expanded', String(!expanded));
+    filterPanel.classList.toggle('collapsed', expanded);
+  });
+}
+
 const toggleRoutes = document.getElementById('toggle-routes');
 const toggleAirports = document.getElementById('toggle-airports');
 if (toggleRoutes) {

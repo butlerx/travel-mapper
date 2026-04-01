@@ -504,3 +504,65 @@
   font-style: italic;
   margin-top: 2px;
 }
+
+/* ===== Filter Toggle Button ===== */
+.filter-toggle {
+  display: none;
+  width: 100%;
+  padding: var(--space-xs) var(--space-sm);
+  background: rgba(17, 24, 39, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  color: var(--color-text-secondary);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  text-align: center;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.filter-toggle:hover {
+  color: var(--color-text);
+  border-color: var(--color-focus);
+}
+
+.filter-toggle[aria-expanded='true'] .filter-toggle-label::after {
+  content: ' \25B2';
+}
+
+.filter-toggle[aria-expanded='false'] .filter-toggle-label::after {
+  content: ' \25BC';
+}
+
+/* ===== Small Screen: Collapsible Filters ===== */
+@media (max-width: 768px) {
+  .filter-toggle {
+    display: block;
+  }
+
+  .filter-panel.collapsed {
+    display: none;
+  }
+
+  .filter-panel {
+    max-height: 45vh;
+    overflow-y: auto;
+  }
+
+  .filter-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+  }
+
+  .filter-row label {
+    flex-basis: 100%;
+  }
+
+  .filter-row select,
+  .filter-row input {
+    flex: 1;
+    min-width: 0;
+  }
+}
