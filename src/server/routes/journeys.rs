@@ -1,12 +1,13 @@
 use super::{
-    ErrorResponse, MultiFormatResponse, add_multi_format_docs, multi_format_docs, negotiate_format,
+    ErrorResponse, MultiFormatResponse, ResponseFormat, add_multi_format_docs, multi_format_docs,
+    negotiate_format,
 };
 use crate::{
     db,
     distance::haversine_miles,
     server::{
         AppState,
-        components::CarrierIcon,
+        components::{CarrierIcon, NavBar, Shell},
         error::AppError,
         extractors::{AuthUser, FormOrJson},
         session::is_form_request,
@@ -402,6 +403,88 @@ impl MultiFormatResponse for JourneyResponse {
     }
 }
 
+/// Available sort options for journey lists.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum JourneySort {
+    /// Newest journeys first (default).
+    #[default]
+    DateDesc,
+    /// Oldest journeys first.
+    DateAsc,
+    /// Origin airport/station A → Z.
+    OriginAsc,
+    /// Origin airport/station Z → A.
+    OriginDesc,
+    /// Destination airport/station A → Z.
+    DestAsc,
+    /// Destination airport/station Z → A.
+    DestDesc,
+}
+
+impl JourneySort {
+    /// Label shown in the sort control dropdown.
+    #[must_use]
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::DateDesc => "Date (newest)",
+            Self::DateAsc => "Date (oldest)",
+            Self::OriginAsc => "Origin (A→Z)",
+            Self::OriginDesc => "Origin (Z→A)",
+            Self::DestAsc => "Dest (A→Z)",
+            Self::DestDesc => "Dest (Z→A)",
+        }
+    }
+
+    /// Query string value matching serde rename.
+    #[must_use]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::DateDesc => "date_desc",
+            Self::DateAsc => "date_asc",
+            Self::OriginAsc => "origin_asc",
+            Self::OriginDesc => "origin_desc",
+            Self::DestAsc => "dest_asc",
+            Self::DestDesc => "dest_desc",
+        }
+    }
+
+    /// Derive the section heading key for a journey under this sort.
+    ///
+    /// Date sorts group by year; origin/dest sorts group by first letter.
+    #[must_use]
+    pub fn group_key(self, resp: &JourneyResponse) -> String {
+        match self {
+            Self::DateDesc | Self::DateAsc => {
+                resp.start_date.get(..4).unwrap_or("Unknown").to_owned()
+            }
+            Self::OriginAsc | Self::OriginDesc => resp
+                .origin_name
+                .chars()
+                .next()
+                .map_or_else(|| "?".to_owned(), |c| c.to_uppercase().to_string()),
+            Self::DestAsc | Self::DestDesc => resp
+                .dest_name
+                .chars()
+                .next()
+                .map_or_else(|| "?".to_owned(), |c| c.to_uppercase().to_string()),
+        }
+    }
+
+    /// All variants for rendering the dropdown.
+    #[must_use]
+    pub fn all() -> &'static [Self] {
+        &[
+            Self::DateDesc,
+            Self::DateAsc,
+            Self::OriginAsc,
+            Self::OriginDesc,
+            Self::DestAsc,
+            Self::DestDesc,
+        ]
+    }
+}
+
 /// Query parameters for filtering journey lists.
 #[derive(Deserialize, JsonSchema)]
 pub struct JourneyQuery {
@@ -416,6 +499,7 @@ pub struct JourneyQuery {
     cabin_class: Option<String>,
     flight_reason: Option<String>,
     q: Option<String>,
+    sort: Option<JourneySort>,
 }
 
 pub async fn handler(
@@ -488,7 +572,82 @@ pub async fn handler(
         }
     }
 
-    JourneyResponse::into_format_response(&responses, format, StatusCode::OK)
+    let sort = query.sort.unwrap_or_default();
+    match sort {
+        JourneySort::DateDesc => responses.sort_by(|a, b| b.start_date.cmp(&a.start_date)),
+        JourneySort::DateAsc => responses.sort_by(|a, b| a.start_date.cmp(&b.start_date)),
+        JourneySort::OriginAsc => responses.sort_by(|a, b| a.origin_name.cmp(&b.origin_name)),
+        JourneySort::OriginDesc => responses.sort_by(|a, b| b.origin_name.cmp(&a.origin_name)),
+        JourneySort::DestAsc => responses.sort_by(|a, b| a.dest_name.cmp(&b.dest_name)),
+        JourneySort::DestDesc => responses.sort_by(|a, b| b.dest_name.cmp(&a.dest_name)),
+    }
+
+    if format != ResponseFormat::Html {
+        return JourneyResponse::into_format_response(&responses, format, StatusCode::OK);
+    }
+
+    build_journey_list_html(&responses, sort)
+}
+
+fn build_journey_list_html(responses: &[JourneyResponse], sort: JourneySort) -> Response {
+    let total = responses.len();
+
+    let sort_options: Vec<AnyView> = JourneySort::all()
+        .iter()
+        .map(|&variant| {
+            let value = variant.as_str();
+            let label = variant.label();
+            let selected = variant == sort;
+            view! { <option value=value selected=selected>{label}</option> }.into_any()
+        })
+        .collect();
+
+    let mut groups: Vec<(String, Vec<AnyView>)> = Vec::new();
+    for resp in responses {
+        let key = sort.group_key(resp);
+        if groups.last().is_some_and(|(k, _)| *k == key) {
+            groups.last_mut().unwrap().1.push(resp.html_card());
+        } else {
+            groups.push((key, vec![resp.html_card()]));
+        }
+    }
+
+    let content: Vec<AnyView> = groups
+        .into_iter()
+        .map(|(heading_key, cards)| {
+            let count = cards.len();
+            let heading = format!("{heading_key} ({count})");
+            view! {
+                <section class="journey-year-section">
+                    <h2 class="journey-year-heading">{heading}</h2>
+                    <div class="data-card-list">{cards}</div>
+                </section>
+            }
+            .into_any()
+        })
+        .collect();
+
+    let title = JourneyResponse::HTML_TITLE;
+    let html = view! {
+        <Shell title=title.to_owned()>
+            <NavBar current="journeys" />
+            <main class="data-page">
+                <div class="data-page-header">
+                    <h1>{title}</h1>
+                    <span class="data-page-count">{format!("{total} records")}</span>
+                    <form class="sort-control" method="get" action="/journeys">
+                        <label for="sort-select" class="sort-label">"Sort"</label>
+                        <select id="sort-select" name="sort" onchange="this.form.submit()">
+                            {sort_options}
+                        </select>
+                    </form>
+                </div>
+                {content}
+            </main>
+        </Shell>
+    };
+
+    axum::response::Html(html.to_html()).into_response()
 }
 
 /// `OpenAPI` metadata for the list journeys endpoint.
@@ -1324,7 +1483,7 @@ mod tests {
             serde_json::from_slice(&body).expect("body should be valid JSON array");
 
         assert_eq!(parsed.len(), 2);
-        assert_eq!(parsed[0].travel_type, JourneyTravelType::Rail);
+        assert_eq!(parsed[0].travel_type, JourneyTravelType::Air);
     }
 
     #[tokio::test]
