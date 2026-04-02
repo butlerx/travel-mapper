@@ -11,12 +11,17 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use leptos::prelude::*;
+use serde_json;
 
 pub(crate) struct TripHopRow {
     pub(crate) id: i64,
     pub(crate) travel_type: String,
     pub(crate) origin_name: String,
+    pub(crate) origin_lat: f64,
+    pub(crate) origin_lng: f64,
     pub(crate) dest_name: String,
+    pub(crate) dest_lat: f64,
+    pub(crate) dest_lng: f64,
     pub(crate) start_date: String,
     pub(crate) carrier: Option<String>,
 }
@@ -27,7 +32,11 @@ impl From<db::hops::SummaryRow> for TripHopRow {
             id: row.id,
             travel_type: row.travel_type,
             origin_name: row.origin_name,
+            origin_lat: row.origin_lat,
+            origin_lng: row.origin_lng,
             dest_name: row.dest_name,
+            dest_lat: row.dest_lat,
+            dest_lng: row.dest_lng,
             start_date: row.start_date,
             carrier: row.carrier,
         }
@@ -101,15 +110,38 @@ fn TripDetailPage(
     };
 
     let trip_id = trip.id;
-    let delete_click = format!(
-        "if (confirm('Delete this trip? Journeys will remain but be unassigned.')) {{ fetch('/trips/{trip_id}', {{ method: 'DELETE' }}).then(function(r) {{ if (r.ok) window.location = '/trips'; else window.location.reload(); }}); }}"
-    );
+    let trip_id_str = trip_id.to_string();
+
+    let legs_json = serde_json::to_string(
+        &trip_journeys
+            .iter()
+            .map(|h| {
+                serde_json::json!({
+                    "oLat": h.origin_lat,
+                    "oLng": h.origin_lng,
+                    "dLat": h.dest_lat,
+                    "dLng": h.dest_lng,
+                })
+            })
+            .collect::<Vec<_>>(),
+    )
+    .unwrap_or_default();
+
+    let remove_entries: Vec<(String, String, String)> = trip_journeys
+        .iter()
+        .map(|h| {
+            (
+                h.id.to_string(),
+                format!("{} → {}", h.origin_name, h.dest_name),
+                h.start_date.clone(),
+            )
+        })
+        .collect();
 
     view! {
         <Shell title="Trip Detail".to_owned()>
             <NavBar current="trips" />
-            <main class="container-wide">
-                <a href="/trips" class="journey-detail-back">"← Trips"</a>
+            <main class="container-wide" data-trip-id=trip_id_str>
 
                 {error.map(|e| view! {
                     <div class="alert alert-error" role="alert">{e}</div>
@@ -118,55 +150,37 @@ fn TripDetailPage(
                     <div class="alert alert-success" role="status">"Trip action completed."</div>
                 })}
 
-                <section class="card">
-                    <h1>{trip.name.clone()}</h1>
+                <header class="journey-detail-header">
+                    <div class="journey-detail-title-row">
+                        <h1>{trip.name.clone()}</h1>
+                        <button class="btn btn-secondary btn-sm" type="button" data-edit-open>"Edit"</button>
+                    </div>
                     <p class="muted">{date_range}</p>
                     <p class="muted">{format!("{} journeys", trip.hop_count)}</p>
+                </header>
 
-                    <form method="post" action={format!("/trips/{trip_id}")}>
-                        <div class="form-group">
-                            <label for="trip-name">"Trip name"</label>
-                            <input id="trip-name" name="name" type="text" value={trip.name} required />
-                        </div>
-                        <button class="btn btn-secondary" type="submit">"Rename Trip"</button>
-                    </form>
+                <div id="trip-map" data-legs=legs_json></div>
 
-                    <button
-                        class="btn btn-danger"
-                        type="button"
-                        style="margin-top:1rem;"
-                        onclick=delete_click
-                    >"Delete Trip"</button>
-                </section>
-
-                <section class="card" style="margin-top:1rem;">
-                    <h2>"Journeys in this trip"</h2>
+                <section class="journey-detail-section">
+                    <h2>"Journeys"</h2>
                     {if trip_journeys.is_empty() {
                         view! { <p class="muted">"No journeys assigned yet."</p> }.into_any()
                     } else {
                         view! {
-                            <ul class="stats-top-list">
+                            <ul class="trip-journey-list">
                                 {trip_journeys.into_iter().map(|row| {
                                     let journey_id = row.id;
                                     let emoji = travel_type_emoji(&row.travel_type);
                                     let carrier = row.carrier.unwrap_or_default();
                                     let travel_type = row.travel_type.clone();
                                     view! {
-                                        <li class="stats-top-item" style="display:flex;justify-content:space-between;align-items:center;gap:1rem;">
-                                            <div>
-                                                <span>{emoji}</span>
+                                        <li class="trip-journey-item">
+                                            <a href={format!("/journeys/{journey_id}")} class="trip-journey-link">
+                                                <span class="trip-journey-type">{emoji}</span>
                                                 <CarrierIcon carrier=carrier travel_type=travel_type size=20 />
-                                                " "
-                                                <a href={format!("/journeys/{journey_id}")}>{format!("{} → {}", row.origin_name, row.dest_name)}</a>
-                                                " "
-                                                <span class="muted">{row.start_date}</span>
-                                            </div>
-                                            <button class="btn btn-secondary" type="button"
-                                                onclick={format!(
-                                                    "fetch('/trips/{trip_id}/journeys/{journey_id}', {{ method: 'DELETE' }}).then(function(r) {{ if (r.ok) window.location.reload(); }});"
-                                                )}>
-                                                "Remove"
-                                            </button>
+                                                <span class="trip-journey-route">{format!("{} → {}", row.origin_name, row.dest_name)}</span>
+                                                <span class="trip-journey-date muted">{row.start_date}</span>
+                                            </a>
                                         </li>
                                     }
                                 }).collect::<Vec<_>>()}
@@ -175,8 +189,24 @@ fn TripDetailPage(
                     }}
                 </section>
 
-                <section class="card" style="margin-top:1rem;">
-                    <h2>"Add journey to trip"</h2>
+                <div id="edit-backdrop" class="edit-panel-backdrop"></div>
+                <section id="edit-form" class="journey-edit-form">
+                    <h3>
+                        "Edit Trip"
+                        <button class="edit-panel-close" type="button" data-edit-close>"\u{2715}"</button>
+                    </h3>
+
+                    <form method="post" action={format!("/trips/{trip_id}")}>
+                        <div class="form-group">
+                            <label for="trip-name">"Trip name"</label>
+                            <input id="trip-name" name="name" type="text" value={trip.name} required />
+                        </div>
+                        <button class="btn btn-primary" type="submit">"Rename Trip"</button>
+                    </form>
+
+                    <hr class="trip-edit-hr" />
+
+                    <h4>"Add journey"</h4>
                     <form method="post" action={format!("/trips/{trip_id}/journeys")}>
                         <div class="form-group">
                             <label for="journey-id">"Unassigned journey"</label>
@@ -200,7 +230,45 @@ fn TripDetailPage(
                         </div>
                         <button class="btn btn-primary" type="submit">"Assign Journey"</button>
                     </form>
+
+                    <hr class="trip-edit-hr" />
+
+                    <h4>"Remove journeys"</h4>
+                    {if remove_entries.is_empty() {
+                        view! { <p class="muted">"No journeys to remove."</p> }.into_any()
+                    } else {
+                        view! {
+                            <ul class="trip-remove-list">
+                                {remove_entries.into_iter().map(|(jid, route, date)| view! {
+                                    <li class="trip-remove-item">
+                                        <span>{route}" "{date}</span>
+                                        <button class="btn btn-danger btn-sm" type="button"
+                                            data-remove-journey=jid
+                                        >"Remove"</button>
+                                    </li>
+                                }).collect::<Vec<_>>()}
+                            </ul>
+                        }.into_any()
+                    }}
+
+                    <hr class="trip-edit-hr" />
+
+                    <button
+                        class="btn btn-danger btn-block"
+                        type="button"
+                        data-delete-trip
+                    >"Delete Trip"</button>
                 </section>
+
+                <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+                    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+                    crossorigin="" />
+                <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+                    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+                    crossorigin=""></script>
+                <script type="module" src="/static/trip-map.js"></script>
+                <script src="/static/edit-panel.js" defer></script>
+                <script src="/static/trip-detail.js" defer></script>
             </main>
         </Shell>
     }

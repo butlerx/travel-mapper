@@ -248,6 +248,33 @@ use axum::{extract::State, http::StatusCode, response::IntoResponse};
 
 `tracing` with structured fields: `tracing::info!(user_id = auth.user_id, job_id, "sync job enqueued");`
 
+## No Inline CSS or JS in Rust Files
+
+**Never embed CSS or JavaScript directly in `.rs` files.** All styling and client-side behavior must live in external files under `static/css/` and `static/js/`.
+
+### What is forbidden
+
+- **Inline `style=` attributes** in Leptos `view!` markup (e.g., `style="display:none"`, `style="margin:0"`).
+- **Inline event handlers** (`onclick=`, `onchange=`, `onsubmit=`, etc.) containing JS code.
+- **`<script>` tags with literal JS** inside Rust string literals or raw strings.
+- **`format!` macros producing JS or CSS** (e.g., building `onclick` handlers or `style` values with `format!`).
+- **Rust `const` / `static` strings containing JS code** (e.g., `const PUSH_SCRIPT: &str = r"..."`).
+
+### What to do instead
+
+| Need | Approach |
+| --- | --- |
+| Hide/show elements | Add a CSS class (e.g., `.hidden { display: none; }`) and toggle it with JS via `classList`. |
+| Dynamic widths/sizes | Use a CSS custom property on the element (`style="--pct: 42%"`) and reference it in CSS (`.bar { width: var(--pct); }`). Prefer `data-*` attributes + external JS when possible. |
+| Event handlers | Use `data-*` attributes or element IDs in markup; attach listeners in an external `.js` file under `static/js/`. |
+| Page-specific scripts | Create a new file in `static/js/`, add an `include_str!` + `js_handler!` in `static_assets.rs`, and reference it with `<script src="..." defer>` in the page component. |
+| Page-specific styles | Add rules to the appropriate CSS partial in `static/css/` (or create a new partial and add its `include_str!` to the `serve_css` handler). |
+
+### Acceptable exceptions
+
+- **`<script type="application/json">`** blocks injecting server-side data as JSON payloads for external scripts to consume — these contain data, not executable code.
+- **`include_str!` of external `.js` / `.css` files** in `static_assets.rs` — this is the compile-time bundling mechanism and is expected.
+
 ## Key Constraints
 
 1. **Never modify committed migrations** — only safe to edit uncommitted ones.
@@ -258,3 +285,4 @@ use axum::{extract::State, http::StatusCode, response::IntoResponse};
 6. **Feature flag `ssr`** gates Leptos server-side rendering — don't break SSR compilation.
 7. **No `unsafe`** — the codebase has zero unsafe blocks; keep it that way.
 8. **No `anyhow`** — use `thiserror` for domain errors, `sqlx::Error` for DB layer.
+9. **No inline CSS or JS in Rust files** — see [No Inline CSS or JS in Rust Files](#no-inline-css-or-js-in-rust-files) above.

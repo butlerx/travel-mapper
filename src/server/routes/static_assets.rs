@@ -68,6 +68,18 @@ js_handler!(
     serve_journey_map_js,
     include_str!("../../../static/js/journey-map.js")
 );
+js_handler!(
+    serve_edit_panel_js,
+    include_str!("../../../static/js/edit-panel.js")
+);
+js_handler!(
+    serve_trip_detail_js,
+    include_str!("../../../static/js/trip-detail.js")
+);
+js_handler!(
+    serve_trip_map_js,
+    include_str!("../../../static/js/trip-map.js")
+);
 
 svg_handler!(serve_logo, include_str!("../../../static/icons/logo.svg"));
 svg_handler!(
@@ -155,6 +167,9 @@ pub fn routes() -> ApiRouter<crate::server::AppState> {
         .route("/nav.js", get(serve_nav_js))
         .route("/add-journey.js", get(serve_add_journey_js))
         .route("/journey-map.js", get(serve_journey_map_js))
+        .route("/edit-panel.js", get(serve_edit_panel_js))
+        .route("/trip-detail.js", get(serve_trip_detail_js))
+        .route("/trip-map.js", get(serve_trip_map_js))
         .route("/icons/logo.svg", get(serve_logo))
         .route("/icons/plane.svg", get(serve_icon_plane))
         .route("/icons/train.svg", get(serve_icon_train))

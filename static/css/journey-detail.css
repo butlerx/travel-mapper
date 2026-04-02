@@ -30,6 +30,14 @@
   margin-bottom: var(--space-xl);
 }
 
+.journey-detail-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+}
+
 .journey-detail-route {
   font-size: var(--text-2xl);
   font-weight: 700;
@@ -289,4 +297,88 @@
   .journey-edit-form {
     width: 100vw;
   }
+}
+
+/* Trip detail page --------------------------------------------------- */
+
+#trip-map {
+  height: 300px;
+  width: 100%;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  margin-bottom: var(--space-xl);
+  background: var(--color-surface);
+}
+
+.trip-journey-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.trip-journey-item {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  transition: border-color 0.15s;
+}
+
+.trip-journey-item:hover {
+  border-color: var(--color-primary);
+}
+
+.trip-journey-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  text-decoration: none;
+  color: var(--color-text);
+}
+
+.trip-journey-type {
+  flex-shrink: 0;
+}
+
+.trip-journey-route {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trip-journey-date {
+  flex-shrink: 0;
+  font-size: var(--text-sm);
+}
+
+.trip-remove-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.trip-remove-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: var(--space-xs) 0;
+}
+
+.trip-edit-hr {
+  margin: var(--space-lg) 0;
+  border: none;
+  border-top: 1px solid var(--color-border);
+}
+
+.btn-block {
+  width: 100%;
 }

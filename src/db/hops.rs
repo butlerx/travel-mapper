@@ -209,13 +209,17 @@ pub(super) struct HopRow {
 }
 
 /// Lightweight summary of a hop — used for trip detail listings and
-/// unassigned-hop dropdowns where full coordinate data is unnecessary.
-/// Database row for a hop summary without full coordinate data.
+/// unassigned-hop dropdowns.
+/// Database row for a hop summary with coordinates for map rendering.
 pub struct SummaryRow {
     pub id: i64,
     pub travel_type: String,
     pub origin_name: String,
+    pub origin_lat: f64,
+    pub origin_lng: f64,
     pub dest_name: String,
+    pub dest_lat: f64,
+    pub dest_lng: f64,
     pub start_date: String,
     pub carrier: Option<String>,
 }

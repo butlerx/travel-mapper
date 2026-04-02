@@ -289,14 +289,17 @@ fn JourneyDetailPage(
                 })}
 
                 <header class="journey-detail-header">
-                    <h1 class="journey-detail-route">
-                        <span>{emoji}</span>
-                        <CarrierIcon carrier=carrier travel_type=travel_type_str size=24 />
-                        " "
-                        {journey.origin_name}
-                        " \u{2192} "
-                        {journey.dest_name}
-                    </h1>
+                    <div class="journey-detail-title-row">
+                        <h1 class="journey-detail-route">
+                            <span>{emoji}</span>
+                            <CarrierIcon carrier=carrier travel_type=travel_type_str size=24 />
+                            " "
+                            {journey.origin_name}
+                            " \u{2192} "
+                            {journey.dest_name}
+                        </h1>
+                        <button class="btn btn-secondary btn-sm" type="button" data-edit-open>"Edit"</button>
+                    </div>
                     <p class="journey-detail-dates">{dates}</p>
                     <span class=badge_class>{type_label}</span>
                     {status_badge_view.map(|(css, label)| view! {
@@ -329,12 +332,6 @@ fn JourneyDetailPage(
 
                 <AttachmentGallery journey_id=journey.id attachments=attachments />
 
-                <button
-                    class="btn btn-secondary"
-                    type="button"
-                    onclick="document.getElementById('edit-form').classList.add('open');document.getElementById('edit-backdrop').classList.add('open')"
-                >"Edit"</button>
-
                 <EditForm journey=edit_journey />
 
                 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -344,6 +341,7 @@ fn JourneyDetailPage(
                     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
                     crossorigin=""></script>
                 <script type="module" src="/static/journey-map.js"></script>
+                <script src="/static/edit-panel.js" defer></script>
             </main>
         </Shell>
     }

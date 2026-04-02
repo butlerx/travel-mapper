@@ -18,7 +18,11 @@ impl GetForTrip {
                    h.id as "id!: i64",
                    h.travel_type as "travel_type!: String",
                    h.origin_name as "origin_name!: String",
+                   h.origin_lat as "origin_lat!: f64",
+                   h.origin_lng as "origin_lng!: f64",
                    h.dest_name as "dest_name!: String",
+                   h.dest_lat as "dest_lat!: f64",
+                   h.dest_lng as "dest_lng!: f64",
                    h.start_date as "start_date!: String",
                    COALESCE(fd.airline, rd.carrier, bd.ship_name, td.carrier_name) AS "carrier: String"
                FROM hops h

@@ -144,14 +144,13 @@ pub(super) fn EditForm(journey: DetailRow) -> impl IntoView {
     };
 
     view! {
-        <div id="edit-backdrop" class="edit-panel-backdrop"
-            onclick="document.getElementById('edit-form').classList.remove('open');this.classList.remove('open')">
+        <div id="edit-backdrop" class="edit-panel-backdrop">
         </div>
         <section id="edit-form" class="journey-edit-form">
             <h3>
                 "Edit Journey"
                 <button class="edit-panel-close" type="button"
-                    onclick="document.getElementById('edit-form').classList.remove('open');document.getElementById('edit-backdrop').classList.remove('open')"
+                    data-edit-close
                 >"\u{2715}"</button>
             </h3>
             <form method="post" action=action>
@@ -177,7 +176,7 @@ pub(super) fn EditForm(journey: DetailRow) -> impl IntoView {
                 <div class="edit-form-actions">
                     <button class="btn btn-primary" type="submit">"Save Changes"</button>
                     <button class="btn btn-secondary" type="button"
-                        onclick="document.getElementById('edit-form').classList.remove('open');document.getElementById('edit-backdrop').classList.remove('open')"
+                        data-edit-close
                     >"Cancel"</button>
                 </div>
             </form>

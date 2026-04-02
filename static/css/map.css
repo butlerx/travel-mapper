@@ -519,7 +519,9 @@
   font-size: var(--text-sm);
   cursor: pointer;
   text-align: center;
-  transition: color 0.15s, border-color 0.15s;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
 }
 
 .filter-toggle:hover {

@@ -6,10 +6,31 @@
   - [ ] Create edit modal for updating name.
   - [ ] move add journey card into edit modal
 - [ ] Update trips page to be more like the journey page
+  - [ ] add create and auto group modal
 - [ ] Update the trip it sync to skip trips with 0 journeys
 - [ ] Improve Journey page layout
-- [x] update landing page so its not disjointed and lays out features
-- [x] Add github actions
-  - [x] add test and lint flow
-  - [x] Add release flow
 - [ ] Add Doc for running service, include systemd unit for linux installs
+- [ ] Split up large CSS files
+- [ ] Pull reusable components out of Pages into their own component files
+- [ ] Extract inline JS and CSS from Rust files to external static files
+  - **Inline JavaScript**
+  - [ ] `src/server/pages/settings/push_section.rs` — Extract `const PUSH_SCRIPT` (~87-line IIFE) to `static/js/push.js`
+  - [ ] `src/server/pages/settings.rs` (lines 189–200) — Extract clipboard copy `<script>` block to `static/js/settings-copy.js`
+  - [ ] `src/server/components/shell.rs` (lines 32–34) — Extract service worker registration `<script>` to `static/js/sw-register.js`
+  - [ ] `src/server/pages/trip_detail.rs` — Extract `format!`-built `delete_click`, `open_edit`, `close_edit` onclick JS to `static/js/trip-detail.js`
+  - [ ] `src/server/pages/journey_detail.rs` (line 335) — Extract `onclick` classList toggle to `static/js/journey-detail.js`
+  - [ ] `src/server/pages/journey_detail/edit_form.rs` (lines 147, 154, 180) — Extract backdrop/close/cancel `onclick` handlers to `static/js/journey-detail.js`
+  - [ ] `src/server/routes/journeys.rs` (lines 667–674) — Replace `onchange="this.form.submit()"` on dropdowns with external JS event listeners
+  - [ ] `src/server/pages/stats.rs` (lines 575–576, 590–591) — Replace `onchange="this.form.submit()"` on filter selects with external JS event listeners
+  - **Inline CSS**
+  - [ ] `src/server/pages/settings/feed_section.rs` (line 33) — Replace `style="display:none"` with `.hidden` CSS class
+  - [ ] `src/server/pages/settings/share_section.rs` (line 33) — Replace `style="display:none"` with `.hidden` CSS class
+  - [ ] `src/server/pages/trip_detail.rs` (lines 203, 230, 235) — Replace `<hr style="...">` with `.section-divider` CSS class
+  - [ ] `src/server/pages/trip_detail.rs` (line 240) — Replace `style="width:100%"` on delete button with `.btn-full` CSS class
+  - [ ] `src/server/pages/trips.rs` (lines 47, 58) — Replace `style="margin-top:1rem"` with CSS class or adjacent-sibling selector
+  - [ ] `src/server/pages/add_journey.rs` (lines 101, 136, 163) — Replace `style="display:none"` on type-fields divs with `.type-fields { display: none }` in CSS
+  - [ ] `src/server/pages/add_journey.rs` (line 189) — Replace `style="text-transform:uppercase"` with CSS rule on `#cost_currency`
+  - [ ] `src/server/components/carrier_icon.rs` (line 171) — Replace `style="border-radius:50%"` with `.carrier-icon img` CSS rule
+  - [ ] `src/server/components/navbar.rs` (line 32) — Replace `style="margin:0"` on logout form with CSS rule
+  - [ ] `src/server/components/shell.rs` (line 27) — Replace `style="display:none"` on og_meta div with `.hidden` CSS class
+  - [ ] `src/server/pages/stats.rs` (lines 543–546) — Replace `format!("width: {pct}%")` with CSS custom property (`--pct`) and `.stats-top-bar { width: var(--pct) }`
