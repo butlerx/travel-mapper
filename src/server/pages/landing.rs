@@ -20,24 +20,22 @@ pub async fn page(State(state): State<AppState>, jar: CookieJar) -> Response {
 #[component]
 fn Landing(show_register: bool) -> impl IntoView {
     view! {
-        <Shell title="Travel Mapper".to_owned()>
-            <main class="auth-page">
-                <div class="card auth-card">
-                    <div class="hero">
-                        <img class="hero-logo" src="/static/icons/logo.svg" alt="" width="32" height="32" />
-                        <div class="hero-badge">{"\u{1F30D}"}" Every journey. Every route. One map."</div>
-                        <h1>"Your Travel Story,\u{2003}Visualised"</h1>
-                        <p>"Import your trips from TripIt and see every journey mapped, measured, and beautifully presented \u{2014} air, rail, boat trips, and more."</p>
-                        <div class="hero-actions">
-                            {show_register.then(|| view! {
-                                <a class="btn btn-primary" href="/register">"Get Started"</a>
-                            })}
-                            <a class="btn btn-secondary" href="/login">"Log In"</a>
-                        </div>
+        <Shell title="Travel Mapper".to_owned() body_class="landing-layout">
+            <main class="landing-page">
+                <section class="landing-hero">
+                    <img class="landing-hero-logo" src="/static/icons/logo.svg" alt="" width="32" height="32" />
+                    <div class="landing-hero-badge">{"\u{1F30D}"}" Every journey. Every route. One map."</div>
+                    <h1 class="landing-hero-title">"Your Travel Story, Visualised"</h1>
+                    <p class="landing-hero-subtitle">"Import your trips from TripIt or CSV and see every journey mapped, measured, and beautifully presented \u{2014} air, rail, boat, and more."</p>
+                    <div class="landing-hero-actions">
+                        {show_register.then(|| view! {
+                            <a class="btn btn-primary btn-lg" href="/register">"Get Started"</a>
+                        })}
+                        <a class="btn btn-secondary btn-lg" href="/login">"Log In"</a>
                     </div>
-                </div>
+                </section>
 
-                <div class="landing-features">
+                <section class="landing-features">
                     <div class="feature-card">
                         <div class="feature-icon">{"\u{1F5FA}\u{FE0F}"}</div>
                         <h3>"Interactive Map"</h3>
@@ -58,7 +56,43 @@ fn Landing(show_register: bool) -> impl IntoView {
                         <h3>"Export Anywhere"</h3>
                         <p>"JSON, CSV, or HTML. Feed your data into Kepler.gl, spreadsheets, or your own tools."</p>
                     </div>
-                </div>
+                </section>
+
+                <section class="landing-steps">
+                    <h2 class="landing-section-title">"How It Works"</h2>
+                    <div class="steps-grid">
+                        <div class="step-card">
+                            <div class="step-number">"1"</div>
+                            <h3>"Connect"</h3>
+                            <p>"Link your TripIt account or import a CSV from Flighty, myFlightradar24, or App in the Air."</p>
+                        </div>
+                        <div class="step-card">
+                            <div class="step-number">"2"</div>
+                            <h3>"Sync"</h3>
+                            <p>"Your trips import automatically. Background sync keeps everything up to date."</p>
+                        </div>
+                        <div class="step-card">
+                            <div class="step-number">"3"</div>
+                            <h3>"Explore"</h3>
+                            <p>"See your journeys on an interactive map, track stats, and export data anywhere."</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="landing-cta">
+                    <h2 class="landing-section-title">"Ready to map your travels?"</h2>
+                    <p class="landing-cta-subtitle">"Self-hosted, open source, and your data stays yours."</p>
+                    <div class="landing-hero-actions">
+                        {show_register.then(|| view! {
+                            <a class="btn btn-primary btn-lg" href="/register">"Get Started"</a>
+                        })}
+                        <a class="btn btn-secondary btn-lg" href="/login">"Log In"</a>
+                    </div>
+                </section>
+
+                <footer class="landing-footer">
+                    <p>"Self-hosted \u{00B7} Open source \u{00B7} Your data stays yours"</p>
+                </footer>
             </main>
         </Shell>
     }
