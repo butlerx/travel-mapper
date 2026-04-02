@@ -1,7 +1,7 @@
 # AGENTS.md — Coding Agent Guide for travel_mapper
 
 Rust 2024 edition / Axum web server / SQLite via sqlx / Leptos SSR components.
-Task runner: [mise](https://mise.jdx.dev/). No Makefile, no CI workflows.
+Task runner: [mise](https://mise.jdx.dev/). Pre-commit hooks via [prek](https://github.com/j178/prek).
 
 ## Build / Run / Test Commands
 

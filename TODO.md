@@ -9,7 +9,7 @@
 - [ ] Update the trip it sync to skip trips with 0 journeys
 - [ ] Improve Journey page layout
 - [x] update landing page so its not disjointed and lays out features
-- [ ] Add github actions
-  - [ ] add test and lint flow
-  - [ ] Add release flow
+- [x] Add github actions
+  - [x] add test and lint flow
+  - [x] Add release flow
 - [ ] Add Doc for running service, include systemd unit for linux installs

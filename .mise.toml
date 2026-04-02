@@ -3,6 +3,7 @@ rust                   = { version = "stable", profile = "default", components =
 node                   = "lts"
 prek                   = "latest"
 taplo                  = "latest"
+zizmor                 = "latest"
 "cargo:cargo-binstall" = "latest"
 "cargo:cargo-nextest"  = "0.9.129"
 "cargo:cargo-watch"    = "latest"
@@ -109,3 +110,29 @@ depends     = ["db:migrate"]
 [tasks.clean]
 description = "Clean build artifacts"
 run         = "rm -rf target"
+
+[tasks."ci:release-build"]
+description = "Build release binary, using cross for cross-compilation when CROSS=true"
+usage = 'arg "<target>" help="Rust target triple"'
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+if [ "${CROSS:-}" = "true" ]; then
+  cross build --release --target "${usage_args}"
+else
+  cargo build --release --target "${usage_args}"
+fi
+'''
+hide = true
+
+[tasks."ci:package"]
+description = "Package a release binary into a .tar.gz archive"
+usage       = 'arg "<target>" help="Rust target triple"'
+run         = "tar czf travel-mapper-${usage_args}.tar.gz -C target/${usage_args}/release travel_mapper"
+hide        = true
+
+[tasks."ci:publish"]
+description = "Create a GitHub Release and upload artifacts"
+usage       = 'arg "<tag>" help="Git tag for the release"'
+run         = "gh release create ${usage_args} --title ${usage_args} --generate-notes artifacts/*.tar.gz"
+hide        = true
