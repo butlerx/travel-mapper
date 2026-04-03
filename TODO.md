@@ -1,10 +1,5 @@
 # TODO
 
-- [ ] Rework trip page
-  - [ ] Add map
-  - [ ] improve layout of journeys
-  - [ ] Create edit modal for updating name.
-  - [ ] move add journey card into edit modal
 - [ ] Update trips page to be more like the journey page
   - [ ] add create and auto group modal
 - [ ] Update the trip it sync to skip trips with 0 journeys

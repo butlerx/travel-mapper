@@ -10,6 +10,7 @@ zizmor                 = "latest"
 "cargo:sqlx-cli"       = { version = "latest", features = "sqlite" }
 "npm:prettier"         = "latest"
 "npm:typescript"       = "latest"
+protoc                 = "latest"
 
 [env]
 _.file = ".env"
