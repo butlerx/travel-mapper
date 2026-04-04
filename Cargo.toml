@@ -4,6 +4,7 @@ version     = "0.1.0"
 edition     = "2024"
 description = "TripIt travel history web server with API and SQLite storage"
 license     = "Apache-2.0"
+homepage    = "https://github.com/butlerx/travel-mapper"
 
 [dependencies]
 aes-gcm = "0.10"

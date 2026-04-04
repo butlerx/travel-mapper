@@ -1,3 +1,10 @@
+use crate::server::components::{
+    format_utils::{format_distance, format_year_range},
+    overview_cards::OverviewCards,
+    stats_filters::StatsFilters,
+    top_list::{TopList, miles_section_view, optional_top_list, spending_section_view},
+};
+pub use crate::server::components::{overview_cards::DetailedStats, top_list::CountedItem};
 use crate::{
     db::hops::{StatsRow, TravelType},
     distance::{haversine_km, haversine_miles},
@@ -17,49 +24,6 @@ use std::fmt::Write;
 pub struct StatsQuery {
     pub year: Option<String>,
     pub travel_type: Option<String>,
-}
-
-/// An item label paired with its occurrence count.
-#[derive(Default, Clone)]
-pub struct CountedItem {
-    pub name: String,
-    pub count: usize,
-}
-
-/// Aggregated travel statistics computed from a user's journey history.
-#[derive(Default, Clone)]
-pub struct DetailedStats {
-    pub total_journeys: usize,
-    pub total_flights: usize,
-    pub total_rail: usize,
-    pub total_boat: usize,
-    pub total_transport: usize,
-    pub total_distance_km: u64,
-    pub unique_airports: usize,
-    pub unique_stations: usize,
-    pub unique_countries: usize,
-    pub top_airlines: Vec<CountedItem>,
-    pub top_aircraft: Vec<CountedItem>,
-    pub top_routes: Vec<CountedItem>,
-    pub cabin_class_breakdown: Vec<CountedItem>,
-    pub seat_type_breakdown: Vec<CountedItem>,
-    pub flight_reason_breakdown: Vec<CountedItem>,
-    pub top_rail_carriers: Vec<CountedItem>,
-    pub top_train_numbers: Vec<CountedItem>,
-    pub rail_service_class_breakdown: Vec<CountedItem>,
-    pub top_ships: Vec<CountedItem>,
-    pub boat_cabin_type_breakdown: Vec<CountedItem>,
-    pub top_transport_carriers: Vec<CountedItem>,
-    pub transport_vehicle_breakdown: Vec<CountedItem>,
-    pub countries: Vec<CountedItem>,
-    pub available_years: Vec<String>,
-    pub selected_year: Option<String>,
-    pub selected_travel_type: Option<String>,
-    pub first_year: Option<String>,
-    pub last_year: Option<String>,
-    pub spending_summary: Vec<String>,
-    pub miles_by_program: Vec<(String, f64)>,
-    pub miles_summary: Vec<String>,
 }
 
 /// Earth distances cap out well below `u64::MAX`, so truncation is safe.
@@ -129,55 +93,6 @@ fn summarize_miles(miles_map: HashMap<String, f64>) -> Vec<String> {
         .filter(|(_, total)| total.is_finite() && *total > 0.0)
         .map(|(program, total)| format!("{total:.0} mi ({program})"))
         .collect()
-}
-
-fn spending_section_view(spending_summary: Vec<String>) -> AnyView {
-    if spending_summary.is_empty() {
-        ().into_any()
-    } else {
-        view! {
-            <section class="stats-section">
-                <h3 class="stats-section-title">"Spending"</h3>
-                <ul class="stats-top-list">
-                    {spending_summary.into_iter().map(|s| view! {
-                        <li class="stats-top-item">
-                            <span class="stats-top-name">{s}</span>
-                        </li>
-                    }).collect::<Vec<_>>()}
-                </ul>
-            </section>
-        }
-        .into_any()
-    }
-}
-
-fn miles_section_view(miles_summary: Vec<String>) -> AnyView {
-    if miles_summary.is_empty() {
-        ().into_any()
-    } else {
-        view! {
-            <section class="stats-section">
-                <h3 class="stats-section-title">"Miles by Program"</h3>
-                <ul class="stats-top-list">
-                    {miles_summary.into_iter().map(|s| view! {
-                        <li class="stats-top-item">
-                            <span class="stats-top-name">{s}</span>
-                        </li>
-                    }).collect::<Vec<_>>()}
-                </ul>
-            </section>
-        }
-        .into_any()
-    }
-}
-
-/// Render a `TopList` section only when `items` is non-empty; otherwise render nothing.
-fn optional_top_list(title: &'static str, items: Vec<CountedItem>) -> AnyView {
-    if items.is_empty() {
-        ().into_any()
-    } else {
-        view! { <TopList title=title items=items /> }.into_any()
-    }
 }
 
 fn sorted_available_years(all_rows: &[StatsRow]) -> Vec<String> {
@@ -434,26 +349,6 @@ pub(crate) fn render_share_page(stats: DetailedStats, token: &str) -> Response {
     (StatusCode::OK, axum::response::Html(html.to_html())).into_response()
 }
 
-fn format_distance(km: u64) -> String {
-    if km >= 1_000_000 {
-        let whole = km / 1_000_000;
-        let frac = (km % 1_000_000) / 100_000;
-        format!("{whole}.{frac}M km")
-    } else if km >= 10_000 {
-        format!("{}k km", km / 1_000)
-    } else {
-        format!("{km} km")
-    }
-}
-
-fn format_year_range(first: Option<&String>, last: Option<&String>) -> String {
-    match (first, last) {
-        (Some(f), Some(l)) if f == l => f.clone(),
-        (Some(f), Some(l)) => format!("{f}\u{2013}{l}"),
-        _ => "\u{2014}".to_owned(),
-    }
-}
-
 /// Serialize country counts as a JSON object: `{"US":5,"GB":3,...}`.
 fn countries_json(countries: &[CountedItem]) -> String {
     let mut buf = String::from('{');
@@ -465,149 +360,6 @@ fn countries_json(countries: &[CountedItem]) -> String {
     }
     buf.push('}');
     buf
-}
-
-#[component]
-fn OverviewCards(stats: DetailedStats, distance: String, year_range: String) -> impl IntoView {
-    let show_airports = stats.unique_airports > 0;
-    let show_stations = stats.unique_stations > 0;
-
-    view! {
-        <div class="stats-overview">
-            <div class="stat-row">
-                <div class="stat-card">
-                    <div class="stat-label">"Total Journeys"</div>
-                    <div class="stat-value">{stats.total_journeys}</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">"Flights"</div>
-                    <div class="stat-value">{stats.total_flights}</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">"Rail"</div>
-                    <div class="stat-value">{stats.total_rail}</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">"Distance"</div>
-                    <div class="stat-value">{distance}</div>
-                </div>
-                {if show_airports {
-                    view! {
-                        <div class="stat-card">
-                            <div class="stat-label">"Airports"</div>
-                            <div class="stat-value">{stats.unique_airports}</div>
-                        </div>
-                    }
-                    .into_any()
-                } else {
-                    ().into_any()
-                }}
-                {if show_stations {
-                    view! {
-                        <div class="stat-card">
-                            <div class="stat-label">"Stations"</div>
-                            <div class="stat-value">{stats.unique_stations}</div>
-                        </div>
-                    }
-                    .into_any()
-                } else {
-                    ().into_any()
-                }}
-                <div class="stat-card">
-                    <div class="stat-label">"Countries"</div>
-                    <div class="stat-value">{stats.unique_countries}</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">"Years"</div>
-                    <div class="stat-value">{year_range}</div>
-                </div>
-            </div>
-        </div>
-    }
-}
-
-#[component]
-fn TopList(title: &'static str, items: Vec<CountedItem>) -> impl IntoView {
-    let max_count = items.first().map_or(1, |i| i.count.max(1));
-
-    view! {
-        <section class="stats-section">
-            <h3 class="stats-section-title">{title}</h3>
-            {if items.is_empty() {
-                view! { <p class="stats-empty">"No data"</p> }.into_any()
-            } else {
-                view! {
-                    <ul class="stats-top-list">
-                        {items.into_iter().map(|item| {
-                            let pct = item.count * 100 / max_count;
-                            let width = format!("--pct: {pct}%");
-                            view! {
-                                <li class="stats-top-item">
-                                    <div class="stats-top-bar" style=width></div>
-                                    <span class="stats-top-name">{item.name}</span>
-                                    <span class="stats-top-count">{item.count}</span>
-                                </li>
-                            }
-                        }).collect::<Vec<_>>()}
-                    </ul>
-                }.into_any()
-            }}
-        </section>
-    }
-}
-
-#[component]
-fn StatsFilters(
-    available_years: Vec<String>,
-    selected_year: Option<String>,
-    selected_travel_type: Option<String>,
-    #[prop(default = "/stats".to_owned())] action: String,
-) -> impl IntoView {
-    view! {
-        <form method="get" action=action class="stats-filters">
-            {if available_years.is_empty() {
-                ().into_any()
-            } else {
-                let sel = selected_year.clone();
-                view! {
-                    <div class="stats-filter-group">
-                        <label for="year-filter">"Year:"</label>
-                        <select name="year" id="year-filter" data-auto-submit>
-                            <option value="" selected=sel.is_none()>"All"</option>
-                            {available_years.into_iter().rev().map(|y| {
-                                let is_selected = sel.as_ref() == Some(&y);
-                                let display = y.clone();
-                                view! {
-                                    <option value={y} selected=is_selected>{display}</option>
-                                }
-                            }).collect::<Vec<_>>()}
-                        </select>
-                    </div>
-                }.into_any()
-            }}
-            <div class="stats-filter-group">
-                <label for="travel-type-filter">"Type:"</label>
-                <select name="travel_type" id="travel-type-filter" data-auto-submit>
-                    <option value="" selected=selected_travel_type.is_none()>"All"</option>
-                    <option value="air" selected=selected_travel_type.as_deref() == Some("air")>
-                        "Flights"
-                    </option>
-                    <option value="rail" selected=selected_travel_type.as_deref() == Some("rail")>
-                        "Rail"
-                    </option>
-                    <option value="boat" selected=selected_travel_type.as_deref() == Some("boat")>
-                        "Boat"
-                    </option>
-                    <option
-                        value="transport"
-                        selected=selected_travel_type.as_deref() == Some("transport")
-                    >
-                        "Transport"
-                    </option>
-                </select>
-            </div>
-        </form>
-    }
 }
 
 #[allow(clippy::must_use_candidate, clippy::needless_pass_by_value)]
@@ -647,12 +399,12 @@ fn StatsPage(stats: DetailedStats) -> impl IntoView {
             {if has_data {
                 view! {
                     <main class="stats-page">
+                        <OverviewCards stats=stats distance=distance year_range=year_range />
                         <StatsFilters
                             available_years=available_years
                             selected_year=filters_selected_year
                             selected_travel_type=filters_selected_travel_type
                         />
-                        <OverviewCards stats=stats distance=distance year_range=year_range />
                         <div class="stats-grid">
                             {optional_top_list("Top Airlines", top_airlines)}
                             {optional_top_list("Top Aircraft", top_aircraft)}

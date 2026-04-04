@@ -1,4 +1,3 @@
-/* ===== Layout ===== */
 .container {
   max-width: 640px;
   margin: var(--space-xl) auto;
@@ -9,4 +8,18 @@
   max-width: 960px;
   margin: var(--space-xl) auto;
   padding: 0 var(--space-md);
+}
+
+footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.25em;
+  padding: var(--space-xs) var(--space-md);
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+footer p {
+  margin: 0;
 }

@@ -180,18 +180,6 @@
   margin-bottom: var(--space-xl);
 }
 
-/* --- Footer --- */
-.landing-footer {
-  text-align: center;
-  padding: var(--space-xl) var(--space-lg);
-  color: var(--color-text-muted);
-  font-size: var(--text-sm);
-}
-
-.landing-footer p {
-  margin: 0;
-}
-
 /* --- Responsive --- */
 @media (max-width: 640px) {
   .landing-hero {

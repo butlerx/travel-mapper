@@ -3,10 +3,6 @@
 
 /** @type {HopResponse[]} */
 const initialJourneys = JSON.parse(document.getElementById('initial-journeys').textContent || '[]');
-/** @type {HopResponse[]} */
-let currentJourneys = initialJourneys;
-/** @type {ReturnType<typeof setTimeout> | null} */
-let debounceTimer = null;
 
 /**
  * @param {string} str
@@ -224,44 +220,6 @@ function carrierIconHtml(journey, size) {
 
   return `<img src="${fallback}" alt="${escapeHtml(tt)}" width="${s}" height="${s}" style="vertical-align:middle;border-radius:50%;">`;
 }
-
-const filterIds = [
-  'search-q',
-  'filter-type',
-  'filter-origin',
-  'filter-dest',
-  'filter-date-from',
-  'filter-date-to',
-  'filter-airline',
-  'filter-cabin',
-  'filter-reason',
-];
-
-/** @type {Record<string, string>} */
-const paramMap = {
-  'search-q': 'q',
-  'filter-type': 'type',
-  'filter-origin': 'origin',
-  'filter-dest': 'dest',
-  'filter-date-from': 'date_from',
-  'filter-date-to': 'date_to',
-  'filter-airline': 'airline',
-  'filter-cabin': 'cabin_class',
-  'filter-reason': 'flight_reason',
-};
-
-/** @type {Record<string, string>} */
-const labelMap = {
-  q: 'Search',
-  type: 'Type',
-  origin: 'Origin',
-  dest: 'Dest',
-  date_from: 'From',
-  date_to: 'To',
-  airline: 'Airline',
-  cabin_class: 'Cabin',
-  flight_reason: 'Reason',
-};
 
 const routesLayer = L.layerGroup().addTo(map);
 const airportsLayer = L.layerGroup().addTo(map);
@@ -676,194 +634,6 @@ function renderJourneys(journeys) {
   }
 }
 
-/** @returns {FilterParams} */
-function getFilterValues() {
-  const params = {};
-  filterIds.forEach((id) => {
-    const el = /** @type {HTMLInputElement | null} */ (document.getElementById(id));
-    if (el && el.value) {
-      params[paramMap[id]] = el.value;
-    }
-  });
-  return params;
-}
-
-/**
- * @param {FilterParams} params
- * @returns {boolean}
- */
-function hasActiveFilters(params) {
-  return Object.keys(params).length > 0;
-}
-
-/**
- * @param {FilterParams} params
- * @returns {string}
- */
-function buildQueryString(params) {
-  const parts = [];
-  Object.keys(params).forEach((key) => {
-    if (params[key]) {
-      parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`);
-    }
-  });
-  return parts.length > 0 ? `?${parts.join('&')}` : '';
-}
-
-/** @param {FilterParams} params */
-function syncUrlParams(params) {
-  const qs = buildQueryString(params);
-  const newUrl = `${window.location.pathname}${qs}`;
-  history.replaceState(null, '', newUrl);
-}
-
-/** @param {FilterParams} params */
-function renderActiveFilters(params) {
-  const container = document.getElementById('active-filters');
-  if (!container) return;
-
-  if (!hasActiveFilters(params)) {
-    container.innerHTML = '';
-    return;
-  }
-
-  let html = '';
-  Object.keys(params).forEach((key) => {
-    if (params[key]) {
-      const label = labelMap[key] || key;
-      const safeLabel = escapeHtml(label);
-      const safeValue = escapeHtml(params[key]);
-      html += `<span class="filter-chip" data-param="${key}"><span class="filter-chip-label">${safeLabel}:</span> ${safeValue}<button type="button" class="filter-chip-remove" aria-label="Remove ${safeLabel}">\u00d7</button></span>`;
-    }
-  });
-  container.innerHTML = html;
-
-  container.querySelectorAll('.filter-chip-remove').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const chip = btn.closest('.filter-chip');
-      const paramKey = chip.getAttribute('data-param');
-      const reverseMap = {};
-      Object.keys(paramMap).forEach((id) => {
-        reverseMap[paramMap[id]] = id;
-      });
-      const inputId = reverseMap[paramKey];
-      if (inputId) {
-        const el = /** @type {HTMLInputElement | null} */ (document.getElementById(inputId));
-        if (el) {
-          el.value = '';
-        }
-      }
-      applyFilters();
-    });
-  });
-}
-
-/** @param {FilterParams} params */
-async function fetchAndRender(params) {
-  const qs = buildQueryString(params);
-  try {
-    const res = await fetch(`/journeys${qs}`, {
-      headers: { Accept: 'application/json' },
-      credentials: 'same-origin',
-    });
-    if (!res.ok) throw new Error('Failed to fetch journeys');
-    const journeys = await res.json();
-    currentJourneys = journeys;
-    renderJourneys(journeys);
-    renderJourneyCards(journeys);
-  } catch {
-    currentJourneys = [];
-    renderJourneys([]);
-    renderJourneyCards([]);
-  }
-}
-
-function applyFilters() {
-  const params = getFilterValues();
-  syncUrlParams(params);
-  renderActiveFilters(params);
-
-  if (hasActiveFilters(params)) {
-    fetchAndRender(params);
-  } else {
-    currentJourneys = initialJourneys;
-    renderJourneys(initialJourneys);
-    renderJourneyCards(initialJourneys);
-  }
-}
-
-function debouncedApply() {
-  clearTimeout(debounceTimer);
-  debounceTimer = setTimeout(applyFilters, 300);
-}
-
-/** @returns {boolean} */
-function populateFromUrl() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const reverseMap = {};
-  Object.keys(paramMap).forEach((id) => {
-    reverseMap[paramMap[id]] = id;
-  });
-
-  let hasParams = false;
-  urlParams.forEach((value, key) => {
-    const inputId = reverseMap[key];
-    if (inputId) {
-      const el = /** @type {HTMLInputElement | null} */ (document.getElementById(inputId));
-      if (el) {
-        el.value = value;
-        hasParams = true;
-      }
-    }
-  });
-
-  return hasParams;
-}
-
-function clearFilters() {
-  filterIds.forEach((id) => {
-    const el = /** @type {HTMLInputElement | null} */ (document.getElementById(id));
-    if (el) el.value = '';
-  });
-  syncUrlParams({});
-  renderActiveFilters({});
-  currentJourneys = initialJourneys;
-  renderJourneys(initialJourneys);
-  renderJourneyCards(initialJourneys);
-}
-
-const textInputs = ['search-q', 'filter-origin', 'filter-dest', 'filter-airline'];
-const selectInputs = ['filter-type', 'filter-cabin', 'filter-reason'];
-const dateInputs = ['filter-date-from', 'filter-date-to'];
-
-textInputs.forEach((id) => {
-  const el = document.getElementById(id);
-  if (el) el.addEventListener('input', debouncedApply);
-});
-
-selectInputs.forEach((id) => {
-  const el = document.getElementById(id);
-  if (el) el.addEventListener('change', applyFilters);
-});
-
-dateInputs.forEach((id) => {
-  const el = document.getElementById(id);
-  if (el) el.addEventListener('change', applyFilters);
-});
-
-const clearBtn = document.getElementById('filter-clear');
-if (clearBtn) clearBtn.addEventListener('click', clearFilters);
-
-const filterToggle = document.getElementById('filter-toggle');
-const filterPanel = document.getElementById('filter-panel');
-if (filterToggle && filterPanel) {
-  filterToggle.addEventListener('click', () => {
-    const expanded = filterToggle.getAttribute('aria-expanded') === 'true';
-    filterToggle.setAttribute('aria-expanded', String(!expanded));
-    filterPanel.classList.toggle('collapsed', expanded);
-  });
-}
-
 const toggleRoutes = document.getElementById('toggle-routes');
 const toggleAirports = document.getElementById('toggle-airports');
 if (toggleRoutes) {
@@ -887,12 +657,5 @@ if (toggleAirports) {
   });
 }
 
-const hasUrlFilters = populateFromUrl();
-if (hasUrlFilters) {
-  const params = getFilterValues();
-  renderActiveFilters(params);
-  fetchAndRender(params);
-} else {
-  renderJourneys(initialJourneys);
-  renderJourneyCards(initialJourneys);
-}
+renderJourneys(initialJourneys);
+renderJourneyCards(initialJourneys);

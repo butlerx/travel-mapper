@@ -24,6 +24,10 @@ impl Search<'_> {
         let q_pattern = self.q.map(|s| format!("%{s}%"));
         let origin_pattern = self.origin.map(|s| format!("%{s}%"));
         let dest_pattern = self.dest.map(|s| format!("%{s}%"));
+        let airline_pattern = self.airline.map(|s| format!("%{s}%"));
+        let flight_number_pattern = self.flight_number.map(|s| format!("%{s}%"));
+        let cabin_class_lower = self.cabin_class.map(str::to_lowercase);
+        let flight_reason_lower = self.flight_reason.map(str::to_lowercase);
 
         let rows = sqlx::query_as!(
             HopRow,
@@ -56,10 +60,10 @@ impl Search<'_> {
                  AND (?4 IS NULL OR h.dest_name LIKE ?4)
                  AND (?5 IS NULL OR h.start_date >= ?5)
                  AND (?6 IS NULL OR h.start_date <= ?6)
-                 AND (?7 IS NULL OR fd.airline LIKE ?7)
-                 AND (?8 IS NULL OR fd.flight_number LIKE ?8)
-                 AND (?9 IS NULL OR fd.cabin_class = ?9)
-                 AND (?10 IS NULL OR fd.flight_reason = ?10)
+                  AND (?7 IS NULL OR fd.airline LIKE ?7)
+                  AND (?8 IS NULL OR fd.flight_number LIKE ?8)
+                  AND (?9 IS NULL OR LOWER(fd.cabin_class) = ?9)
+                  AND (?10 IS NULL OR LOWER(fd.flight_reason) = ?10)
                  AND (?11 IS NULL
                       OR h.origin_name LIKE ?11
                       OR h.dest_name LIKE ?11
@@ -76,10 +80,10 @@ impl Search<'_> {
             dest_pattern,
             self.date_from,
             self.date_to,
-            self.airline,
-            self.flight_number,
-            self.cabin_class,
-            self.flight_reason,
+            airline_pattern,
+            flight_number_pattern,
+            cabin_class_lower,
+            flight_reason_lower,
             q_pattern,
         )
         .fetch_all(pool)

@@ -181,7 +181,7 @@ fn non_empty(s: &str) -> Option<String> {
 }
 
 impl JourneyResponse {
-    fn apply_enrichment(&mut self, enrichment: &db::status_enrichments::Row) {
+    pub(crate) fn apply_enrichment(&mut self, enrichment: &db::status_enrichments::Row) {
         self.status = non_empty(&enrichment.status);
         self.delay_minutes = enrichment.delay_minutes;
         self.dep_gate = non_empty(&enrichment.dep_gate);
@@ -198,7 +198,7 @@ impl JourneyResponse {
         self.provider = non_empty(&enrichment.provider);
     }
 
-    fn apply_opensky_verification(&mut self, enrichment: &db::status_enrichments::Row) {
+    pub(crate) fn apply_opensky_verification(&mut self, enrichment: &db::status_enrichments::Row) {
         self.route_verified = Some(enrichment.status == "verified");
     }
 

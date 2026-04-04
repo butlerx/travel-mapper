@@ -89,10 +89,6 @@ fn Landing(show_register: bool) -> impl IntoView {
                         <a class="btn btn-secondary btn-lg" href="/login">"Log In"</a>
                     </div>
                 </section>
-
-                <footer class="landing-footer">
-                    <p>"Self-hosted \u{00B7} Open source \u{00B7} Your data stays yours"</p>
-                </footer>
             </main>
         </Shell>
     }

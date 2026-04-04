@@ -217,6 +217,7 @@ mod tests {
                     .method("GET")
                     .uri("/settings")
                     .header(header::COOKIE, cookie)
+                    .header(header::HOST, "localhost")
                     .header(header::ACCEPT, "text/html")
                     .body(Body::empty())
                     .expect("failed to build request"),
@@ -283,6 +284,7 @@ mod tests {
                     .method("GET")
                     .uri("/settings")
                     .header(header::COOKIE, cookie)
+                    .header(header::HOST, "localhost")
                     .header(header::ACCEPT, "text/html")
                     .body(Body::empty())
                     .expect("failed to build request"),
@@ -308,6 +310,7 @@ mod tests {
                     .method("GET")
                     .uri("/settings?error=Something+broke")
                     .header(header::COOKIE, cookie)
+                    .header(header::HOST, "localhost")
                     .header(header::ACCEPT, "text/html")
                     .body(Body::empty())
                     .expect("failed to build request"),
@@ -333,6 +336,7 @@ mod tests {
                     .method("GET")
                     .uri("/settings?tripit=connected")
                     .header(header::COOKIE, cookie)
+                    .header(header::HOST, "localhost")
                     .header(header::ACCEPT, "text/html")
                     .body(Body::empty())
                     .expect("failed to build request"),
@@ -357,6 +361,7 @@ mod tests {
                     .method("GET")
                     .uri("/settings")
                     .header(header::COOKIE, cookie)
+                    .header(header::HOST, "localhost")
                     .header(header::ACCEPT, "text/html")
                     .body(Body::empty())
                     .expect("failed to build request"),
@@ -383,6 +388,7 @@ mod tests {
                     .method("GET")
                     .uri("/settings")
                     .header(header::COOKIE, cookie)
+                    .header(header::HOST, "localhost")
                     .header(header::ACCEPT, "text/html")
                     .body(Body::empty())
                     .expect("failed to build request"),
@@ -410,6 +416,7 @@ mod tests {
                     .method("GET")
                     .uri("/settings?csv=42")
                     .header(header::COOKIE, cookie)
+                    .header(header::HOST, "localhost")
                     .header(header::ACCEPT, "text/html")
                     .body(Body::empty())
                     .expect("failed to build request"),

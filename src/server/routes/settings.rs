@@ -180,6 +180,7 @@ mod tests {
                     .method("GET")
                     .uri("/settings")
                     .header(header::COOKIE, cookie)
+                    .header(header::HOST, "localhost")
                     .header(header::ACCEPT, "application/json")
                     .body(Body::empty())
                     .expect("failed to build request"),
@@ -249,6 +250,7 @@ mod tests {
                     .method("GET")
                     .uri("/settings")
                     .header(header::COOKIE, cookie)
+                    .header(header::HOST, "localhost")
                     .header(header::ACCEPT, "application/json")
                     .body(Body::empty())
                     .expect("failed to build request"),
@@ -280,6 +282,7 @@ mod tests {
                     .method("GET")
                     .uri("/settings?error=Something+broke&tripit=connected&csv=42")
                     .header(header::COOKIE, cookie)
+                    .header(header::HOST, "localhost")
                     .header(header::ACCEPT, "application/json")
                     .body(Body::empty())
                     .expect("failed to build request"),
@@ -311,6 +314,7 @@ mod tests {
                     .method("GET")
                     .uri("/settings")
                     .header(header::COOKIE, cookie)
+                    .header(header::HOST, "localhost")
                     .header(header::ACCEPT, "text/html")
                     .body(Body::empty())
                     .expect("failed to build request"),
@@ -336,6 +340,7 @@ mod tests {
                     .method("GET")
                     .uri("/settings")
                     .header(header::COOKIE, cookie)
+                    .header(header::HOST, "localhost")
                     .header(header::ACCEPT, "text/csv")
                     .body(Body::empty())
                     .expect("failed to build request"),
@@ -356,6 +361,7 @@ mod tests {
                 Request::builder()
                     .method("GET")
                     .uri("/settings")
+                    .header(header::HOST, "localhost")
                     .header(header::ACCEPT, "application/json")
                     .body(Body::empty())
                     .expect("failed to build request"),

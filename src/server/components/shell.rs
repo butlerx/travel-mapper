@@ -10,6 +10,7 @@ pub fn Shell(
     children: Children,
 ) -> impl IntoView {
     let class = body_class.unwrap_or_default();
+
     view! {
         <!DOCTYPE html>
         <html lang="en">
@@ -32,6 +33,9 @@ pub fn Shell(
             <body class=class>
                 {children()}
             </body>
+            <footer>
+                <p>"Self-hosted \u{00B7}"</p><a href={env!("CARGO_PKG_HOMEPAGE")}>"Open source"</a><p>"\u{00B7} Your data stays yours"</p>
+            </footer>
         </html>
     }
 }

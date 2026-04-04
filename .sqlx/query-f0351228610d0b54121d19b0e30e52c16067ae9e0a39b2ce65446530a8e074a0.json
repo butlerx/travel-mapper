@@ -1,0 +1,74 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT\n                   h.id as \"id!: i64\",\n                   h.travel_type as \"travel_type!: String\",\n                   h.origin_name as \"origin_name!: String\",\n                   h.origin_lat as \"origin_lat!: f64\",\n                   h.origin_lng as \"origin_lng!: f64\",\n                   h.dest_name as \"dest_name!: String\",\n                   h.dest_lat as \"dest_lat!: f64\",\n                   h.dest_lng as \"dest_lng!: f64\",\n                   h.start_date as \"start_date!: String\",\n                   COALESCE(fd.airline, rd.carrier, bd.ship_name, td.carrier_name) AS \"carrier: String\"\n               FROM hops h\n               LEFT JOIN flight_details fd ON fd.hop_id = h.id\n               LEFT JOIN rail_details rd ON rd.hop_id = h.id\n               LEFT JOIN boat_details bd ON bd.hop_id = h.id\n               LEFT JOIN transport_details td ON td.hop_id = h.id\n               WHERE h.user_id = ? AND h.user_trip_id IS NULL\n               ORDER BY h.start_date DESC, h.id DESC\n               LIMIT 200",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!: i64",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "travel_type!: String",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "origin_name!: String",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "origin_lat!: f64",
+        "ordinal": 3,
+        "type_info": "Float"
+      },
+      {
+        "name": "origin_lng!: f64",
+        "ordinal": 4,
+        "type_info": "Float"
+      },
+      {
+        "name": "dest_name!: String",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "dest_lat!: f64",
+        "ordinal": 6,
+        "type_info": "Float"
+      },
+      {
+        "name": "dest_lng!: f64",
+        "ordinal": 7,
+        "type_info": "Float"
+      },
+      {
+        "name": "start_date!: String",
+        "ordinal": 8,
+        "type_info": "Text"
+      },
+      {
+        "name": "carrier: String",
+        "ordinal": 9,
+        "type_info": "Null"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "f0351228610d0b54121d19b0e30e52c16067ae9e0a39b2ce65446530a8e074a0"
+}

@@ -9,7 +9,7 @@ pub fn NavBar(#[prop(into)] current: String) -> impl IntoView {
     view! {
         <nav class="nav" aria-label="Main">
             <a class="nav-brand" href="/dashboard">
-                <img class="nav-logo" src="/static/logo.svg" alt="" width="32" height="32" />
+                <img class="nav-logo" src="/static/icons/logo.svg" alt="" width="32" height="32" />
                 {APP_NAME}
             </a>
             <div class="spacer"></div>

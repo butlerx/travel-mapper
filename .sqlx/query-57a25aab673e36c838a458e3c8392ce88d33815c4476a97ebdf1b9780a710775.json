@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO trips (user_id, name, tripit_id, start_date, end_date)\n                  VALUES (?, ?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 5
+    },
+    "nullable": []
+  },
+  "hash": "57a25aab673e36c838a458e3c8392ce88d33815c4476a97ebdf1b9780a710775"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM trips\n              WHERE user_id = ?\n                AND tripit_id IS NOT NULL\n                AND tripit_id NOT IN (SELECT value FROM json_each(?))",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "fb48d14235f98d56743aca42403a13c41a9dc9938db41d5d319866642445c710"
+}

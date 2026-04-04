@@ -1,13 +1,16 @@
-/// Travel statistics computation from journey data.
-mod travel_stats;
-
 use crate::{
     db,
     server::{
         AppState,
-        components::{NavBar, Shell},
+        components::{
+            NavBar, Shell,
+            format_utils::{format_distance, format_year_range},
+            map_controls::MapControls,
+            overview_cards::{DetailedStats, OverviewCards},
+            stats_filters::StatsFilters,
+        },
         extractors::AuthUser,
-        routes::JourneyResponse,
+        routes::{JourneyResponse, journeys::JourneyTravelType},
     },
 };
 use axum::{
@@ -17,20 +20,55 @@ use axum::{
 };
 use leptos::prelude::*;
 use serde::Deserialize;
-use travel_stats::{TravelStats, compute_stats, format_distance, format_year_range};
+use std::collections::{HashMap, HashSet};
 
-/// Flash feedback messages displayed on the dashboard after user actions.
+/// Query parameters for filtering the dashboard.
 #[derive(Deserialize, Default)]
-pub struct DashboardFeedback {
+pub struct DashboardQuery {
+    pub year: Option<String>,
+    pub travel_type: Option<String>,
+    pub origin: Option<String>,
+    pub dest: Option<String>,
+    pub date_from: Option<String>,
+    pub date_to: Option<String>,
+    pub airline: Option<String>,
+    pub cabin_class: Option<String>,
+    pub flight_reason: Option<String>,
+    pub q: Option<String>,
     pub error: Option<String>,
+}
+
+impl DashboardQuery {
+    /// Normalize empty strings to `None` so SQL `?N IS NULL` clauses behave
+    /// correctly — HTML forms submit empty inputs as `""`, which Serde
+    /// deserializes as `Some("")` rather than `None`.
+    fn normalize(&mut self) {
+        fn strip_empty(opt: &mut Option<String>) {
+            if opt.as_deref().is_some_and(|s| s.trim().is_empty()) {
+                *opt = None;
+            }
+        }
+        strip_empty(&mut self.year);
+        strip_empty(&mut self.travel_type);
+        strip_empty(&mut self.origin);
+        strip_empty(&mut self.dest);
+        strip_empty(&mut self.date_from);
+        strip_empty(&mut self.date_to);
+        strip_empty(&mut self.airline);
+        strip_empty(&mut self.cabin_class);
+        strip_empty(&mut self.flight_reason);
+        strip_empty(&mut self.q);
+    }
 }
 
 pub async fn page(
     State(state): State<AppState>,
     auth: AuthUser,
-    Query(feedback): Query<DashboardFeedback>,
+    Query(mut query): Query<DashboardQuery>,
 ) -> Response {
-    let journeys = db::hops::GetAll {
+    query.normalize();
+
+    let all_hops = db::hops::GetAll {
         user_id: auth.user_id,
         travel_type_filter: None,
     }
@@ -38,9 +76,35 @@ pub async fn page(
     .await
     .unwrap_or_default();
 
-    let journey_count = journeys.len();
-    let responses: Vec<JourneyResponse> = journeys.into_iter().map(JourneyResponse::from).collect();
-    let travel_stats = compute_stats(&responses);
+    let available_years = extract_available_years(&all_hops);
+
+    // Resolve effective date range: explicit date_from/date_to override year.
+    let (effective_date_from, effective_date_to) = resolve_date_range(&query);
+
+    // Fetch filtered journeys via Search.
+    let hops = (db::hops::Search {
+        user_id: auth.user_id,
+        travel_type: query.travel_type.as_deref(),
+        origin: query.origin.as_deref(),
+        dest: query.dest.as_deref(),
+        date_from: effective_date_from.as_deref(),
+        date_to: effective_date_to.as_deref(),
+        airline: query.airline.as_deref(),
+        flight_number: None,
+        cabin_class: query.cabin_class.as_deref(),
+        flight_reason: query.flight_reason.as_deref(),
+        q: query.q.as_deref(),
+    })
+    .execute(&state.db)
+    .await
+    .unwrap_or_default();
+
+    let journey_count = hops.len();
+    let mut responses: Vec<JourneyResponse> = hops.into_iter().map(JourneyResponse::from).collect();
+
+    apply_enrichments(&state, &mut responses).await;
+
+    let travel_stats = DetailedStats::from(responses.as_slice());
     let journeys_json = serde_json::to_string(&responses).unwrap_or_default();
 
     let html = view! {
@@ -48,20 +112,87 @@ pub async fn page(
             journeys_json=journeys_json
             journey_count=journey_count
             stats=travel_stats
-            error=feedback.error
+            available_years=available_years
+            query=query
         />
     };
     (StatusCode::OK, axum::response::Html(html.to_html())).into_response()
+}
+
+fn extract_available_years(hops: &[db::hops::Row]) -> Vec<String> {
+    let mut year_set: HashSet<String> = HashSet::new();
+    for hop in hops {
+        if hop.start_date.len() >= 4 {
+            year_set.insert(hop.start_date[..4].to_owned());
+        }
+    }
+    let mut years: Vec<String> = year_set.into_iter().collect();
+    years.sort_unstable();
+    years
+}
+
+fn resolve_date_range(query: &DashboardQuery) -> (Option<String>, Option<String>) {
+    let date_from = query
+        .date_from
+        .clone()
+        .or_else(|| query.year.as_ref().map(|y| format!("{y}-01-01")));
+    let date_to = query
+        .date_to
+        .clone()
+        .or_else(|| query.year.as_ref().map(|y| format!("{y}-12-31")));
+    (date_from, date_to)
+}
+
+async fn apply_enrichments(state: &AppState, responses: &mut [JourneyResponse]) {
+    let hop_ids: Vec<i64> = responses.iter().map(|r| r.id).collect();
+    if let Ok(enrichments) = (db::status_enrichments::GetByHopIds { hop_ids })
+        .execute(&state.db)
+        .await
+    {
+        let enrichment_map: HashMap<i64, db::status_enrichments::Row> =
+            enrichments.into_iter().map(|e| (e.hop_id, e)).collect();
+        for response in responses.iter_mut() {
+            if let Some(enrichment) = enrichment_map.get(&response.id) {
+                response.apply_enrichment(enrichment);
+            }
+        }
+    }
+
+    let hop_ids_for_opensky: Vec<i64> = responses
+        .iter()
+        .filter(|r| r.travel_type == JourneyTravelType::Air)
+        .map(|r| r.id)
+        .collect();
+    if !hop_ids_for_opensky.is_empty()
+        && let Ok(opensky_enrichments) = (db::status_enrichments::GetByHopIdsAndProvider {
+            hop_ids: hop_ids_for_opensky,
+            provider: "opensky",
+        })
+        .execute(&state.db)
+        .await
+    {
+        let opensky_map: HashMap<i64, db::status_enrichments::Row> = opensky_enrichments
+            .into_iter()
+            .map(|e| (e.hop_id, e))
+            .collect();
+        for response in responses.iter_mut() {
+            if let Some(enrichment) = opensky_map.get(&response.id) {
+                response.apply_opensky_verification(enrichment);
+            }
+        }
+    }
 }
 
 #[component]
 fn DashboardPage(
     journeys_json: String,
     journey_count: usize,
-    stats: TravelStats,
-    #[prop(optional_no_strip)] error: Option<String>,
+    stats: DetailedStats,
+    available_years: Vec<String>,
+    query: DashboardQuery,
 ) -> impl IntoView {
     let has_journeys = journey_count > 0;
+    let error = query.error;
 
     let distance = format_distance(stats.total_distance_km);
     let year_range = format_year_range(stats.first_year.as_ref(), stats.last_year.as_ref());
@@ -75,7 +206,22 @@ fn DashboardPage(
 
             {if has_journeys {
                 view! {
-                    <StatsBar stats=stats distance=distance year_range=year_range />
+                    <OverviewCards stats=stats distance=distance year_range=year_range />
+                    <StatsFilters
+                        available_years=available_years
+                        selected_year=query.year
+                        selected_travel_type=query.travel_type
+                        action="/dashboard".to_owned()
+                        extended=true
+                        selected_origin=query.origin
+                        selected_dest=query.dest
+                        selected_date_from=query.date_from
+                        selected_date_to=query.date_to
+                        selected_airline=query.airline
+                        selected_cabin_class=query.cabin_class
+                        selected_flight_reason=query.flight_reason
+                        selected_q=query.q
+                    />
                     <div class="dashboard-main">
                         <div class="dashboard-map-col">
                             <div id="map"></div>
@@ -105,126 +251,6 @@ fn DashboardPage(
                 }.into_any()
             }}
         </Shell>
-    }
-}
-
-#[component]
-fn MapControls(journey_count: usize) -> impl IntoView {
-    view! {
-        <div class="map-controls">
-            <div class="search-bar">
-                <input type="text" id="search-q" placeholder="Search destinations, airlines..." />
-            </div>
-            <button type="button" class="filter-toggle" id="filter-toggle" aria-expanded="false" aria-controls="filter-panel">
-                <span class="filter-toggle-label">"Filters"</span>
-            </button>
-            <div class="filter-panel collapsed" id="filter-panel">
-                <div class="filter-row">
-                    <label for="filter-type">{"\u{1F3F7}\u{FE0F} Type"}</label>
-                    <select id="filter-type">
-                        <option value="">"All Types"</option>
-                        <option value="air">{"\u{2708}\u{FE0F} Air"}</option>
-                        <option value="rail">{"\u{1F686} Rail"}</option>
-                        <option value="boat">{"\u{1F6A2} Boat"}</option>
-                        <option value="transport">{"\u{1F697} Transport"}</option>
-                    </select>
-                    <label for="filter-origin">"Origin"</label>
-                    <input type="text" id="filter-origin" placeholder="e.g. LHR" />
-                    <label for="filter-dest">"Dest"</label>
-                    <input type="text" id="filter-dest" placeholder="e.g. JFK" />
-                </div>
-                <div class="filter-row">
-                    <label for="filter-date-from">"From"</label>
-                    <input type="date" id="filter-date-from" />
-                    <label for="filter-date-to">"To"</label>
-                    <input type="date" id="filter-date-to" />
-                    <label for="filter-airline">"Airline"</label>
-                    <input type="text" id="filter-airline" placeholder="e.g. BA" />
-                </div>
-                <div class="filter-row">
-                    <label for="filter-cabin">"Cabin"</label>
-                    <select id="filter-cabin">
-                        <option value="">"Any"</option>
-                        <option value="economy">"Economy"</option>
-                        <option value="premium_economy">"Premium Economy"</option>
-                        <option value="business">"Business"</option>
-                        <option value="first">"First"</option>
-                    </select>
-                    <label for="filter-reason">"Reason"</label>
-                    <select id="filter-reason">
-                        <option value="">"Any"</option>
-                        <option value="personal">"Personal"</option>
-                        <option value="business">"Business"</option>
-                    </select>
-                    <button type="button" id="filter-clear" class="btn-clear">"Clear"</button>
-                </div>
-            </div>
-            <div id="active-filters" class="active-filters"></div>
-            <div class="map-toggles">
-                <label class="map-toggle">
-                    <input type="checkbox" id="toggle-routes" checked />
-                    <span>{"\u{1F5FA}\u{FE0F} Routes"}</span>
-                </label>
-                <label class="map-toggle">
-                    <input type="checkbox" id="toggle-airports" checked />
-                    <span>{"\u{1F4CD} Airports"}</span>
-                </label>
-            </div>
-            <div class="map-legend">
-                <h3>{"\u{1F5FA}\u{FE0F} Routes"}</h3>
-                <div class="legend-item">
-                    <div class="legend-swatch legend-air"></div>
-                    <span>{"\u{2708}\u{FE0F} Air"}</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-swatch legend-rail"></div>
-                    <span>{"\u{1F686} Rail"}</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-swatch legend-boat"></div>
-                    <span>{"\u{1F6A2} Boat"}</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-swatch legend-transport"></div>
-                    <span>{"\u{1F697} Transport"}</span>
-                </div>
-                <div class="legend-count" id="journey-count">{journey_count}" journeys"</div>
-            </div>
-        </div>
-    }
-}
-
-#[component]
-fn StatsBar(stats: TravelStats, distance: String, year_range: String) -> impl IntoView {
-    view! {
-        <div class="dashboard-stats">
-            <div class="stat-row">
-                <div class="stat-card">
-                    <div class="stat-label">"Journeys"</div>
-                    <div class="stat-value">{stats.total_journeys}</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">"Routes"</div>
-                    <div class="stat-value">{stats.total_flights + stats.total_rail}</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">"Distance"</div>
-                    <div class="stat-value">{distance}</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">"Places"</div>
-                    <div class="stat-value">{stats.cities_visited}</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">"Countries"</div>
-                    <div class="stat-value">{stats.airports_visited}</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">"Years"</div>
-                    <div class="stat-value">{year_range}</div>
-                </div>
-            </div>
-        </div>
     }
 }
 

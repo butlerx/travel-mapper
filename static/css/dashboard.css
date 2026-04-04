@@ -7,9 +7,13 @@
 }
 
 /* ===== Stat Cards ===== */
-.dashboard-stats {
-  padding: var(--space-sm) var(--space-lg);
+.dashboard-layout .stats-overview {
+  padding: var(--space-lg) var(--space-xl);
   margin: 0;
+}
+
+.dashboard-layout .stats-filters {
+  padding: 0 var(--space-xl);
 }
 
 .stat-row {

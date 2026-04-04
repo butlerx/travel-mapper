@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM trips WHERE user_id = ? AND tripit_id IS NOT NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "e39b26f542da7d70d74e7275fed1d660b681f9ac9641349c7701ba180befff52"
+}

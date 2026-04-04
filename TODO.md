@@ -1,7 +1,24 @@
 # TODO
 
-- [x] Update the trip it sync to skip trips with 0 journeys
-- [ ] Pull reusable components out of Pages into their own component files
+- [x] Shared filter menu — migrate dashboard from client-side to server-side filtering
+  - [x] Extend `StatsFilters` component with `extended: bool` prop
+  - [x] Update dashboard route handler to use `DashboardQuery` + `db::hops::Search`
+  - [x] Update `DashboardPage` component to use shared `StatsFilters`
+  - [x] Simplify `static/js/map.js` — remove client-side filtering
+  - [x] Update stats page to use shared `StatsFilters` (extended=false)
+  - [x] Remove old `MapControls` filter panel; keep map toggles + legend
+  - [x] Remove dead filter CSS from `static/css/map.css`
+  - [x] Fix search SQL: airline/flight_number `%` wrapping, cabin_class/flight_reason case-insensitive
+  - [x] Remove Apply/Clear buttons, auto-submit all inputs
+  - [x] Add left/right padding to dashboard filters matching stats page
+  - [x] Compact footer to single line
+  - [x] Unify overview cards between dashboard and stats pages
+  - [x] Extract shared components (format_utils, overview_cards, top_list, attachment_gallery)
+  - [x] Squash commits into 3 logical groups
+  - [x] Verify lint + format pass
 - [ ] Improve Journey page layout
+- [ ] Have journeys and trips page use the same layout
 - [ ] Split up large CSS files
 - [ ] Add Doc for running service, include systemd unit for linux installs
+- [x] Add github repo link to footer
+- [ ] fix ci/cd. cant compile because of missing types for sql queries
