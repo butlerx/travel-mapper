@@ -66,6 +66,10 @@
   display: contents;
 }
 
+.nav-menu form {
+  margin: 0;
+}
+
 .nav-toggle {
   display: none;
   background: none;

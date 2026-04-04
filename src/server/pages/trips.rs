@@ -44,7 +44,7 @@ fn TripsPage(
                     </form>
                 </section>
 
-                <section class="card" style="margin-top:1rem;">
+                <section class="card mt-1">
                     <h2>"Auto Group"</h2>
                     <form method="post" action="/trips/auto-group">
                         <div class="form-group">
@@ -55,7 +55,7 @@ fn TripsPage(
                     </form>
                 </section>
 
-                <section class="card" style="margin-top:1rem;">
+                <section class="card mt-1">
                     <h2>"Trips"</h2>
                     {if trips.is_empty() {
                         view! {

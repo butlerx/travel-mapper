@@ -664,13 +664,13 @@ fn build_journey_list_html(
                     <form class="journey-controls" method="get" action="/journeys">
                         <div class="journey-control">
                             <label for="type-select" class="control-label">"Type"</label>
-                            <select id="type-select" name="type" onchange="this.form.submit()">
+                            <select id="type-select" name="type" data-auto-submit>
                                 {type_options}
                             </select>
                         </div>
                         <div class="journey-control">
                             <label for="sort-select" class="control-label">"Sort"</label>
-                            <select id="sort-select" name="sort" onchange="this.form.submit()">
+                            <select id="sort-select" name="sort" data-auto-submit>
                                 {sort_options}
                             </select>
                         </div>

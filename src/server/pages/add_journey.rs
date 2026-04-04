@@ -98,7 +98,7 @@ fn AddHop(
                             </div>
                         </div>
 
-                        <div id="fields-rail" class="type-fields" style="display:none">
+                        <div id="fields-rail" class="type-fields">
                             <div class="form-group">
                                 <label for="rail_carrier">"Carrier"</label>
                                 <input type="text" id="rail_carrier" name="rail_carrier" placeholder="Eurostar" />
@@ -133,7 +133,7 @@ fn AddHop(
                             </div>
                         </div>
 
-                        <div id="fields-boat" class="type-fields" style="display:none">
+                        <div id="fields-boat" class="type-fields">
                             <div class="form-group">
                                 <label for="ship_name">"Ship Name"</label>
                                 <input type="text" id="ship_name" name="ship_name" placeholder="MS Nordnorge" />
@@ -160,7 +160,7 @@ fn AddHop(
                             </div>
                         </div>
 
-                        <div id="fields-transport" class="type-fields" style="display:none">
+                        <div id="fields-transport" class="type-fields">
                             <div class="form-group">
                                 <label for="transport_carrier">"Carrier"</label>
                                 <input type="text" id="transport_carrier" name="transport_carrier" placeholder="Greyhound" />
@@ -186,7 +186,7 @@ fn AddHop(
                             </div>
                             <div class="form-group">
                                 <label for="cost_currency">"Currency"</label>
-                                <input type="text" id="cost_currency" name="cost_currency" placeholder="EUR" maxlength="3" style="text-transform:uppercase" />
+                                <input type="text" id="cost_currency" name="cost_currency" placeholder="EUR" maxlength="3" />
                             </div>
                         </div>
 

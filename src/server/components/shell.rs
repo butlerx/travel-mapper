@@ -24,14 +24,13 @@ pub fn Shell(
                 <link rel="apple-touch-icon" href="/static/logo.svg" />
                 <link rel="manifest" href="/manifest.json" />
                 <link rel="stylesheet" href="/static/style.css" />
-                {og_meta.map(|m| view! { <div inner_html=m style="display:none" /> })}
+                {og_meta.map(|m| view! { <div class="hidden" inner_html=m /> })}
                 <script defer src="/static/nav.js"></script>
+                <script defer src="/static/auto-submit.js"></script>
+                <script defer src="/static/sw-register.js"></script>
             </head>
             <body class=class>
                 {children()}
-                <script>
-                    "if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js'); }"
-                </script>
             </body>
         </html>
     }

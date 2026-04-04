@@ -19,6 +19,10 @@
   margin-left: var(--space-sm);
 }
 
+.hidden {
+  display: none;
+}
+
 /* ===== Responsive ===== */
 @media (max-width: 640px) {
   .container-wide {

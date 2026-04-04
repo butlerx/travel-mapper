@@ -540,7 +540,7 @@ fn TopList(title: &'static str, items: Vec<CountedItem>) -> impl IntoView {
                     <ul class="stats-top-list">
                         {items.into_iter().map(|item| {
                             let pct = item.count * 100 / max_count;
-                            let width = format!("width: {pct}%");
+                            let width = format!("--pct: {pct}%");
                             view! {
                                 <li class="stats-top-item">
                                     <div class="stats-top-bar" style=width></div>
@@ -572,7 +572,7 @@ fn StatsFilters(
                 view! {
                     <div class="stats-filter-group">
                         <label for="year-filter">"Year:"</label>
-                        <select name="year" id="year-filter" onchange="this.form.submit()">
+                        <select name="year" id="year-filter" data-auto-submit>
                             <option value="" selected=sel.is_none()>"All"</option>
                             {available_years.into_iter().rev().map(|y| {
                                 let is_selected = sel.as_ref() == Some(&y);
@@ -587,7 +587,7 @@ fn StatsFilters(
             }}
             <div class="stats-filter-group">
                 <label for="travel-type-filter">"Type:"</label>
-                <select name="travel_type" id="travel-type-filter" onchange="this.form.submit()">
+                <select name="travel_type" id="travel-type-filter" data-auto-submit>
                     <option value="" selected=selected_travel_type.is_none()>"All"</option>
                     <option value="air" selected=selected_travel_type.as_deref() == Some("air")>
                         "Flights"

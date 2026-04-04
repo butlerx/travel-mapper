@@ -379,6 +379,10 @@
   border-top: 1px solid var(--color-border);
 }
 
+.carrier-icon {
+  border-radius: 50%;
+}
+
 .btn-block {
   width: 100%;
 }

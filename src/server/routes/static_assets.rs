@@ -80,6 +80,19 @@ js_handler!(
     serve_trip_map_js,
     include_str!("../../../static/js/trip-map.js")
 );
+js_handler!(serve_push_js, include_str!("../../../static/js/push.js"));
+js_handler!(
+    serve_settings_copy_js,
+    include_str!("../../../static/js/settings-copy.js")
+);
+js_handler!(
+    serve_sw_register_js,
+    include_str!("../../../static/js/sw-register.js")
+);
+js_handler!(
+    serve_auto_submit_js,
+    include_str!("../../../static/js/auto-submit.js")
+);
 
 svg_handler!(serve_logo, include_str!("../../../static/icons/logo.svg"));
 svg_handler!(
@@ -170,6 +183,10 @@ pub fn routes() -> ApiRouter<crate::server::AppState> {
         .route("/edit-panel.js", get(serve_edit_panel_js))
         .route("/trip-detail.js", get(serve_trip_detail_js))
         .route("/trip-map.js", get(serve_trip_map_js))
+        .route("/push.js", get(serve_push_js))
+        .route("/settings-copy.js", get(serve_settings_copy_js))
+        .route("/sw-register.js", get(serve_sw_register_js))
+        .route("/auto-submit.js", get(serve_auto_submit_js))
         .route("/icons/logo.svg", get(serve_logo))
         .route("/icons/plane.svg", get(serve_icon_plane))
         .route("/icons/train.svg", get(serve_icon_train))

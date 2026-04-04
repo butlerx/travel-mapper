@@ -30,7 +30,7 @@ pub(super) fn FeedSection(tokens: Vec<db::feed_tokens::Row>, base_url: String) -
                                     </div>
                                     <div class="token-actions">
                                         <span class="new-token-value">
-                                            <code data-copy-value=full_url style="display:none"></code>
+                                            <code class="hidden" data-copy-value=full_url></code>
                                             <button type="button" class="btn btn-sm btn-primary" data-copy-trigger>"Copy URL"</button>
                                         </span>
                                         <form method="post" action=delete_url>

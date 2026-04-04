@@ -168,7 +168,6 @@ pub fn CarrierIcon(
             height=size_str
             onerror=onerror
             loading="lazy"
-            style="border-radius:50%"
         />
     }
 }

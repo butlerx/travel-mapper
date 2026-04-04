@@ -168,3 +168,12 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
   color: var(--color-info-text);
   border-color: var(--color-info-border);
 }
+
+/* ===== Add Journey Form ===== */
+.type-fields {
+  display: none;
+}
+
+#cost_currency {
+  text-transform: uppercase;
+}

@@ -186,18 +186,7 @@ fn Settings(
                     <PushSection vapid_public_key=vapid_public_key />
                 </div>
 
-                <script>
-                    "document.querySelectorAll('[data-copy-trigger]').forEach(function(btn){"
-                    "btn.addEventListener('click',function(){"
-                    "var code=btn.closest('.new-token-value').querySelector('[data-copy-value]');"
-                    "var text=code.getAttribute('data-copy-value');"
-                    "navigator.clipboard.writeText(text).then(function(){"
-                    "btn.textContent='Copied!';"
-                    "setTimeout(function(){btn.textContent='Copy';},2000);"
-                    "});"
-                    "});"
-                    "});"
-                </script>
+                <script defer src="/static/settings-copy.js"></script>
             </main>
         </Shell>
     }
