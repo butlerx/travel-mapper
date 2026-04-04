@@ -134,19 +134,95 @@ pub async fn fetch_trips(
 
         match fetch_trip_objects(api, geocoder, &trip_id).await {
             Ok(hops) => {
-                let count = hops.len();
-                if count > 0 {
-                    tracing::debug!(count, "found hops");
+                if hops.is_empty() {
+                    tracing::debug!(trip_id, trip_name, "skipping trip with 0 hops");
+                } else {
+                    tracing::debug!(count = hops.len(), "found hops");
+                    result.push(Trip {
+                        id: trip_id,
+                        display_name: trip_name,
+                        hops,
+                    });
                 }
-                result.push(Trip {
-                    id: trip_id,
-                    display_name: trip_name,
-                    hops,
-                });
             }
             Err(e) => tracing::warn!(trip_id, error = %e, "trip fetch failed"),
         }
     }
 
     Ok(result)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::geocode::Geocoder;
+    use serde_json::json;
+
+    struct MockApi;
+
+    #[async_trait::async_trait]
+    impl TripItApi for MockApi {
+        async fn list_trips(
+            &self,
+            past: bool,
+            _page: u64,
+            _page_size: u64,
+        ) -> Result<Value, FetchError> {
+            if past {
+                Ok(json!({
+                    "max_page": "1",
+                    "Trip": [
+                        {"id": "1", "display_name": "Trip With Hops"},
+                        {"id": "2", "display_name": "Empty Trip"},
+                        {"id": "3", "display_name": "Another Trip With Hops"},
+                    ]
+                }))
+            } else {
+                Ok(json!({"max_page": "1"}))
+            }
+        }
+
+        async fn get_trip_objects(&self, trip_id: &str) -> Result<Value, FetchError> {
+            match trip_id {
+                "1" => Ok(json!({
+                    "AirObject": {
+                        "Segment": {
+                            "start_airport_code": "DUB",
+                            "end_airport_code": "LHR",
+                            "StartDateTime": {"date": "2024-06-01"},
+                            "EndDateTime": {"date": "2024-06-01"},
+                        }
+                    }
+                })),
+                "3" => Ok(json!({
+                    "AirObject": {
+                        "Segment": {
+                            "start_airport_code": "JFK",
+                            "end_airport_code": "LAX",
+                            "StartDateTime": {"date": "2024-07-01"},
+                            "EndDateTime": {"date": "2024-07-01"},
+                        }
+                    }
+                })),
+                // Trip "2" and any unknown IDs return no objects
+                _ => Ok(json!({})),
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn fetch_trips_skips_trips_with_zero_hops() {
+        let api = MockApi;
+        let geocoder = Geocoder::default();
+
+        let trips = fetch_trips(&api, &geocoder).await.unwrap();
+
+        assert_eq!(trips.len(), 2, "should exclude the trip with 0 hops");
+        assert_eq!(trips[0].id, "1");
+        assert_eq!(trips[0].display_name, "Trip With Hops");
+        assert!(!trips[0].hops.is_empty());
+        assert_eq!(trips[1].id, "3");
+        assert_eq!(trips[1].display_name, "Another Trip With Hops");
+        assert!(!trips[1].hops.is_empty());
+    }
 }
