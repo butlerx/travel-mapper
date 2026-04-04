@@ -22,6 +22,74 @@ use leptos::prelude::*;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+/// Sort order for the trips list page.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum TripSort {
+    /// Newest trips first (default).
+    #[default]
+    DateDesc,
+    /// Oldest trips first.
+    DateAsc,
+    /// Trip name A → Z.
+    NameAsc,
+    /// Trip name Z → A.
+    NameDesc,
+    /// Most journeys first.
+    CountDesc,
+    /// Fewest journeys first.
+    CountAsc,
+}
+
+impl TripSort {
+    /// Label shown in the sort control dropdown.
+    #[must_use]
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::DateDesc => "Date (newest)",
+            Self::DateAsc => "Date (oldest)",
+            Self::NameAsc => "Name (A→Z)",
+            Self::NameDesc => "Name (Z→A)",
+            Self::CountDesc => "Journeys (most)",
+            Self::CountAsc => "Journeys (fewest)",
+        }
+    }
+
+    /// Query string value matching serde rename.
+    #[must_use]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::DateDesc => "date_desc",
+            Self::DateAsc => "date_asc",
+            Self::NameAsc => "name_asc",
+            Self::NameDesc => "name_desc",
+            Self::CountDesc => "count_desc",
+            Self::CountAsc => "count_asc",
+        }
+    }
+
+    /// All variants for rendering the dropdown.
+    #[must_use]
+    pub fn all() -> &'static [Self] {
+        &[
+            Self::DateDesc,
+            Self::DateAsc,
+            Self::NameAsc,
+            Self::NameDesc,
+            Self::CountDesc,
+            Self::CountAsc,
+        ]
+    }
+}
+
+/// Query parameters for the trips list page.
+#[derive(Deserialize, JsonSchema)]
+pub struct TripQuery {
+    sort: Option<TripSort>,
+    error: Option<String>,
+    success: Option<String>,
+}
+
 /// JSON response for a single trip.
 #[derive(Debug, Default, Serialize, JsonSchema)]
 pub struct TripResponse {
@@ -90,7 +158,7 @@ impl MultiFormatResponse for TripResponse {
 pub async fn handler(
     State(state): State<AppState>,
     auth: AuthUser,
-    Query(feedback): Query<FormFeedback>,
+    Query(query): Query<TripQuery>,
     headers: HeaderMap,
 ) -> Response {
     let format = negotiate_format(&headers);
@@ -106,10 +174,24 @@ pub async fn handler(
         }
     };
 
+    let mut responses: Vec<TripResponse> = trips.into_iter().map(TripResponse::from).collect();
+    let sort = query.sort.unwrap_or_default();
+    match sort {
+        TripSort::DateDesc => responses.sort_by(|a, b| b.start_date.cmp(&a.start_date)),
+        TripSort::DateAsc => responses.sort_by(|a, b| a.start_date.cmp(&b.start_date)),
+        TripSort::NameAsc => responses.sort_by(|a, b| a.name.cmp(&b.name)),
+        TripSort::NameDesc => responses.sort_by(|a, b| b.name.cmp(&a.name)),
+        TripSort::CountDesc => responses.sort_by(|a, b| b.hop_count.cmp(&a.hop_count)),
+        TripSort::CountAsc => responses.sort_by(|a, b| a.hop_count.cmp(&b.hop_count)),
+    }
+
     if format == super::ResponseFormat::Html {
-        crate::server::pages::trips::render_page(trips, feedback)
+        let feedback = FormFeedback {
+            error: query.error,
+            success: query.success,
+        };
+        crate::server::pages::trips::render_page(responses, sort, feedback)
     } else {
-        let responses: Vec<TripResponse> = trips.into_iter().map(TripResponse::from).collect();
         TripResponse::into_format_response(&responses, format, StatusCode::OK)
     }
 }
@@ -282,7 +364,7 @@ pub async fn create_handler(
     };
 
     if is_form_request(&headers) {
-        redirect_back_or(&headers, "/trips")
+        Redirect::to(&format!("/trips/{id}")).into_response()
     } else {
         let response = TripResponse {
             id,

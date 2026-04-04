@@ -32,10 +32,15 @@
 
 .journey-detail-title-row {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
   gap: var(--space-md);
   flex-wrap: wrap;
+}
+
+.journey-detail-title-row h1,
+.journey-detail-title-row p {
+  margin-bottom: 0;
 }
 
 .journey-detail-route {
