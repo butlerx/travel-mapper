@@ -47,6 +47,7 @@ jobs:
         with:
           tool: cross
 
+      - run: mise run db:prepare
       - name: Build release binary
         run: mise run ci:release-build ${{ matrix.target }}
         env:
