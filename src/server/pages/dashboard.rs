@@ -335,7 +335,7 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
         let body = body_text(response).await;
         assert!(body.contains("id=\"map\""));
-        assert!(body.contains("id=\"filter-type\""));
+        assert!(body.contains("id=\"travel-type-filter\""));
         assert!(body.contains("id=\"filter-date-from\""));
         assert!(body.contains("map-legend"));
         assert!(body.contains("id=\"initial-journeys\""));
