@@ -1,5 +1,7 @@
 document.querySelectorAll('[data-auto-submit]').forEach(function (el) {
   el.addEventListener('change', function () {
-    el.form.submit();
+    /** @type {HTMLFormElement | null} */
+    const form = el.closest('form');
+    if (form) form.submit();
   });
 });

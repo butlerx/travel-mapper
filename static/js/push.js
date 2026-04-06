@@ -1,6 +1,8 @@
 (async () => {
-  const button = document.getElementById('push-toggle');
+  /** @type {HTMLButtonElement | null} */
+  const button = /** @type {HTMLButtonElement | null} */ (document.getElementById('push-toggle'));
   const status = document.getElementById('push-status');
+  /** @type {HTMLElement | null} */
   const config = document.getElementById('push-config');
   if (!button || !status || !config) {
     return;
