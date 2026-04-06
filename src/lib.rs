@@ -1,6 +1,7 @@
 //! Travel Mapper — sync `TripIt` travel history to `SQLite` and serve it via a web
 //! dashboard, REST API, or CSV export.
 
+#![recursion_limit = "256"]
 #![warn(clippy::pedantic)]
 
 /// Encryption and password-hashing helpers — AES-256-GCM and Argon2.
