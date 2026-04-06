@@ -98,7 +98,7 @@ run         = ["sqlx database drop -y", "sqlx database create", "sqlx migrate ru
 
 [tasks."db:prepare"]
 description = "Generate .sqlx/ query cache for offline compile-time checking"
-run         = "cargo sqlx prepare"
+run         = "cargo sqlx prepare -- --all-targets"
 depends     = ["db:migrate"]
 sources     = ["src/**/*.rs", "migrations/*.sql"]
 outputs     = [".sqlx/*.json"]

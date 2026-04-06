@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT ship_name, confirmation_num FROM boat_details WHERE hop_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "ship_name",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "confirmation_num",
+        "ordinal": 1,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "69a204908cad95923a35617927d7cfb1a587abc744355bde622fa41dd4572e95"
+}

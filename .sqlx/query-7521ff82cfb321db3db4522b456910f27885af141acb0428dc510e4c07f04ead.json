@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT carrier, train_number FROM rail_details WHERE hop_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "carrier",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "train_number",
+        "ordinal": 1,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "7521ff82cfb321db3db4522b456910f27885af141acb0428dc510e4c07f04ead"
+}

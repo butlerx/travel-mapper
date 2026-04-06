@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT airline, flight_number, aircraft_type, cabin_class FROM flight_details WHERE hop_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "airline",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "flight_number",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "aircraft_type",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "cabin_class",
+        "ordinal": 3,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "1af2e51ed0d94dc0d4faeef30c1d98c5ff62d492414e96be32f254f735ed12e8"
+}

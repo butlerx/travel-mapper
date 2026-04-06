@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT carrier_name, vehicle_description, notes FROM transport_details WHERE hop_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "carrier_name",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "vehicle_description",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "notes",
+        "ordinal": 2,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "dce30e944baaa388a650dc48c8178e63009be2951a883731ab502f51db6e07ae"
+}
