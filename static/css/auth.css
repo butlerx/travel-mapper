@@ -1,0 +1,22 @@
+/* ===== Auth Pages ===== */
+.auth-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: var(--space-md);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 380px;
+  box-shadow: var(--shadow-glow);
+}
+
+.auth-card h1 {
+  text-align: center;
+  margin-bottom: var(--space-lg);
+  background: linear-gradient(to right, var(--color-text), var(--color-primary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}

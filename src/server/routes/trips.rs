@@ -80,6 +80,27 @@ impl TripSort {
             Self::CountAsc,
         ]
     }
+
+    /// Derive the section heading key for a trip under this sort.
+    ///
+    /// Date sorts group by year; name sorts group by first letter; count sorts
+    /// fall back to first letter of name.
+    #[must_use]
+    pub fn group_key(self, trip: &TripResponse) -> String {
+        match self {
+            Self::DateDesc | Self::DateAsc => trip
+                .start_date
+                .as_deref()
+                .and_then(|d| d.get(..4))
+                .unwrap_or("No date")
+                .to_owned(),
+            Self::NameAsc | Self::NameDesc | Self::CountDesc | Self::CountAsc => trip
+                .name
+                .chars()
+                .next()
+                .map_or_else(|| "?".to_owned(), |c| c.to_uppercase().to_string()),
+        }
+    }
 }
 
 /// Query parameters for the trips list page.

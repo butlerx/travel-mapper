@@ -42,7 +42,20 @@ fn TripsPage(
     view! {
         <Shell title="Trips".to_owned()>
             <NavBar current="trips" />
-            <main class="container-wide">
+            <main class="data-page">
+                <div class="data-page-header">
+                    <h1>"Trips"</h1>
+                    <span class="data-page-count">{format!("{trip_count} trips")}</span>
+                    <form class="journey-controls" method="get" action="/trips">
+                        <div class="journey-control">
+                            <label for="sort-select" class="control-label">"Sort"</label>
+                            <select id="sort-select" name="sort" data-auto-submit>
+                                {sort_options}
+                            </select>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" type="button" data-edit-open>"Actions"</button>
+                    </form>
+                </div>
 
                 {error.map(|e| view! {
                     <div class="alert alert-error" role="alert">{e}</div>
@@ -51,54 +64,54 @@ fn TripsPage(
                     <div class="alert alert-success" role="status">"Trip action completed."</div>
                 })}
 
-                <header class="journey-detail-header">
-                    <div class="journey-detail-title-row">
-                        <h1>"Trips"</h1>
-                        <p class="muted">{format!("{trip_count} trips")}</p>
-                        <form class="journey-controls" method="get" action="/trips">
-                            <div class="journey-control">
-                                <label for="sort-select" class="control-label">"Sort"</label>
-                                <select id="sort-select" name="sort" data-auto-submit>
-                                    {sort_options}
-                                </select>
-                            </div>
-                        </form>
-                        <button class="btn btn-secondary btn-sm" type="button" data-edit-open>"Actions"</button>
-                    </div>
-                </header>
-
-                <section class="journey-detail-section">
-                    {if trips.is_empty() {
-                        view! {
-                            <p class="muted">"No trips yet. Open Actions to create one or auto-group your journeys."</p>
-                        }.into_any()
-                    } else {
-                        view! {
-                            <div class="data-card-list">
-                                {trips.into_iter().map(|trip| {
-                                    let range = match (&trip.start_date, &trip.end_date) {
-                                        (Some(start), Some(end)) if start == end => start.clone(),
-                                        (Some(start), Some(end)) => format!("{start} \u{2013} {end}"),
-                                        (Some(start), None) => start.clone(),
-                                        (None, Some(end)) => end.clone(),
-                                        (None, None) => "No dates yet".to_string(),
-                                    };
-                                    view! {
-                                        <a href={format!("/trips/{}", trip.id)} class="journey-card-link">
-                                            <div class="data-card journey-card">
-                                                <div class="journey-card-route">{trip.name.clone()}</div>
-                                                <div class="journey-card-meta">
-                                                    <span class="journey-card-date">{range}</span>
-                                                    <span class="journey-card-badge">{format!("{} journeys", trip.hop_count)}</span>
-                                                </div>
-                                            </div>
-                                        </a>
-                                    }
-                                }).collect::<Vec<_>>()}
-                            </div>
-                        }.into_any()
-                    }}
-                </section>
+                {if trips.is_empty() {
+                    view! {
+                        <p class="muted">"No trips yet. Open Actions to create one or auto-group your journeys."</p>
+                    }.into_any()
+                } else {
+                    let mut groups: Vec<(String, Vec<AnyView>)> = Vec::new();
+                    for trip in &trips {
+                        let key = sort.group_key(trip);
+                        let range = match (&trip.start_date, &trip.end_date) {
+                            (Some(start), Some(end)) if start == end => start.clone(),
+                            (Some(start), Some(end)) => format!("{start} \u{2013} {end}"),
+                            (Some(start), None) => start.clone(),
+                            (None, Some(end)) => end.clone(),
+                            (None, None) => "No dates yet".to_string(),
+                        };
+                        let card = view! {
+                            <a href={format!("/trips/{}", trip.id)} class="journey-card-link">
+                                <div class="data-card journey-card">
+                                    <div class="journey-card-route">{trip.name.clone()}</div>
+                                    <div class="journey-card-meta">
+                                        <span class="journey-card-date">{range}</span>
+                                        <span class="journey-card-badge">{format!("{} journeys", trip.hop_count)}</span>
+                                    </div>
+                                </div>
+                            </a>
+                        }.into_any();
+                        if groups.last().is_some_and(|(k, _)| *k == key) {
+                            groups.last_mut().unwrap().1.push(card);
+                        } else {
+                            groups.push((key, vec![card]));
+                        }
+                    }
+                    let sections: Vec<AnyView> = groups
+                        .into_iter()
+                        .map(|(heading_key, cards)| {
+                            let count = cards.len();
+                            let heading = format!("{heading_key} ({count})");
+                            view! {
+                                <section class="journey-year-section">
+                                    <h2 class="journey-year-heading">{heading}</h2>
+                                    <div class="data-card-list">{cards}</div>
+                                </section>
+                            }
+                            .into_any()
+                        })
+                        .collect();
+                    view! { <div>{sections}</div> }.into_any()
+                }}
 
                 <div id="edit-backdrop" class="edit-panel-backdrop"></div>
                 <section id="edit-form" class="journey-edit-form">

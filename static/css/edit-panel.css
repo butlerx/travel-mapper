@@ -1,0 +1,88 @@
+/* Edit Form — Slide-in Panel */
+.edit-panel-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.3s,
+    visibility 0.3s;
+  z-index: 1100;
+}
+
+.edit-panel-backdrop.open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.journey-edit-form {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(480px, 90vw);
+  height: 100vh;
+  background: var(--color-surface);
+  border-left: 1px solid var(--color-border);
+  padding: var(--space-lg);
+  overflow-y: auto;
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
+  z-index: 1101;
+}
+
+.journey-edit-form.open {
+  transform: translateX(0);
+}
+
+.journey-edit-form h3 {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 var(--space-lg) 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.edit-panel-close {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: var(--text-xl);
+  cursor: pointer;
+  padding: var(--space-xs);
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.edit-panel-close:hover {
+  color: var(--color-text);
+}
+
+.edit-form-fieldset {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-md) var(--space-lg);
+  margin: 0 0 var(--space-md) 0;
+}
+
+.edit-form-fieldset legend {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-accent);
+  padding: 0 var(--space-xs);
+}
+
+.edit-form-actions {
+  display: flex;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+  padding-bottom: var(--space-lg);
+}
+
+@media (max-width: 640px) {
+  .journey-edit-form {
+    width: 100vw;
+  }
+}

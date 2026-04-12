@@ -1,0 +1,114 @@
+/* ===== Hop Cards (custom override) ===== */
+.journey-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-lg);
+}
+
+.journey-card-route {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--color-text);
+  min-width: 0;
+}
+
+.journey-card-place {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.journey-card-arrow {
+  color: var(--color-primary);
+  flex-shrink: 0;
+  font-size: var(--text-lg);
+}
+
+.journey-card-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: var(--text-xs);
+}
+
+.journey-card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25em;
+  padding: 2px var(--space-sm);
+  border-radius: 9999px;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  text-transform: capitalize;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+.journey-card-badge.badge-air {
+  color: var(--color-type-air);
+  border-color: var(--color-type-air-border);
+}
+.journey-card-badge.badge-rail {
+  color: var(--color-type-rail);
+  border-color: var(--color-type-rail-border);
+}
+.journey-card-badge.badge-boat {
+  color: var(--color-type-boat);
+  border-color: var(--color-type-boat-border);
+}
+.journey-card-badge.badge-transport {
+  color: var(--color-type-transport);
+  border-color: var(--color-type-transport-border);
+}
+
+.journey-card-date {
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+/* Journey card links */
+.journey-card-link {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+.journey-card-link:hover {
+  color: inherit;
+}
+
+@media (max-width: 640px) {
+  .data-page {
+    padding: var(--space-md) var(--space-sm);
+  }
+
+  .data-page-header {
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+
+  .journey-controls {
+    margin-left: 0;
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .journey-control {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .journey-controls select {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .data-card-list {
+    grid-template-columns: 1fr;
+  }
+}

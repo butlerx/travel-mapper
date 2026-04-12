@@ -139,9 +139,10 @@ fn TripDetailPage(
         .collect();
 
     view! {
-        <Shell title="Trip Detail".to_owned()>
+        <Shell title="Trip Detail".to_owned() body_class="journey-detail-layout">
             <NavBar current="trips" />
-            <main class="container-wide" data-trip-id=trip_id_str>
+            <main class="journey-detail-page" data-trip-id=trip_id_str>
+                <a href="/trips" class="journey-detail-back">"\u{2190} Trips"</a>
 
                 {error.map(|e| view! {
                     <div class="alert alert-error" role="alert">{e}</div>
@@ -150,8 +151,8 @@ fn TripDetailPage(
                     <div class="alert alert-success" role="status">"Trip action completed."</div>
                 })}
 
-                <header class="journey-detail-header">
-                    <div class="journey-detail-title-row">
+                <header class="page-header">
+                    <div class="page-title-row">
                         <h1>{trip.name.clone()}</h1>
                         <button class="btn btn-secondary btn-sm" type="button" data-edit-open>"Edit"</button>
                     </div>
@@ -161,7 +162,7 @@ fn TripDetailPage(
 
                 <div id="trip-map" data-legs=legs_json></div>
 
-                <section class="journey-detail-section">
+                <section class="content-section">
                     <h2>"Journeys"</h2>
                     {if trip_journeys.is_empty() {
                         view! { <p class="muted">"No journeys assigned yet."</p> }.into_any()

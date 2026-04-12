@@ -274,6 +274,9 @@ export DATABASE_URL=sqlite:/var/lib/travel-mapper/travel.db
 
 Both binaries support graceful shutdown via `Ctrl+C` (SIGINT).
 
+For systemd units, reverse proxy configuration, and full Linux deployment
+instructions, see the **[Deployment Guide](deployment.md)**.
+
 ---
 
 ## Database Management

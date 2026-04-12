@@ -23,7 +23,7 @@ use axum::{
 use leptos::prelude::*;
 use percent_encoding::{AsciiSet, NON_ALPHANUMERIC, utf8_percent_encode};
 use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 /// API response type for a single travel journey.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema)]
@@ -491,10 +491,30 @@ impl JourneySort {
     }
 }
 
+/// Deserialize an optional enum field that may arrive as an empty string from
+/// HTML `<select>` elements. An empty value (the "All types" option) is mapped
+/// to `None` instead of producing a deserialization error.
+fn empty_string_as_none<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    let s: Option<String> = Option::deserialize(deserializer)?;
+    match s.as_deref() {
+        None | Some("") => Ok(None),
+        Some(_) => {
+            let value = T::deserialize(serde::de::value::StringDeserializer::<D::Error>::new(
+                s.unwrap(),
+            ))?;
+            Ok(Some(value))
+        }
+    }
+}
+
 /// Query parameters for filtering journey lists.
 #[derive(Deserialize, JsonSchema)]
 pub struct JourneyQuery {
-    #[serde(rename = "type")]
+    #[serde(rename = "type", default, deserialize_with = "empty_string_as_none")]
     travel_type: Option<JourneyTravelType>,
     origin: Option<String>,
     dest: Option<String>,

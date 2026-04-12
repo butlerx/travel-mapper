@@ -1,0 +1,82 @@
+/* ===== Hop List ===== */
+.journey-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.journey-item {
+  display: grid;
+  grid-template-columns: 2.5rem 1fr 1fr auto;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.journey-item:hover {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-glow);
+}
+
+.journey-type {
+  font-size: var(--text-xl);
+  text-align: center;
+}
+
+.journey-label {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 1px;
+}
+
+.journey-value {
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.journey-date {
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.journey-header {
+  display: none;
+}
+
+/* Travel type text colors */
+.journey-item[data-type='air'] .journey-value,
+.type-air {
+  color: var(--color-type-air);
+}
+.journey-item[data-type='rail'] .journey-value,
+.type-rail {
+  color: var(--color-type-rail);
+}
+.journey-item[data-type='boat'] .journey-value,
+.type-boat {
+  color: var(--color-type-boat);
+}
+.journey-item[data-type='transport'] .journey-value,
+.type-transport {
+  color: var(--color-type-transport);
+}
+
+@media (max-width: 640px) {
+  .journey-item {
+    grid-template-columns: 2.5rem 1fr;
+    gap: var(--space-sm);
+  }
+
+  .journey-date {
+    grid-column: 2;
+  }
+}

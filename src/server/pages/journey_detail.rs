@@ -288,8 +288,8 @@ fn JourneyDetailPage(
                     <div class="alert alert-success" role="status">"Journey updated successfully!"</div>
                 })}
 
-                <header class="journey-detail-header">
-                    <div class="journey-detail-title-row">
+                <header class="page-header">
+                    <div class="page-title-row">
                         <h1 class="journey-detail-route">
                             <span>{emoji}</span>
                             <CarrierIcon carrier=carrier travel_type=travel_type_str size=24 />
@@ -309,15 +309,26 @@ fn JourneyDetailPage(
                         <span class=css>{label}</span>
                     })}
                     {countries_view}
-                    {cost_view.map(|text| view! {
-                        <p class="journey-detail-cost">{text}</p>
-                    })}
-                    {loyalty_view.map(|program| view! {
-                        <p class="journey-detail-cost">{format!("Loyalty: {program}")}</p>
-                    })}
-                    {miles_view.map(|text| view! {
-                        <p class="journey-detail-cost">{text}</p>
-                    })}
+                    <div class="journey-detail-meta">
+                        {cost_view.map(|text| view! {
+                            <span class="journey-detail-meta-item">
+                                <span class="journey-detail-meta-label">"Cost"</span>
+                                {text}
+                            </span>
+                        })}
+                        {loyalty_view.map(|program| view! {
+                            <span class="journey-detail-meta-item">
+                                <span class="journey-detail-meta-label">"Loyalty"</span>
+                                {program}
+                            </span>
+                        })}
+                        {miles_view.map(|text| view! {
+                            <span class="journey-detail-meta-item">
+                                <span class="journey-detail-meta-label">"Miles"</span>
+                                {text}
+                            </span>
+                        })}
+                    </div>
                 </header>
 
                 <div

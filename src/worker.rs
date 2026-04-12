@@ -21,12 +21,38 @@ use tokio::sync::watch;
 
 /// Default enrichment TTL for non-realtime data (24 hours).
 pub(crate) const ENRICHMENT_TTL_SECS: i64 = 24 * 60 * 60;
+
+/// Write an empty sentinel row so `is_enrichment_fresh` skips this hop/provider
+/// until the TTL expires.
+async fn write_no_data_sentinel(pool: &SqlitePool, hop_id: i64, provider: &str) {
+    if let Err(err) = (db::status_enrichments::Upsert {
+        hop_id,
+        provider,
+        status: "",
+        delay_minutes: None,
+        dep_gate: "",
+        dep_terminal: "",
+        arr_gate: "",
+        arr_terminal: "",
+        dep_platform: "",
+        arr_platform: "",
+        raw_json: "",
+    })
+    .execute(pool)
+    .await
+    {
+        tracing::warn!(hop_id, error = %err, "failed to write no-data sentinel");
+    }
+}
 /// Shorter TTL for flights departing within 1 day (2 hours).
 pub(crate) const REALTIME_TTL_SECS: i64 = 2 * 60 * 60;
 
 /// How often the worker runs a periodic enrichment sweep across all users.
 const PERIODIC_ENRICHMENT_INTERVAL: std::time::Duration =
     std::time::Duration::from_secs(4 * 60 * 60);
+
+/// Backoff duration after an external API signals rate limiting.
+const RATE_LIMIT_BACKOFF: std::time::Duration = std::time::Duration::from_secs(60 * 60);
 
 /// Result of a successful `TripIt` sync — counts and duration.
 #[derive(Debug)]
@@ -297,6 +323,7 @@ pub async fn run_sync_worker(
     let mut last_enrichment_sweep = Instant::now()
         .checked_sub(PERIODIC_ENRICHMENT_INTERVAL)
         .unwrap_or_else(Instant::now);
+    let mut opensky_backoff_until: Option<Instant> = None;
 
     loop {
         tokio::select! {
@@ -310,7 +337,8 @@ pub async fn run_sync_worker(
         match db::sync_jobs::ClaimNext.execute(&config.pool).await {
             Ok(Some(job)) => {
                 tracing::info!(job_id = job.id, user_id = job.user_id, "claimed sync job");
-                process_sync_job(&config, &job).await;
+                opensky_backoff_until =
+                    process_sync_job(&config, &job, opensky_backoff_until).await;
             }
             Ok(None) => {}
             Err(err) => {
@@ -319,39 +347,54 @@ pub async fn run_sync_worker(
         }
 
         if last_enrichment_sweep.elapsed() >= PERIODIC_ENRICHMENT_INTERVAL {
-            run_periodic_enrichment_sweep(&config).await;
+            opensky_backoff_until =
+                run_periodic_enrichment_sweep(&config, opensky_backoff_until).await;
             last_enrichment_sweep = Instant::now();
         }
     }
 }
 
-async fn run_periodic_enrichment_sweep(config: &SyncWorkerConfig) {
+async fn run_periodic_enrichment_sweep(
+    config: &SyncWorkerConfig,
+    opensky_backoff_until: Option<Instant>,
+) -> Option<Instant> {
     let user_ids = match db::sync_state::GetAllUserIds.execute(&config.pool).await {
         Ok(ids) => ids,
         Err(err) => {
             tracing::error!(error = %err, "failed to fetch user ids for periodic enrichment");
-            return;
+            return opensky_backoff_until;
         }
     };
 
     if user_ids.is_empty() {
-        return;
+        return opensky_backoff_until;
     }
 
     tracing::info!(users = user_ids.len(), "starting periodic enrichment sweep");
 
+    let mut backoff = opensky_backoff_until;
     for user_id in &user_ids {
         enrich_flight_statuses(config, *user_id).await;
-        verify_flight_routes(config, *user_id).await;
+        if backoff.is_none_or(|until| Instant::now() >= until)
+            && verify_flight_routes(config, *user_id).await
+        {
+            backoff = Some(Instant::now() + RATE_LIMIT_BACKOFF);
+        }
         enrich_rail_statuses(config, *user_id).await;
     }
 
     tracing::info!(users = user_ids.len(), "periodic enrichment sweep complete");
+    backoff
 }
 
-async fn process_sync_job(config: &SyncWorkerConfig, job: &db::sync_jobs::Row) {
+async fn process_sync_job(
+    config: &SyncWorkerConfig,
+    job: &db::sync_jobs::Row,
+    opensky_backoff_until: Option<Instant>,
+) -> Option<Instant> {
     let result = build_client_and_sync(config, job).await;
 
+    let mut backoff = opensky_backoff_until;
     match result {
         Ok(ref sync_result) => {
             tracing::info!(
@@ -363,7 +406,11 @@ async fn process_sync_job(config: &SyncWorkerConfig, job: &db::sync_jobs::Row) {
                 "sync job completed",
             );
             enrich_flight_statuses(config, job.user_id).await;
-            verify_flight_routes(config, job.user_id).await;
+            if backoff.is_none_or(|until| Instant::now() >= until)
+                && verify_flight_routes(config, job.user_id).await
+            {
+                backoff = Some(Instant::now() + RATE_LIMIT_BACKOFF);
+            }
             enrich_rail_statuses(config, job.user_id).await;
             if let Some(ref vapid_key) = config.vapid_private_key {
                 let duration_secs =
@@ -402,6 +449,7 @@ async fn process_sync_job(config: &SyncWorkerConfig, job: &db::sync_jobs::Row) {
             }
         }
     }
+    backoff
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -580,24 +628,7 @@ async fn enrich_single_flight_hop(
                 flight_number,
                 "no flight status data returned, writing sentinel",
             );
-            if let Err(err) = (db::status_enrichments::Upsert {
-                hop_id: hop.id,
-                provider: "airlabs",
-                status: "",
-                delay_minutes: None,
-                dep_gate: "",
-                dep_terminal: "",
-                arr_gate: "",
-                arr_terminal: "",
-                dep_platform: "",
-                arr_platform: "",
-                raw_json: "",
-            })
-            .execute(&config.pool)
-            .await
-            {
-                tracing::warn!(hop_id = hop.id, error = %err, "failed to write no-data sentinel");
-            }
+            write_no_data_sentinel(&config.pool, hop.id, "airlabs").await;
             FlightEnrichResult::Skipped
         }
         Err(FlightStatusError::RateLimited) => FlightEnrichResult::RateLimited,
@@ -617,19 +648,20 @@ async fn enrich_single_flight_hop(
 ///
 /// Failures are logged and never propagated — verification is optional and must
 /// not block sync completion.
-async fn verify_flight_routes(config: &SyncWorkerConfig, user_id: i64) {
+/// Returns `true` if the `OpenSky` API signalled a rate limit.
+async fn verify_flight_routes(config: &SyncWorkerConfig, user_id: i64) -> bool {
     let (Some(client_id), Some(client_secret)) =
         (&config.opensky_client_id, &config.opensky_client_secret)
     else {
-        return;
+        return false;
     };
 
     let Some(hops) = fetch_air_hops_for_route_verification(config, user_id).await else {
-        return;
+        return false;
     };
 
     if hops.is_empty() {
-        return;
+        return false;
     }
 
     let client = OpenSkyClient::new(client_id.clone(), client_secret.clone());
@@ -646,7 +678,7 @@ async fn verify_flight_routes(config: &SyncWorkerConfig, user_id: i64) {
                     requests = client.requests_made(),
                     "opensky rate limit reached, stopping verification",
                 );
-                break;
+                return true;
             }
             RouteVerificationOutcome::Noop => {}
         }
@@ -655,6 +687,7 @@ async fn verify_flight_routes(config: &SyncWorkerConfig, user_id: i64) {
     if verified > 0 {
         tracing::info!(user_id, verified, "opensky route verification complete");
     }
+    false
 }
 
 async fn fetch_air_hops_for_route_verification(
@@ -758,8 +791,9 @@ async fn verify_air_hop_route(
             tracing::debug!(
                 hop_id = hop.id,
                 flight_number,
-                "no opensky route data found"
+                "no opensky route data found, writing sentinel",
             );
+            write_no_data_sentinel(&config.pool, hop.id, "opensky").await;
             RouteVerificationOutcome::Noop
         }
         Err(crate::integrations::opensky::OpenSkyError::RateLimited) => {
@@ -990,8 +1024,9 @@ async fn dispatch_and_upsert_rail_status(
             tracing::debug!(
                 hop_id = hop.id,
                 train_number,
-                "no rail status data returned",
+                "no rail status data returned, writing sentinel",
             );
+            write_no_data_sentinel(&config.pool, hop.id, provider).await;
             Some(RailEnrichResult::Skipped)
         }
         Err(crate::integrations::rail_status::RailStatusError::RateLimited) => {

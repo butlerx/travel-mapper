@@ -23,3 +23,35 @@ footer {
 footer p {
   margin: 0;
 }
+
+.page-header {
+  margin-bottom: var(--space-xl);
+}
+
+.page-title-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.page-title-row h1,
+.page-title-row p {
+  margin-bottom: 0;
+}
+
+.content-section {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-md);
+}
+
+.content-section h3 {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 var(--space-md) 0;
+}

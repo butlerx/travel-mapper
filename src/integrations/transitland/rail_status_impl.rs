@@ -32,12 +32,22 @@ impl TransitlandRailClient {
         operator: RailOperator,
         query: &RailStatusQuery<'_>,
     ) -> Result<Option<RailStatus>, RailStatusError> {
-        let departure_time = parse_departure_time(query.start_date).ok_or_else(|| {
-            RailStatusError::Parse("invalid start_date: expected ISO-8601 datetime".to_string())
-        })?;
-        let service_date = parse_service_date(query.start_date).ok_or_else(|| {
-            RailStatusError::Parse("invalid start_date: expected ISO-8601 datetime".to_string())
-        })?;
+        let Some(departure_time) = parse_departure_time(query.start_date) else {
+            tracing::debug!(
+                start_date = query.start_date,
+                train_number = query.train_number,
+                "skipping transitland lookup: could not parse departure time from start_date",
+            );
+            return Ok(None);
+        };
+        let Some(service_date) = parse_service_date(query.start_date) else {
+            tracing::debug!(
+                start_date = query.start_date,
+                train_number = query.train_number,
+                "skipping transitland lookup: could not parse service date from start_date",
+            );
+            return Ok(None);
+        };
 
         let feed_id = self
             .cache

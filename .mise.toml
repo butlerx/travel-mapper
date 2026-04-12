@@ -12,6 +12,11 @@ zizmor                 = "latest"
 "npm:typescript"       = "latest"
 protoc                 = "latest"
 
+[settings]
+experimental   = true
+lockfile       = true
+cargo.binstall = true
+
 [env]
 _.file = ".env"
 
@@ -42,7 +47,7 @@ run         = "cargo watch -x 'run -- serve'"
 
 [tasks.worker]
 description = "Start the background sync worker"
-run         = "cargo run -- worker"
+run         = "cargo watch -x 'run -- worker'"
 
 [tasks.lint]
 description = "Lint code with clippy"
@@ -114,17 +119,9 @@ run         = "rm -rf target"
 
 [tasks."ci:release-build"]
 description = "Build release binary, using cross for cross-compilation when CROSS=true"
-usage = 'arg "<target>" help="Rust target triple"'
-run = '''
-#!/usr/bin/env bash
-set -euo pipefail
-if [ "${CROSS:-}" = "true" ]; then
-  cross build --release --target "${usage_args}"
-else
-  cargo build --release --target "${usage_args}"
-fi
-'''
-hide = true
+usage       = 'arg "<target>" help="Rust target triple"'
+run         = '''cross build --release --target "${usage_args}"'''
+hide        = true
 
 [tasks."ci:package"]
 description = "Package a release binary into a .tar.gz archive"

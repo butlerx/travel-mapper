@@ -47,7 +47,7 @@ pub(super) fn FlightSection(
         .and_then(|v| (!v.callsign.is_empty()).then_some(v.callsign.clone()));
 
     view! {
-        <section class="journey-detail-section">
+        <section class="content-section">
             <h3>"Flight Info"</h3>
             <div class="journey-detail-grid">
                 {detail_row_view("Airline", &detail.airline)}
@@ -74,7 +74,7 @@ pub(super) fn FlightSection(
         </section>
 
         {if has_timing { view! {
-            <section class="journey-detail-section">
+            <section class="content-section">
                 <h3>"Timing"</h3>
                 <table class="journey-detail-timing">
                     <thead>
@@ -91,7 +91,7 @@ pub(super) fn FlightSection(
             </section>
         }.into_any() } else { ().into_any() }}
 
-        <section class="journey-detail-section">
+        <section class="content-section">
             <h3>"Seat & Booking"</h3>
             <div class="journey-detail-grid">
                 {detail_row_view("Cabin Class", &detail.cabin_class)}
@@ -105,7 +105,7 @@ pub(super) fn FlightSection(
         {if detail.notes.is_empty() { ().into_any() } else {
             let notes = detail.notes.clone();
             view! {
-                <section class="journey-detail-section">
+                <section class="content-section">
                     <h3>"Notes"</h3>
                     <p class="journey-detail-notes">{notes}</p>
                 </section>

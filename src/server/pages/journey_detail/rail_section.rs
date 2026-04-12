@@ -51,7 +51,7 @@ pub(super) fn RailSection(
     let provider = enrichment.as_ref().map(|e| e.provider.clone());
 
     view! {
-        <section class="journey-detail-section">
+        <section class="content-section">
             <h3>"Rail Details"</h3>
             <div class="journey-detail-grid">
                 {detail_row_view("Carrier", &detail.carrier)}
@@ -69,7 +69,7 @@ pub(super) fn RailSection(
         {if detail.notes.is_empty() { ().into_any() } else {
             let notes = detail.notes.clone();
             view! {
-                <section class="journey-detail-section">
+                <section class="content-section">
                     <h3>"Notes"</h3>
                     <p class="journey-detail-notes">{notes}</p>
                 </section>
