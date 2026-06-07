@@ -2,7 +2,7 @@
 rust                   = { version = "stable", profile = "default", components = "rust-analyzer" }
 node                   = "lts"
 prek                   = "latest"
-taplo                  = "latest"
+tombi                  = "latest"
 zizmor                 = "latest"
 "cargo:cargo-binstall" = "latest"
 "cargo:cargo-nextest"  = "0.9.129"
@@ -28,7 +28,6 @@ alias       = "b"
 sources     = ["Cargo.lock", "Cargo.toml", "src/**/*.rs"]
 outputs     = ["target/debug/travel-mapper"]
 
-
 [tasks."build:release"]
 description = "Build release binary"
 usage       = 'arg "[args]" var=#true help="Additional arguments passed to cargo build"'
@@ -43,11 +42,15 @@ wait_for    = []
 
 [tasks.serve]
 description = "Start the server with auto-reload on changes"
-run         = "cargo watch -x 'run -- serve'"
+# Only watch compile inputs the server binary actually uses: Rust source, the
+# `static/` assets it embeds via include_str!, and the embedded migrations.
+# Avoids restart loops from the runtime SQLite DB, uploaded attachments, logs, etc.
+run         = "cargo watch -w src -w static -w migrations -w Cargo.toml -w Cargo.lock -x 'run -- serve'"
 
 [tasks.worker]
 description = "Start the background sync worker"
-run         = "cargo watch -x 'run -- worker'"
+# The worker does not serve `static/`, so changes there should not restart it.
+run         = "cargo watch -w src -w migrations -w Cargo.toml -w Cargo.lock -x 'run -- worker'"
 
 [tasks.lint]
 description = "Lint code with clippy"
@@ -61,17 +64,20 @@ run         = "cargo clippy --fix --all-targets --all-features --allow-staged ${
 
 [tasks.format]
 description = "Format Rust code with cargo fmt and JS/CSS with Prettier"
-run         = ["cargo fmt", "prettier --write 'static/**/*.js' 'static/**/*.css'"]
+run         = [
+  "cargo fmt",
+  "prettier --write 'static/**/*.js' 'static/**/*.css'"
+]
 alias       = "f"
 sources     = ["static/**/*.js", "static/**/*.css", "src/**/*.rs"]
 
 [tasks."format:check"]
 description = "Check Rust code formatting with cargo fmt and JS/CSS with Prettier"
-run = [
+run         = [
   "cargo fmt --check ",
   "prettier --check 'static/**/*.js' 'static/**/*.css'",
 ]
-sources = ["static/**/*.js", "static/**/*.css", "src/**/*.rs"]
+sources     = ["static/**/*.js", "static/**/*.css", "src/**/*.rs"]
 
 [tasks.typecheck]
 description = "Type-check JS files with TypeScript"
@@ -99,7 +105,11 @@ depends     = ["db:create"]
 
 [tasks."db:reset"]
 description = "Drop and recreate the database, then run migrations"
-run         = ["sqlx database drop -y", "sqlx database create", "sqlx migrate run"]
+run         = [
+  "sqlx database drop -y",
+  "sqlx database create",
+  "sqlx migrate run"
+]
 
 [tasks."db:prepare"]
 description = "Generate .sqlx/ query cache for offline compile-time checking"

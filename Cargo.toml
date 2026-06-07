@@ -3,83 +3,97 @@ name        = "travel_mapper"
 version     = "0.1.0"
 edition     = "2024"
 description = "TripIt travel history web server with API and SQLite storage"
-license     = "Apache-2.0"
 homepage    = "https://github.com/butlerx/travel-mapper"
+license     = "Apache-2.0"
 
 [dependencies]
-aes-gcm = "0.10"
+aes-gcm      = "0.10"
+aide         = {
+  version  = "0.15",
+  features = [
+    "axum",
+    "axum-extra-cookie",
+    "axum-form",
+    "axum-json",
+    "axum-query",
+    "swagger",
+  ]
+}
 airport-data = "1.0"
-aide = { version = "0.15", features = [
-  "axum",
-  "axum-json",
-  "axum-query",
-  "axum-form",
-  "axum-extra-cookie",
-  "swagger",
-] }
 
-argon2 = "0.5"
-async-trait = "0.1"
-axum = "0.8"
-axum-extra = { version = "0.10", features = ["cookie"] }
-base64 = "0.22"
-chrono = { version = "0.4", default-features = false }
-clap = { version = "4", features = ["derive", "env"] }
-csv = "1"
-hmac = "0.12"
-icalendar = "0.17"
-indexmap = "2"
-lettre = { version = "0.11", default-features = false, features = [
-  "tokio1",
-  "tokio1-native-tls",
-  "smtp-transport",
-  "builder",
-  "hostname",
-] }
-leptos = { version = "0.8" }
-nominatim = "0.3"
-leptos_axum = { version = "0.8" }
-leptos_meta = { version = "0.8" }
-leptos_router = { version = "0.8" }
-percent-encoding = "2"
-rand = "0.8"
-rpassword = "5"
-regex = "1"
-reqwest = { version = "0.12", features = ["json"] }
-schemars = { version = "0.9", features = ["uuid1"] }
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-serde_urlencoded = "0.7"
-sha1 = "0.10"
-sha2 = "0.10"
-sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite", "macros"] }
-thiserror = "2"
-tokio = { version = "1", features = ["full"] }
-tower-http = { version = "0.6", features = ["cors", "trace"] }
-tracing = "0.1"
+argon2             = "0.5"
+async-trait        = "0.1"
+axum               = "0.8"
+axum-extra         = { version = "0.10", features = ["cookie"] }
+base64             = "0.22"
+chrono             = { version = "0.4", default-features = false }
+clap               = { version = "4", features = ["derive", "env"] }
+csv                = "1"
+deunicode          = "1.6.2"
+governor           = {
+  version          = "0.8",
+  default-features = false,
+  features         = [
+    "jitter",
+    "std",
+  ]
+}
+gtfs-realtime      = "0.2"
+gtfs-structures    = "0.42"
+hmac               = "0.12"
+icalendar          = "0.17"
+indexmap           = "2"
+leptos             = { version = "0.8" }
+leptos_axum        = { version = "0.8" }
+leptos_meta        = { version = "0.8" }
+leptos_router      = { version = "0.8" }
+lettre             = {
+  version          = "0.11",
+  default-features = false,
+  features         = [
+    "builder",
+    "hostname",
+    "smtp-transport",
+    "tokio1",
+    "tokio1-native-tls",
+  ]
+}
+nominatim          = "0.3"
+percent-encoding   = "2"
+prost              = "0.14"
+quick-xml          = "0.37"
+rand               = "0.8"
+regex              = "1"
+reqwest            = { version = "0.12", features = ["json"] }
+rpassword          = "5"
+schemars           = { version = "0.9", features = ["uuid1"] }
+serde              = { version = "1", features = ["derive"] }
+serde_json         = "1"
+serde_urlencoded   = "0.7"
+sha1               = "0.10"
+sha2               = "0.10"
+sqlx               = {
+  version  = "0.8",
+  features = ["macros", "runtime-tokio", "sqlite"]
+}
+strsim             = "0.11.1"
+tempfile           = "3.27.0"
+thiserror          = "2"
+tokio              = { version = "1", features = ["full"] }
+tower-http         = { version = "0.6", features = ["cors", "trace"] }
+tracing            = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-url = "2"
-web-push = "0.11"
-uuid = { version = "1", features = ["v4"] }
-gtfs-realtime = "0.2"
-gtfs-structures = "0.42"
-prost = "0.14"
-governor = { version = "0.8", default-features = false, features = [
-  "std",
-  "jitter",
-] }
-strsim = "0.11.1"
-deunicode = "1.6.2"
-quick-xml = "0.37"
-tempfile = "3.27.0"
-zip = "8.4.0"
+url                = "2"
+uuid               = { version = "1", features = ["v4"] }
+web-push           = "0.11"
+zip                = "8.4.0"
 
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }
 
 [features]
-ssr = ["leptos/ssr", "leptos_meta/ssr", "leptos_router/ssr"]
+ssr = ["leptos_meta/ssr", "leptos_router/ssr", "leptos/ssr"]
 
 [profile.release]
-lto   = true
 strip = true
+lto   = true
