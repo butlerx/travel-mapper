@@ -34,6 +34,8 @@ pub(super) mod feed;
 /// Authenticated feed token create/revoke handlers.
 pub(super) mod feed_tokens;
 pub(super) mod health;
+/// Import journeys from a user-supplied iCalendar (`.ics`) URL.
+pub(super) mod ics_import;
 pub(super) mod journeys;
 pub(super) mod login;
 pub(super) mod logout;
@@ -516,7 +518,9 @@ pub(super) fn tripit_api_routes() -> ApiRouter<super::AppState> {
 
 /// Import API routes, nested under `/import`.
 pub(super) fn import_api_routes() -> ApiRouter<super::AppState> {
-    ApiRouter::new().route("/csv", axum::routing::post(csv_import::handler))
+    ApiRouter::new()
+        .route("/csv", axum::routing::post(csv_import::handler))
+        .route("/ics", axum::routing::post(ics_import::handler))
 }
 
 /// Attachment API routes, nested under `/journeys/{id}/attachments`.

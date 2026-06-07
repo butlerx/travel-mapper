@@ -58,6 +58,53 @@ pub async fn handler(
     }
 }
 
+/// Public Year-in-Review recap for a shared token. Defaults to the most recent
+/// year with data when no `?year=` is given.
+pub async fn review_handler(
+    State(state): State<AppState>,
+    Path(token_hash): Path<String>,
+    Query(query): Query<StatsQuery>,
+) -> Response {
+    let user_id = match (db::share_tokens::GetUserIdByHash {
+        token_hash: &token_hash,
+    })
+    .execute(&state.db)
+    .await
+    {
+        Ok(Some(id)) => id,
+        Ok(None) => return StatusCode::NOT_FOUND.into_response(),
+        Err(err) => {
+            tracing::error!(error = %err, "share token lookup failed");
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+
+    let all_rows = match (db::hops::GetAllForStats { user_id })
+        .execute(&state.db)
+        .await
+    {
+        Ok(rows) => rows,
+        Err(err) => {
+            tracing::error!(error = %err, "failed to fetch stats for year-in-review");
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+
+    // Choose the year: explicit `?year=`, else the most recent year with data.
+    let base = compute_detailed_stats(&all_rows, None, None);
+    let year = query
+        .year
+        .filter(|y| !y.is_empty())
+        .or_else(|| base.available_years.last().cloned());
+
+    let (recap, year_label) = match year {
+        Some(y) => (compute_detailed_stats(&all_rows, Some(&y), None), y),
+        None => (base, "All Time".to_owned()),
+    };
+
+    crate::server::pages::year_in_review::render(recap, &token_hash, &year_label)
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{
@@ -173,6 +220,139 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
         let body = body_text(response).await;
         assert!(body.contains("total_journeys"));
+    }
+
+    #[tokio::test]
+    async fn year_in_review_renders_recap_for_latest_year() {
+        let pool = test_pool().await;
+        let user_id = db::tests::test_user(&pool, "alice").await;
+
+        let mut journey = sample_hop(TravelType::Air, "DUB", "JFK", "2024-06-15", "2024-06-15");
+        journey.flight_detail = Some(FlightDetail {
+            airline: "Aer Lingus".to_string(),
+            ..Default::default()
+        });
+        Create {
+            trip_id: "trip-1",
+            user_id,
+            hops: &[journey],
+        }
+        .execute(&pool)
+        .await
+        .expect("insert hops failed");
+
+        let token_hash = "share_review_token";
+        db::share_tokens::Create {
+            user_id,
+            token_hash,
+            label: "review",
+        }
+        .execute(&pool)
+        .await
+        .expect("create share token failed");
+
+        let app = create_router(test_app_state(pool));
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri(format!("/share/{token_hash}/review"))
+                    .header(header::ACCEPT, "text/html")
+                    .body(Body::empty())
+                    .expect("failed to build request"),
+            )
+            .await
+            .expect("router request failed");
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = body_text(response).await;
+        assert!(body.contains("Year in Review"));
+        assert!(body.contains("2024"), "should default to the latest year");
+        assert!(
+            body.contains("Aer Lingus"),
+            "should surface the top airline"
+        );
+        assert!(
+            !body.contains("nav-brand"),
+            "recap should not include the app navbar"
+        );
+    }
+
+    #[tokio::test]
+    async fn year_in_review_returns_404_for_invalid_token() {
+        let pool = test_pool().await;
+        let app = create_router(test_app_state(pool));
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/share/nope/review")
+                    .header(header::ACCEPT, "text/html")
+                    .body(Body::empty())
+                    .expect("failed to build request"),
+            )
+            .await
+            .expect("router request failed");
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    }
+
+    #[tokio::test]
+    async fn year_in_review_honours_explicit_year() {
+        let pool = test_pool().await;
+        let user_id = db::tests::test_user(&pool, "alice").await;
+
+        Create {
+            trip_id: "t24",
+            user_id,
+            hops: &[sample_hop(
+                TravelType::Air,
+                "DUB",
+                "LHR",
+                "2024-06-15",
+                "2024-06-15",
+            )],
+        }
+        .execute(&pool)
+        .await
+        .expect("insert 2024");
+        Create {
+            trip_id: "t23",
+            user_id,
+            hops: &[sample_hop(
+                TravelType::Air,
+                "SFO",
+                "NRT",
+                "2023-03-01",
+                "2023-03-01",
+            )],
+        }
+        .execute(&pool)
+        .await
+        .expect("insert 2023");
+
+        let token_hash = "share_review_year";
+        db::share_tokens::Create {
+            user_id,
+            token_hash,
+            label: "review year",
+        }
+        .execute(&pool)
+        .await
+        .expect("create share token failed");
+
+        let app = create_router(test_app_state(pool));
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri(format!("/share/{token_hash}/review?year=2023"))
+                    .header(header::ACCEPT, "text/html")
+                    .body(Body::empty())
+                    .expect("failed to build request"),
+            )
+            .await
+            .expect("router request failed");
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = body_text(response).await;
+        assert!(body.contains("NRT"), "2023 recap should mention its route");
     }
 
     #[tokio::test]

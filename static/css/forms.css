@@ -75,11 +75,15 @@ select:focus {
   box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
 }
 
-input[type='text']:invalid:not(:placeholder-shown):not(:focus),
-input[type='email']:invalid:not(:placeholder-shown):not(:focus),
-input[type='password']:invalid:not(:placeholder-shown):not(:focus),
-input[type='date']:invalid:not(:placeholder-shown):not(:focus),
-input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
+/* Only flag fields as invalid after the user has interacted with them.
+   `:user-invalid` avoids the red border that `:invalid` shows on empty
+   required fields (notably date inputs, which have no placeholder) before
+   the user has touched the form. */
+input[type='text']:user-invalid:not(:focus),
+input[type='email']:user-invalid:not(:focus),
+input[type='password']:user-invalid:not(:focus),
+input[type='date']:user-invalid:not(:focus),
+input[type='number']:user-invalid:not(:focus) {
   border-color: var(--color-danger);
 }
 
@@ -170,10 +174,60 @@ input[type='number']:invalid:not(:placeholder-shown):not(:focus) {
 }
 
 /* ===== Add Journey Form ===== */
+.form-section {
+  margin-bottom: var(--space-lg);
+}
+
+.form-section-heading {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary);
+  margin: 0 0 var(--space-sm);
+  padding-bottom: var(--space-xs);
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* Two-column field grid used across the Add Journey form. Collapses the
+   trailing margin on inputs so rows line up cleanly. */
+.form-grid,
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0 var(--space-md);
+}
+
+/* Type-specific field blocks are hidden until their travel type is selected
+   (toggled via the `is-active` class in add-journey.js), then laid out in the
+   same two-column grid. */
 .type-fields {
   display: none;
 }
 
+.type-fields.is-active {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0 var(--space-md);
+}
+
+/* Notes textareas span the full width of the two-column grid. */
+.type-fields .form-group:has(textarea) {
+  grid-column: 1 / -1;
+}
+
+.uppercase-input {
+  text-transform: uppercase;
+}
+
 #cost_currency {
   text-transform: uppercase;
+}
+
+@media (max-width: 640px) {
+  .form-grid,
+  .form-row,
+  .type-fields.is-active {
+    grid-template-columns: 1fr;
+  }
 }

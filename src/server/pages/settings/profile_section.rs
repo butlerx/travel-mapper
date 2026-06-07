@@ -25,7 +25,7 @@ pub(super) fn ProfileSection(first_name: String, last_name: String) -> impl Into
                     />
                 </label>
                 <div class="form-actions">
-                    <button type="submit" class="btn">"Save Profile"</button>
+                    <button type="submit" class="btn btn-primary">"Save Profile"</button>
                 </div>
             </form>
         </section>

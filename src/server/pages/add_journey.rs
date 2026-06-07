@@ -48,28 +48,37 @@ fn AddHop(
                 <section class="card">
                     <h2>"Add Journey"</h2>
                     <form method="post" action="/journeys">
-                        <div class="form-group">
-                            <label for="travel_type">"Travel Type"</label>
-                            <select id="travel_type" name="travel_type">
-                                <option value="air" selected>"✈️ Flight"</option>
-                                <option value="rail">"🚆 Rail"</option>
-                                <option value="boat">"🚢 Boat"</option>
-                                <option value="transport">"🚗 Transport"</option>
-                            </select>
+                        <div class="form-section">
+                            <h3 class="form-section-heading">"Route"</h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="travel_type">"Travel Type"</label>
+                                    <select id="travel_type" name="travel_type">
+                                        <option value="air" selected>"✈️ Flight"</option>
+                                        <option value="rail">"🚆 Rail"</option>
+                                        <option value="boat">"🚢 Boat"</option>
+                                        <option value="transport">"🚗 Transport"</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="date">"Date"</label>
+                                    <input type="date" id="date" name="date" required />
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="origin" id="origin-label">"Origin"</label>
+                                    <input type="text" id="origin" name="origin" required placeholder="LHR" />
+                                </div>
+                                <div class="form-group">
+                                    <label for="destination" id="destination-label">"Destination"</label>
+                                    <input type="text" id="destination" name="destination" required placeholder="JFK" />
+                                </div>
+                            </div>
                         </div>
 
-                        <div class="form-group">
-                            <label for="origin" id="origin-label">"Origin"</label>
-                            <input type="text" id="origin" name="origin" required placeholder="LHR" />
-                        </div>
-                        <div class="form-group">
-                            <label for="destination" id="destination-label">"Destination"</label>
-                            <input type="text" id="destination" name="destination" required placeholder="JFK" />
-                        </div>
-                        <div class="form-group">
-                            <label for="date">"Date"</label>
-                            <input type="date" id="date" name="date" required />
-                        </div>
+                        <div class="form-section">
+                            <h3 class="form-section-heading">"Details"</h3>
 
                         <div id="fields-air" class="type-fields">
                             <div class="form-group">
@@ -178,26 +187,29 @@ fn AddHop(
                                 <textarea id="transport_notes" name="transport_notes" rows="3"></textarea>
                             </div>
                         </div>
-
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="cost_amount">"Cost"</label>
-                                <input type="number" id="cost_amount" name="cost_amount" step="0.01" min="0" placeholder="0.00" />
-                            </div>
-                            <div class="form-group">
-                                <label for="cost_currency">"Currency"</label>
-                                <input type="text" id="cost_currency" name="cost_currency" placeholder="EUR" maxlength="3" />
-                            </div>
                         </div>
 
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="loyalty_program">"Loyalty Program"</label>
-                                <input type="text" id="loyalty_program" name="loyalty_program" placeholder="e.g. Delta SkyMiles" />
+                        <div class="form-section">
+                            <h3 class="form-section-heading">"Cost & Loyalty"</h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="cost_amount">"Cost"</label>
+                                    <input type="number" id="cost_amount" name="cost_amount" step="0.01" min="0" placeholder="0.00" />
+                                </div>
+                                <div class="form-group">
+                                    <label for="cost_currency">"Currency"</label>
+                                    <input type="text" id="cost_currency" name="cost_currency" placeholder="EUR" maxlength="3" />
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label for="miles_earned">"Miles Earned"</label>
-                                <input type="number" id="miles_earned" name="miles_earned" step="1" placeholder="auto-calculated for flights" />
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="loyalty_program">"Loyalty Program"</label>
+                                    <input type="text" id="loyalty_program" name="loyalty_program" placeholder="e.g. Delta SkyMiles" />
+                                </div>
+                                <div class="form-group">
+                                    <label for="miles_earned">"Miles Earned"</label>
+                                    <input type="number" id="miles_earned" name="miles_earned" step="1" placeholder="auto-calculated for flights" />
+                                </div>
                             </div>
                         </div>
 
@@ -208,5 +220,42 @@ fn AddHop(
                 <script type="module" src="/static/add-journey.js"></script>
             </main>
         </Shell>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::server::{create_router, test_helpers::*};
+    use axum::{
+        body::Body,
+        http::{Request, StatusCode, header},
+    };
+    use tower::ServiceExt;
+
+    #[tokio::test]
+    async fn add_journey_renders_grouped_two_column_form() {
+        let pool = test_pool().await;
+        let cookie = auth_cookie_for_user(&pool, "alice").await;
+        let app = create_router(test_app_state(pool));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/journeys/new")
+                    .header(header::COOKIE, cookie)
+                    .header(header::ACCEPT, "text/html")
+                    .body(Body::empty())
+                    .expect("failed to build request"),
+            )
+            .await
+            .expect("router request failed");
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = body_text(response).await;
+        assert!(body.contains("form-section"), "grouped sections");
+        assert!(body.contains("form-section-heading"), "section headings");
+        assert!(body.contains("form-row"), "two-column rows");
+        assert!(body.contains("type-fields"), "type-specific field blocks");
     }
 }

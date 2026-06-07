@@ -44,6 +44,7 @@ static_handler!(
         include_str!("../../../static/css/buttons.css"),
         include_str!("../../../static/css/forms.css"),
         include_str!("../../../static/css/dashboard.css"),
+        include_str!("../../../static/css/upcoming.css"),
         include_str!("../../../static/css/hop-list.css"),
         include_str!("../../../static/css/journey-cards.css"),
         include_str!("../../../static/css/status-badges.css"),
@@ -54,6 +55,7 @@ static_handler!(
         include_str!("../../../static/css/data.css"),
         include_str!("../../../static/css/hop-cards.css"),
         include_str!("../../../static/css/stats.css"),
+        include_str!("../../../static/css/year-in-review.css"),
         include_str!("../../../static/css/journey-detail.css"),
         include_str!("../../../static/css/edit-panel.css"),
         include_str!("../../../static/css/trip-detail.css"),
@@ -63,12 +65,20 @@ static_handler!(
     "text/css; charset=utf-8"
 );
 
+js_handler!(
+    serve_map_core_js,
+    include_str!("../../../static/js/map-core.js")
+);
 js_handler!(serve_js, include_str!("../../../static/js/map.js"));
 js_handler!(
     serve_stats_js,
     include_str!("../../../static/js/stats-map.js")
 );
 js_handler!(serve_nav_js, include_str!("../../../static/js/nav.js"));
+js_handler!(
+    serve_upcoming_poll_js,
+    include_str!("../../../static/js/upcoming-poll.js")
+);
 js_handler!(
     serve_add_journey_js,
     include_str!("../../../static/js/add-journey.js")
@@ -184,9 +194,11 @@ pub async fn serve_sw() -> impl IntoResponse {
 pub fn routes() -> ApiRouter<crate::server::AppState> {
     ApiRouter::new()
         .route("/style.css", get(serve_css))
+        .route("/map-core.js", get(serve_map_core_js))
         .route("/map.js", get(serve_js))
         .route("/stats-map.js", get(serve_stats_js))
         .route("/nav.js", get(serve_nav_js))
+        .route("/upcoming-poll.js", get(serve_upcoming_poll_js))
         .route("/add-journey.js", get(serve_add_journey_js))
         .route("/journey-map.js", get(serve_journey_map_js))
         .route("/edit-panel.js", get(serve_edit_panel_js))
@@ -288,6 +300,31 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn map_core_js_route_serves_javascript_content_type() {
+        let pool = test_pool().await;
+        let app = create_router(test_app_state(pool));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/static/map-core.js")
+                    .body(Body::empty())
+                    .expect("failed to build request"),
+            )
+            .await
+            .expect("router request failed");
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let content_type = response
+            .headers()
+            .get(header::CONTENT_TYPE)
+            .and_then(|value| value.to_str().ok())
+            .expect("content-type should exist");
+        assert!(content_type.contains("application/javascript"));
+    }
+
+    #[tokio::test]
     async fn manifest_route_serves_json_content_type() {
         let pool = test_pool().await;
         let app = create_router(test_app_state(pool));
@@ -333,6 +370,31 @@ mod tests {
                 Request::builder()
                     .method("GET")
                     .uri("/sw.js")
+                    .body(Body::empty())
+                    .expect("failed to build request"),
+            )
+            .await
+            .expect("router request failed");
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let content_type = response
+            .headers()
+            .get(header::CONTENT_TYPE)
+            .and_then(|value| value.to_str().ok())
+            .expect("content-type should exist");
+        assert!(content_type.contains("application/javascript"));
+    }
+
+    #[tokio::test]
+    async fn upcoming_poll_js_route_serves_javascript_content_type() {
+        let pool = test_pool().await;
+        let app = create_router(test_app_state(pool));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/static/upcoming-poll.js")
                     .body(Body::empty())
                     .expect("failed to build request"),
             )

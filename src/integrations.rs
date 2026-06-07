@@ -12,6 +12,8 @@ pub(crate) mod flight_status;
 /// Generic CSV/delimited import — auto-detects Flighty, myFlightradar24,
 /// OpenFlights, and App in the Air formats.
 pub(crate) mod generic_csv;
+/// iCalendar (`.ics`) import — parse calendar events into journeys.
+pub(crate) mod ics_import;
 /// OpenSky Network API client for route verification via ADS-B data.
 pub(crate) mod opensky;
 /// Rail status API trait and shared types.

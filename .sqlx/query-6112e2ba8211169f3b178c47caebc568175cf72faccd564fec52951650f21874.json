@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT\n                   id as \"id!: i64\",\n                   hop_id as \"hop_id!: i64\",\n                   provider as \"provider!: String\",\n                   status as \"status!: String\",\n                   delay_minutes,\n                   dep_gate as \"dep_gate!: String\",\n                   dep_terminal as \"dep_terminal!: String\",\n                   arr_gate as \"arr_gate!: String\",\n                   arr_terminal as \"arr_terminal!: String\",\n                   dep_platform as \"dep_platform!: String\",\n                   arr_platform as \"arr_platform!: String\",\n                   raw_json as \"raw_json!: String\",\n                   fetched_at as \"fetched_at!: String\"\n               FROM status_enrichments\n               WHERE hop_id = ? AND provider = ?\n               ORDER BY fetched_at DESC\n               LIMIT 1",
+  "query": "SELECT\n                   id as \"id!: i64\",\n                   hop_id as \"hop_id!: i64\",\n                   provider as \"provider!: String\",\n                   status as \"status!: String\",\n                   delay_minutes,\n                   dep_gate as \"dep_gate!: String\",\n                   dep_terminal as \"dep_terminal!: String\",\n                   arr_gate as \"arr_gate!: String\",\n                   arr_terminal as \"arr_terminal!: String\",\n                   dep_platform as \"dep_platform!: String\",\n                   arr_platform as \"arr_platform!: String\",\n                   aircraft_reg as \"aircraft_reg!: String\",\n                   raw_json as \"raw_json!: String\",\n                   fetched_at as \"fetched_at!: String\"\n               FROM status_enrichments\n               WHERE hop_id = ?\n               ORDER BY fetched_at DESC\n               LIMIT 1",
   "describe": {
     "columns": [
       {
@@ -59,18 +59,23 @@
         "type_info": "Text"
       },
       {
-        "name": "raw_json!: String",
+        "name": "aircraft_reg!: String",
         "ordinal": 11,
         "type_info": "Text"
       },
       {
-        "name": "fetched_at!: String",
+        "name": "raw_json!: String",
         "ordinal": 12,
+        "type_info": "Text"
+      },
+      {
+        "name": "fetched_at!: String",
+        "ordinal": 13,
         "type_info": "Text"
       }
     ],
     "parameters": {
-      "Right": 2
+      "Right": 1
     },
     "nullable": [
       true,
@@ -85,8 +90,9 @@
       false,
       false,
       false,
+      false,
       false
     ]
   },
-  "hash": "3966ae00eb2b788d5cfcf4db44dca8f000bc763f36fcf76c21a13643fc4f95b5"
+  "hash": "6112e2ba8211169f3b178c47caebc568175cf72faccd564fec52951650f21874"
 }

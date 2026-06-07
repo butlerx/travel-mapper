@@ -27,7 +27,7 @@ pub(super) fn EmailSection(email: String, email_verified: bool) -> impl IntoView
                 <p>"Status: "<span class=status_class>{status_text}</span></p>
                 {(!email_verified && !email.is_empty()).then(|| view! {
                     <form method="post" action="/auth/resend-verification">
-                        <button type="submit" class="btn btn-sm btn-warning">"Resend Verification"</button>
+                        <button type="submit" class="btn btn-secondary btn-sm">"Resend Verification"</button>
                     </form>
                 })}
             </div>
@@ -42,7 +42,7 @@ pub(super) fn EmailSection(email: String, email_verified: bool) -> impl IntoView
                         placeholder={placeholder.to_string()}
                         value=email
                     />
-                    <button type="submit" class="btn">"Save"</button>
+                    <button type="submit" class="btn btn-primary">"Save"</button>
                 </div>
             </form>
         </section>

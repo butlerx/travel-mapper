@@ -515,6 +515,10 @@ fn ShareStatsPage(stats: DetailedStats, token: String) -> impl IntoView {
     let country_counts_json = countries_json(&countries);
     let filters_selected_year = selected_year.clone();
     let filters_selected_travel_type = selected_travel_type.clone();
+    let review_url = match &selected_year {
+        Some(year) => format!("/share/{token}/review?year={year}"),
+        None => format!("/share/{token}/review"),
+    };
 
     view! {
         <Shell
@@ -525,6 +529,7 @@ fn ShareStatsPage(stats: DetailedStats, token: String) -> impl IntoView {
             {if has_data {
                 view! {
                     <main class="stats-page">
+                        <a class="yir-banner-link" href=review_url>"\u{2728} View Year in Review \u{2192}"</a>
                         <StatsFilters
                             available_years=available_years
                             selected_year=filters_selected_year

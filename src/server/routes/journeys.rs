@@ -74,6 +74,9 @@ pub struct JourneyResponse {
     /// Arrival platform from rail status enrichment.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub arr_platform: Option<String>,
+    /// Aircraft registration / tail number from flight status enrichment.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub aircraft_reg: Option<String>,
     /// Whether the flight route was verified via ADS-B data from `OpenSky` Network.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub route_verified: Option<bool>,
@@ -190,6 +193,7 @@ impl JourneyResponse {
         self.arr_terminal = non_empty(&enrichment.arr_terminal);
         self.dep_platform = non_empty(&enrichment.dep_platform);
         self.arr_platform = non_empty(&enrichment.arr_platform);
+        self.aircraft_reg = non_empty(&enrichment.aircraft_reg);
         self.fetched_at = Some(enrichment.fetched_at.clone());
         self.is_fresh = Some(Self::compute_freshness(
             &enrichment.fetched_at,
@@ -236,6 +240,7 @@ impl From<db::hops::Row> for JourneyResponse {
             arr_terminal: None,
             dep_platform: None,
             arr_platform: None,
+            aircraft_reg: None,
             route_verified: None,
             cost_amount: hop.cost_amount,
             cost_currency: hop.cost_currency,
@@ -279,6 +284,7 @@ impl From<db::hops::DetailRow> for JourneyResponse {
             arr_terminal: None,
             dep_platform: None,
             arr_platform: None,
+            aircraft_reg: None,
             route_verified: None,
             cost_amount: hop.cost_amount,
             cost_currency: hop.cost_currency,
@@ -314,6 +320,7 @@ impl MultiFormatResponse for JourneyResponse {
         "arr_terminal",
         "dep_platform",
         "arr_platform",
+        "aircraft_reg",
         "route_verified",
         "cost_amount",
         "cost_currency",
@@ -344,6 +351,7 @@ impl MultiFormatResponse for JourneyResponse {
             self.arr_terminal.clone().unwrap_or_default(),
             self.dep_platform.clone().unwrap_or_default(),
             self.arr_platform.clone().unwrap_or_default(),
+            self.aircraft_reg.clone().unwrap_or_default(),
             self.route_verified
                 .map_or_else(String::new, |v| v.to_string()),
             self.cost_amount.map_or_else(String::new, |v| v.to_string()),

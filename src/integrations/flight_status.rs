@@ -25,6 +25,8 @@ pub struct FlightStatus {
     pub dep_terminal: String,
     pub arr_gate: String,
     pub arr_terminal: String,
+    /// Aircraft registration / tail number, when the provider reports it.
+    pub aircraft_reg: String,
     pub raw_json: String,
 }
 

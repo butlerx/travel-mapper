@@ -107,61 +107,93 @@ impl From<&[JourneyResponse]> for DetailedStats {
     }
 }
 
+/// A single overview stat card: icon, label, and value. `hero` enlarges the
+/// value to the display type scale for the dashboard's headline figures.
+fn stat_card(icon: &'static str, label: &'static str, value: String, hero: bool) -> impl IntoView {
+    let value_class = if hero {
+        "stat-value stat-value-hero"
+    } else {
+        "stat-value"
+    };
+    view! {
+        <div class="stat-card">
+            <div class="stat-card-head">
+                <span class="stat-icon" aria-hidden="true">{icon}</span>
+                <div class="stat-label">{label}</div>
+            </div>
+            <div class=value_class>{value}</div>
+        </div>
+    }
+}
+
+/// Overview stat cards shown above the dashboard map and on the stats page.
+///
+/// When `compact` is true (dashboard), only four headline cards are shown
+/// inline; the rest collapse into a "More stats" disclosure so the map stays
+/// near the top of the viewport. When false (stats page), every card is shown.
 #[component]
-pub fn OverviewCards(stats: DetailedStats, distance: String, year_range: String) -> impl IntoView {
+pub fn OverviewCards(
+    stats: DetailedStats,
+    distance: String,
+    year_range: String,
+    #[prop(default = false)] compact: bool,
+) -> impl IntoView {
     let show_airports = stats.unique_airports > 0;
     let show_stations = stats.unique_stations > 0;
 
-    view! {
-        <div class="stats-overview">
-            <div class="stat-row">
-                <div class="stat-card">
-                    <div class="stat-label">"Total Journeys"</div>
-                    <div class="stat-value">{stats.total_journeys}</div>
+    let airports_card = show_airports.then(|| {
+        stat_card(
+            "\u{1F6EB}",
+            "Airports",
+            stats.unique_airports.to_string(),
+            false,
+        )
+    });
+    let stations_card = show_stations.then(|| {
+        stat_card(
+            "\u{1F687}",
+            "Stations",
+            stats.unique_stations.to_string(),
+            false,
+        )
+    });
+
+    if compact {
+        view! {
+            <div class="stats-overview stats-overview-compact">
+                <div class="stat-row">
+                    {stat_card("\u{1F9ED}", "Total Journeys", stats.total_journeys.to_string(), true)}
+                    {stat_card("\u{2708}\u{FE0F}", "Flights", stats.total_flights.to_string(), true)}
+                    {stat_card("\u{1F4CF}", "Distance", distance, true)}
+                    {stat_card("\u{1F30D}", "Countries", stats.unique_countries.to_string(), true)}
                 </div>
-                <div class="stat-card">
-                    <div class="stat-label">"Flights"</div>
-                    <div class="stat-value">{stats.total_flights}</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">"Rail"</div>
-                    <div class="stat-value">{stats.total_rail}</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">"Distance"</div>
-                    <div class="stat-value">{distance}</div>
-                </div>
-                {if show_airports {
-                    view! {
-                        <div class="stat-card">
-                            <div class="stat-label">"Airports"</div>
-                            <div class="stat-value">{stats.unique_airports}</div>
-                        </div>
-                    }
-                    .into_any()
-                } else {
-                    ().into_any()
-                }}
-                {if show_stations {
-                    view! {
-                        <div class="stat-card">
-                            <div class="stat-label">"Stations"</div>
-                            <div class="stat-value">{stats.unique_stations}</div>
-                        </div>
-                    }
-                    .into_any()
-                } else {
-                    ().into_any()
-                }}
-                <div class="stat-card">
-                    <div class="stat-label">"Countries"</div>
-                    <div class="stat-value">{stats.unique_countries}</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">"Years"</div>
-                    <div class="stat-value">{year_range}</div>
+                <details class="stats-more">
+                    <summary class="stats-more-summary">"More stats"</summary>
+                    <div class="stat-row">
+                        {stat_card("\u{1F686}", "Rail", stats.total_rail.to_string(), false)}
+                        {airports_card}
+                        {stations_card}
+                        {stat_card("\u{1F4C5}", "Years", year_range, false)}
+                    </div>
+                </details>
+            </div>
+        }
+        .into_any()
+    } else {
+        view! {
+            <div class="stats-overview">
+                <div class="stat-row">
+                    {stat_card("\u{1F9ED}", "Total Journeys", stats.total_journeys.to_string(), false)}
+                    {stat_card("\u{2708}\u{FE0F}", "Flights", stats.total_flights.to_string(), false)}
+                    {stat_card("\u{1F686}", "Rail", stats.total_rail.to_string(), false)}
+                    {stat_card("\u{1F4CF}", "Distance", distance, false)}
+                    {airports_card}
+                    {stations_card}
+                    {stat_card("\u{1F30D}", "Countries", stats.unique_countries.to_string(), false)}
+                    {stat_card("\u{1F4C5}", "Years", year_range, false)}
                 </div>
             </div>
-        </div>
+        }
+        .into_any()
     }
 }

@@ -200,6 +200,7 @@ pub fn create_router(state: AppState) -> Router {
         .nest("/import", routes::import_api_routes())
         .route("/feed/{token}", get(routes::feed::handler))
         .route("/share/{token}", get(routes::share::handler))
+        .route("/share/{token}/review", get(routes::share::review_handler))
         .route(
             "/docs",
             get(Swagger::new("/openapi.json")

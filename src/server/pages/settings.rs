@@ -1,5 +1,7 @@
 /// API keys management section.
 mod api_keys_section;
+/// iCalendar (`.ics`) URL import section.
+mod calendar_import_section;
 /// Generic CSV/delimited import section.
 mod csv_import_section;
 /// Email address and verification status section.
@@ -23,6 +25,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
+use calendar_import_section::CalendarImportSection;
 use csv_import_section::CsvImportSection;
 use email_section::EmailSection;
 use feed_section::FeedSection;
@@ -39,6 +42,7 @@ pub struct SettingsFeedback {
     pub error: Option<String>,
     pub tripit: Option<String>,
     pub csv: Option<String>,
+    pub ics: Option<String>,
     pub email: Option<String>,
     pub profile: Option<String>,
     /// Raw API key shown once after creation (not persisted).
@@ -78,6 +82,7 @@ pub fn render_page(data: PageData) -> Response {
             error=data.feedback.error
             tripit_connected=data.feedback.tripit
             csv_imported=data.feedback.csv
+            ics_imported=data.feedback.ics
             email_feedback=data.feedback.email
             profile_feedback=data.feedback.profile
             email=data.profile.email
@@ -105,6 +110,7 @@ fn Settings(
     #[prop(optional_no_strip)] error: Option<String>,
     #[prop(optional_no_strip)] tripit_connected: Option<String>,
     #[prop(optional_no_strip)] csv_imported: Option<String>,
+    #[prop(optional_no_strip)] ics_imported: Option<String>,
     #[prop(optional_no_strip)] email_feedback: Option<String>,
     #[prop(optional_no_strip)] profile_feedback: Option<String>,
     #[prop(optional_no_strip)] email: String,
@@ -151,6 +157,11 @@ fn Settings(
                         {format!("Successfully imported {count} flights!")}
                     </div>
                 })}
+                {ics_imported.map(|count| view! {
+                    <div class="alert alert-success" role="status">
+                        {format!("Imported {count} journeys from calendar!")}
+                    </div>
+                })}
                 {email_alert.map(|msg| view! {
                     <div class="alert alert-success" role="status">{msg}</div>
                 })}
@@ -176,6 +187,7 @@ fn Settings(
                         hops_fetched=hops_fetched
                     />
                     <CsvImportSection />
+                    <CalendarImportSection />
                 </div>
 
                 <div class="settings-group">

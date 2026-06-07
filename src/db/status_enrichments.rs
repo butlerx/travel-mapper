@@ -14,8 +14,139 @@ pub struct Row {
     pub arr_terminal: String,
     pub dep_platform: String,
     pub arr_platform: String,
+    /// Aircraft registration / tail number (e.g. `"EI-DEG"`), when known.
+    pub aircraft_reg: String,
     pub raw_json: String,
     pub fetched_at: String,
+}
+
+impl Row {
+    /// A "no-data" sentinel row (see `write_no_data_sentinel` in the worker):
+    /// every meaningful field is empty. We must not treat the step from a
+    /// sentinel to real data as a notify-worthy transition.
+    fn is_sentinel(&self) -> bool {
+        self.status.is_empty()
+            && self.delay_minutes.is_none()
+            && self.dep_gate.is_empty()
+            && self.dep_terminal.is_empty()
+            && self.arr_gate.is_empty()
+            && self.arr_terminal.is_empty()
+            && self.dep_platform.is_empty()
+            && self.arr_platform.is_empty()
+            && self.aircraft_reg.is_empty()
+    }
+}
+
+/// Map a raw provider status string to a notify-worthy human label, or `None`
+/// for statuses that aren't worth a notification on their own (e.g. scheduled).
+fn notable_status_label(status: &str) -> Option<&'static str> {
+    match status.trim().to_ascii_lowercase().as_str() {
+        "active" | "en-route" | "en route" | "departed" | "in-air" | "in air" => Some("Departed"),
+        "landed" | "arrived" => Some("Landed"),
+        "boarding" => Some("Boarding"),
+        _ => None,
+    }
+}
+
+fn push_changed_field(parts: &mut Vec<String>, label: &str, next: &str, prior: &str) {
+    let next = next.trim();
+    if !next.is_empty() && next != prior.trim() {
+        parts.push(format!("{label} {next}"));
+    }
+}
+
+/// The status fields about to be written for a hop/provider, used to detect
+/// notify-worthy changes against the previously stored [`Row`].
+pub struct StatusSnapshot<'a> {
+    pub status: &'a str,
+    pub delay_minutes: Option<i64>,
+    pub dep_gate: &'a str,
+    pub dep_terminal: &'a str,
+    pub arr_gate: &'a str,
+    pub arr_terminal: &'a str,
+    pub dep_platform: &'a str,
+    pub arr_platform: &'a str,
+}
+
+impl StatusSnapshot<'_> {
+    /// Describe the notify-worthy transition from `prior` to this snapshot as a
+    /// short human string (e.g. `"Delayed 25m \u{00b7} Gate B22"`), or `None`
+    /// when nothing meaningful changed or there is no meaningful prior to
+    /// compare against (initial data is not a "change").
+    #[must_use]
+    pub fn describe_transition(&self, prior: Option<&Row>) -> Option<String> {
+        let prior = prior?;
+        if prior.is_sentinel() {
+            return None;
+        }
+
+        let next_status = self.status.trim().to_ascii_lowercase();
+        let prior_status = prior.status.trim().to_ascii_lowercase();
+
+        let is_cancel = |s: &str| s.contains("cancel");
+        let is_divert = |s: &str| s.contains("divert") || s.contains("redirect");
+
+        // Cancellation and diversion are the most significant — report alone.
+        if is_cancel(&next_status) && !is_cancel(&prior_status) {
+            return Some("Cancelled".to_owned());
+        }
+        if is_divert(&next_status) && !is_divert(&prior_status) {
+            return Some("Diverted".to_owned());
+        }
+
+        let mut parts: Vec<String> = Vec::new();
+
+        if next_status != prior_status
+            && let Some(label) = notable_status_label(&next_status)
+        {
+            parts.push(label.to_owned());
+        }
+
+        let next_delay = self.delay_minutes.unwrap_or(0);
+        let prior_delay = prior.delay_minutes.unwrap_or(0);
+        if next_delay > 0 && next_delay != prior_delay {
+            if prior_delay <= 0 {
+                parts.push(format!("Delayed {next_delay}m"));
+            } else if next_delay > prior_delay {
+                parts.push(format!("Delay increased to {next_delay}m"));
+            } else {
+                parts.push(format!("Delay down to {next_delay}m"));
+            }
+        }
+
+        push_changed_field(&mut parts, "Gate", self.dep_gate, &prior.dep_gate);
+        push_changed_field(
+            &mut parts,
+            "Terminal",
+            self.dep_terminal,
+            &prior.dep_terminal,
+        );
+        push_changed_field(&mut parts, "Arr. gate", self.arr_gate, &prior.arr_gate);
+        push_changed_field(
+            &mut parts,
+            "Arr. terminal",
+            self.arr_terminal,
+            &prior.arr_terminal,
+        );
+        push_changed_field(
+            &mut parts,
+            "Platform",
+            self.dep_platform,
+            &prior.dep_platform,
+        );
+        push_changed_field(
+            &mut parts,
+            "Arr. platform",
+            self.arr_platform,
+            &prior.arr_platform,
+        );
+
+        if parts.is_empty() {
+            None
+        } else {
+            Some(parts.join(" \u{00b7} "))
+        }
+    }
 }
 
 /// Insert or update status enrichment data.
@@ -30,6 +161,7 @@ pub struct Upsert<'a> {
     pub arr_terminal: &'a str,
     pub dep_platform: &'a str,
     pub arr_platform: &'a str,
+    pub aircraft_reg: &'a str,
     pub raw_json: &'a str,
 }
 
@@ -42,8 +174,8 @@ impl Upsert<'_> {
             r"INSERT INTO status_enrichments
                    (hop_id, provider, status, delay_minutes,
                     dep_gate, dep_terminal, arr_gate, arr_terminal,
-                    dep_platform, arr_platform, raw_json)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    dep_platform, arr_platform, aircraft_reg, raw_json)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                ON CONFLICT(hop_id, provider) DO UPDATE SET
                    status = excluded.status,
                    delay_minutes = excluded.delay_minutes,
@@ -53,6 +185,7 @@ impl Upsert<'_> {
                    arr_terminal = excluded.arr_terminal,
                    dep_platform = excluded.dep_platform,
                    arr_platform = excluded.arr_platform,
+                   aircraft_reg = excluded.aircraft_reg,
                    raw_json = excluded.raw_json,
                    fetched_at = datetime('now')",
             self.hop_id,
@@ -65,6 +198,7 @@ impl Upsert<'_> {
             self.arr_terminal,
             self.dep_platform,
             self.arr_platform,
+            self.aircraft_reg,
             self.raw_json,
         )
         .execute(pool)
@@ -97,6 +231,7 @@ impl GetByHopId {
                    arr_terminal as "arr_terminal!: String",
                    dep_platform as "dep_platform!: String",
                    arr_platform as "arr_platform!: String",
+                   aircraft_reg as "aircraft_reg!: String",
                    raw_json as "raw_json!: String",
                    fetched_at as "fetched_at!: String"
                FROM status_enrichments
@@ -139,6 +274,7 @@ impl GetByHopIds {
                    se.arr_terminal as "arr_terminal!: String",
                    se.dep_platform as "dep_platform!: String",
                    se.arr_platform as "arr_platform!: String",
+                   se.aircraft_reg as "aircraft_reg!: String",
                    se.raw_json as "raw_json!: String",
                    se.fetched_at as "fetched_at!: String"
                FROM status_enrichments se
@@ -182,6 +318,7 @@ impl GetByHopIdAndProvider<'_> {
                    arr_terminal as "arr_terminal!: String",
                    dep_platform as "dep_platform!: String",
                    arr_platform as "arr_platform!: String",
+                   aircraft_reg as "aircraft_reg!: String",
                    raw_json as "raw_json!: String",
                    fetched_at as "fetched_at!: String"
                FROM status_enrichments
@@ -226,6 +363,7 @@ impl GetByHopIdsAndProvider<'_> {
                    se.arr_terminal as "arr_terminal!: String",
                    se.dep_platform as "dep_platform!: String",
                    se.arr_platform as "arr_platform!: String",
+                   se.aircraft_reg as "aircraft_reg!: String",
                    se.raw_json as "raw_json!: String",
                    se.fetched_at as "fetched_at!: String"
                FROM status_enrichments se
@@ -263,6 +401,7 @@ impl GetAllByHopId {
                    arr_terminal as "arr_terminal!: String",
                    dep_platform as "dep_platform!: String",
                    arr_platform as "arr_platform!: String",
+                   aircraft_reg as "aircraft_reg!: String",
                    raw_json as "raw_json!: String",
                    fetched_at as "fetched_at!: String"
                FROM status_enrichments
@@ -340,6 +479,7 @@ mod tests {
             arr_terminal: "1",
             dep_platform: "",
             arr_platform: "",
+            aircraft_reg: "EI-DEG",
             raw_json: r#"{"test":true}"#,
         }
         .execute(&pool)
@@ -357,6 +497,7 @@ mod tests {
         assert_eq!(row.delay_minutes, Some(15));
         assert_eq!(row.dep_gate, "B22");
         assert_eq!(row.arr_terminal, "1");
+        assert_eq!(row.aircraft_reg, "EI-DEG");
     }
 
     #[tokio::test]
@@ -376,6 +517,7 @@ mod tests {
             arr_terminal: "",
             dep_platform: "",
             arr_platform: "",
+            aircraft_reg: "",
             raw_json: "{}",
         }
         .execute(&pool)
@@ -393,6 +535,7 @@ mod tests {
             arr_terminal: "3",
             dep_platform: "",
             arr_platform: "",
+            aircraft_reg: "",
             raw_json: r#"{"updated":true}"#,
         }
         .execute(&pool)
@@ -445,6 +588,7 @@ mod tests {
             arr_terminal: "",
             dep_platform: "",
             arr_platform: "",
+            aircraft_reg: "",
             raw_json: "{}",
         }
         .execute(&pool)
@@ -462,6 +606,7 @@ mod tests {
             arr_terminal: "",
             dep_platform: "",
             arr_platform: "",
+            aircraft_reg: "",
             raw_json: "{}",
         }
         .execute(&pool)
@@ -490,6 +635,118 @@ mod tests {
         assert!(results.is_empty());
     }
 
+    fn row_with(status: &str, delay: Option<i64>, dep_gate: &str, dep_terminal: &str) -> Row {
+        Row {
+            id: 1,
+            hop_id: 1,
+            provider: "airlabs".to_owned(),
+            status: status.to_owned(),
+            delay_minutes: delay,
+            dep_gate: dep_gate.to_owned(),
+            dep_terminal: dep_terminal.to_owned(),
+            arr_gate: String::new(),
+            arr_terminal: String::new(),
+            dep_platform: String::new(),
+            arr_platform: String::new(),
+            aircraft_reg: String::new(),
+            raw_json: "{}".to_owned(),
+            fetched_at: "2024-01-01 00:00:00".to_owned(),
+        }
+    }
+
+    fn snapshot<'a>(status: &'a str, delay: Option<i64>, dep_gate: &'a str) -> StatusSnapshot<'a> {
+        StatusSnapshot {
+            status,
+            delay_minutes: delay,
+            dep_gate,
+            dep_terminal: "",
+            arr_gate: "",
+            arr_terminal: "",
+            dep_platform: "",
+            arr_platform: "",
+        }
+    }
+
+    #[test]
+    fn transition_none_without_prior() {
+        assert_eq!(
+            snapshot("active", Some(20), "").describe_transition(None),
+            None
+        );
+    }
+
+    #[test]
+    fn transition_none_from_sentinel() {
+        let sentinel = row_with("", None, "", "");
+        assert_eq!(
+            snapshot("active", Some(20), "B1").describe_transition(Some(&sentinel)),
+            None
+        );
+    }
+
+    #[test]
+    fn transition_none_when_unchanged() {
+        let prior = row_with("active", Some(10), "B1", "5");
+        assert_eq!(
+            snapshot("active", Some(10), "B1").describe_transition(Some(&prior)),
+            None
+        );
+    }
+
+    #[test]
+    fn transition_delay_started() {
+        let prior = row_with("active", None, "", "");
+        assert_eq!(
+            snapshot("active", Some(25), "").describe_transition(Some(&prior)),
+            Some("Delayed 25m".to_owned())
+        );
+    }
+
+    #[test]
+    fn transition_delay_increased() {
+        let prior = row_with("active", Some(10), "", "");
+        assert_eq!(
+            snapshot("active", Some(30), "").describe_transition(Some(&prior)),
+            Some("Delay increased to 30m".to_owned())
+        );
+    }
+
+    #[test]
+    fn transition_cancelled_reported_alone() {
+        let prior = row_with("scheduled", Some(15), "B1", "");
+        assert_eq!(
+            snapshot("cancelled", Some(15), "B1").describe_transition(Some(&prior)),
+            Some("Cancelled".to_owned())
+        );
+    }
+
+    #[test]
+    fn transition_landed() {
+        let prior = row_with("active", None, "", "");
+        assert_eq!(
+            snapshot("landed", None, "").describe_transition(Some(&prior)),
+            Some("Landed".to_owned())
+        );
+    }
+
+    #[test]
+    fn transition_gate_assignment() {
+        let prior = row_with("scheduled", None, "", "");
+        assert_eq!(
+            snapshot("scheduled", None, "B22").describe_transition(Some(&prior)),
+            Some("Gate B22".to_owned())
+        );
+    }
+
+    #[test]
+    fn transition_combines_multiple_changes() {
+        let prior = row_with("scheduled", None, "", "");
+        assert_eq!(
+            snapshot("active", Some(20), "B22").describe_transition(Some(&prior)),
+            Some("Departed \u{00b7} Delayed 20m \u{00b7} Gate B22".to_owned())
+        );
+    }
+
     #[tokio::test]
     async fn delete_by_hop_id_removes_enrichment() {
         let pool = test_pool().await;
@@ -507,6 +764,7 @@ mod tests {
             arr_terminal: "",
             dep_platform: "",
             arr_platform: "",
+            aircraft_reg: "",
             raw_json: "{}",
         }
         .execute(&pool)

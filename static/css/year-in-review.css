@@ -1,0 +1,150 @@
+/* ===== Year in Review ===== */
+.yir-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--space-xl) var(--space-lg) var(--space-2xl);
+  text-align: center;
+}
+
+.yir-header {
+  margin-bottom: var(--space-xl);
+}
+
+.yir-eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: var(--text-sm);
+  color: var(--color-primary);
+  margin: 0;
+}
+
+.yir-year {
+  font-size: var(--text-4xl);
+  font-weight: 800;
+  line-height: 1;
+  margin: var(--space-xs) 0 0;
+}
+
+.yir-tiles {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+
+.yir-tile {
+  flex: 1 1 8rem;
+  min-width: 8rem;
+  padding: var(--space-lg) var(--space-md);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.yir-tiles--hero .yir-tile {
+  border-color: var(--color-primary);
+}
+
+.yir-tile-value {
+  font-size: var(--text-3xl);
+  font-weight: 800;
+  line-height: 1.05;
+  color: var(--color-text);
+}
+
+.yir-tiles--hero .yir-tile-value {
+  font-size: var(--text-4xl);
+  color: var(--color-primary);
+}
+
+.yir-tile-label {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.yir-highlights {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-xl);
+}
+
+.yir-highlight {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  text-align: left;
+}
+
+.yir-highlight-label {
+  color: var(--color-text-secondary);
+}
+
+.yir-highlight-value {
+  font-weight: 600;
+  text-align: right;
+}
+
+.yir-years {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-lg);
+}
+
+.yir-year-link {
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+
+.yir-year-link:hover {
+  border-color: var(--color-text-muted);
+  color: var(--color-text);
+}
+
+.yir-year-link--active {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.yir-full-link {
+  display: inline-block;
+  color: var(--color-link);
+}
+
+.yir-empty {
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-lg);
+}
+
+/* Link from the shared stats page into the recap. */
+.yir-banner-link {
+  display: block;
+  padding: var(--space-sm) var(--space-md);
+  margin-bottom: var(--space-md);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  text-align: center;
+  font-weight: 600;
+  text-decoration: none;
+  color: var(--color-primary);
+}
+
+.yir-banner-link:hover {
+  background: var(--color-surface);
+}

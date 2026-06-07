@@ -1,51 +1,14 @@
 // @ts-check
 /// <reference path="types.d.ts" />
+import { createMap, escapeHtml, haversineKm, arcPoints, cssVar, typeColors } from './map-core.js';
 
 /** @type {HopResponse[]} */
 const initialJourneys = JSON.parse(document.getElementById('initial-journeys').textContent || '[]');
 
-/**
- * @param {string} str
- * @returns {string}
- */
-function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.appendChild(document.createTextNode(str));
-  return div.innerHTML;
-}
+const map = createMap('map', { zoomControl: true, scrollWheelZoom: true }).setView([48, 10], 4);
 
-const map = L.map('map', {
-  zoomControl: true,
-  scrollWheelZoom: true,
-  worldCopyJump: true,
-  maxBounds: [
-    [-85, -Infinity],
-    [85, Infinity],
-  ],
-  maxBoundsViscosity: 1.0,
-  minZoom: 2,
-}).setView([48, 10], 4);
-
-const darkTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png', {
-  attribution:
-    '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
-  maxZoom: 19,
-  subdomains: 'abcd',
-});
-
-darkTiles.addTo(map);
-
-const rootStyles = getComputedStyle(document.documentElement);
-const cssVar = (name) => {
-  return rootStyles.getPropertyValue(name).trim();
-};
 /** @type {Record<string, string>} */
-const colors = {
-  air: cssVar('--color-type-air'),
-  rail: cssVar('--color-type-rail'),
-  boat: cssVar('--color-type-boat'),
-  transport: cssVar('--color-type-transport'),
-};
+const colors = typeColors;
 /** @type {Record<string, string>} */
 const emojis = {
   air: '\u2708\uFE0F',
@@ -224,74 +187,6 @@ function carrierIconHtml(journey, size) {
 const routesLayer = L.layerGroup().addTo(map);
 const airportsLayer = L.layerGroup().addTo(map);
 const offsets = [-360, 0, 360];
-
-/**
- * @param {number} lat1
- * @param {number} lng1
- * @param {number} lat2
- * @param {number} lng2
- * @returns {number}
- */
-function haversineKm(lat1, lng1, lat2, lng2) {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLng / 2) *
-      Math.sin(dLng / 2);
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-/**
- * @param {[number, number]} from
- * @param {[number, number]} to
- * @param {number} numPoints
- * @returns {[number, number][]}
- */
-function arcPoints(from, to, numPoints) {
-  const lat1 = (from[0] * Math.PI) / 180;
-  const lng1 = (from[1] * Math.PI) / 180;
-  const lat2 = (to[0] * Math.PI) / 180;
-  let lng2 = (to[1] * Math.PI) / 180;
-
-  const dLng = lng2 - lng1;
-  if (dLng > Math.PI) lng2 -= 2 * Math.PI;
-  else if (dLng < -Math.PI) lng2 += 2 * Math.PI;
-
-  const d =
-    2 *
-    Math.asin(
-      Math.sqrt(
-        Math.pow(Math.sin((lat1 - lat2) / 2), 2) +
-          Math.cos(lat1) * Math.cos(lat2) * Math.pow(Math.sin((lng1 - lng2) / 2), 2),
-      ),
-    );
-
-  if (d < 1e-10) return [from, to];
-
-  const points = [];
-  let prevLng = from[1];
-  for (let i = 0; i <= numPoints; i++) {
-    const f = i / numPoints;
-    const A = Math.sin((1 - f) * d) / Math.sin(d);
-    const B = Math.sin(f * d) / Math.sin(d);
-    const x = A * Math.cos(lat1) * Math.cos(lng1) + B * Math.cos(lat2) * Math.cos(lng2);
-    const y = A * Math.cos(lat1) * Math.sin(lng1) + B * Math.cos(lat2) * Math.sin(lng2);
-    const z = A * Math.sin(lat1) + B * Math.sin(lat2);
-    const lat = (Math.atan2(z, Math.sqrt(x * x + y * y)) * 180) / Math.PI;
-    let lng = (Math.atan2(y, x) * 180) / Math.PI;
-
-    while (lng - prevLng > 180) lng -= 360;
-    while (lng - prevLng < -180) lng += 360;
-    prevLng = lng;
-
-    points.push(/** @type {[number, number]} */ ([lat, lng]));
-  }
-  return points;
-}
 
 /**
  * @param {HopResponse} journey

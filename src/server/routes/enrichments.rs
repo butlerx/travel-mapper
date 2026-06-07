@@ -32,6 +32,8 @@ pub struct EnrichmentResponse {
     pub dep_platform: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub arr_platform: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub aircraft_reg: Option<String>,
     pub fetched_at: String,
     pub is_fresh: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -75,6 +77,7 @@ impl EnrichmentResponse {
             arr_terminal: non_empty(&row.arr_terminal),
             dep_platform: non_empty(&row.dep_platform),
             arr_platform: non_empty(&row.arr_platform),
+            aircraft_reg: non_empty(&row.aircraft_reg),
             fetched_at: row.fetched_at.clone(),
             is_fresh: compute_freshness(&row.fetched_at, start_date),
             raw_json: if include_raw {
@@ -100,6 +103,7 @@ impl MultiFormatResponse for EnrichmentResponse {
         "arr_terminal",
         "dep_platform",
         "arr_platform",
+        "aircraft_reg",
         "fetched_at",
         "is_fresh",
     ];
@@ -118,6 +122,7 @@ impl MultiFormatResponse for EnrichmentResponse {
             self.arr_terminal.clone().unwrap_or_default(),
             self.dep_platform.clone().unwrap_or_default(),
             self.arr_platform.clone().unwrap_or_default(),
+            self.aircraft_reg.clone().unwrap_or_default(),
             self.fetched_at.clone(),
             self.is_fresh.to_string(),
         ]

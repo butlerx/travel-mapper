@@ -19,7 +19,7 @@ pub(super) fn TripitSection(
                             <span class="badge badge-success ml-sm">"Connected"</span>
                         </h2>
                         <form method="post" action="/sync">
-                            <button class="btn btn-success btn-sm" type="submit">"Sync Now"</button>
+                            <button class="btn btn-primary btn-sm" type="submit">"Sync Now"</button>
                         </form>
                     </div>
                     {if has_sync {

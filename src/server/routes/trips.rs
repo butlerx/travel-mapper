@@ -120,16 +120,27 @@ pub struct TripResponse {
     pub end_date: Option<String>,
     #[serde(rename = "journey_count")]
     pub hop_count: i64,
+    /// Distinct travel types present in the trip, in display order.
+    pub travel_types: Vec<String>,
 }
 
 impl From<db::trips::Row> for TripResponse {
     fn from(row: db::trips::Row) -> Self {
+        let travel_types = row
+            .travel_types
+            .as_deref()
+            .unwrap_or_default()
+            .split(',')
+            .filter(|s| !s.is_empty())
+            .map(str::to_owned)
+            .collect();
         Self {
             id: row.id,
             name: row.name,
             start_date: row.start_date,
             end_date: row.end_date,
             hop_count: row.hop_count,
+            travel_types,
         }
     }
 }
@@ -202,8 +213,8 @@ pub async fn handler(
         TripSort::DateAsc => responses.sort_by(|a, b| a.start_date.cmp(&b.start_date)),
         TripSort::NameAsc => responses.sort_by(|a, b| a.name.cmp(&b.name)),
         TripSort::NameDesc => responses.sort_by(|a, b| b.name.cmp(&a.name)),
-        TripSort::CountDesc => responses.sort_by(|a, b| b.hop_count.cmp(&a.hop_count)),
-        TripSort::CountAsc => responses.sort_by(|a, b| a.hop_count.cmp(&b.hop_count)),
+        TripSort::CountDesc => responses.sort_by_key(|t| std::cmp::Reverse(t.hop_count)),
+        TripSort::CountAsc => responses.sort_by_key(|t| t.hop_count),
     }
 
     if format == super::ResponseFormat::Html {
@@ -393,6 +404,7 @@ pub async fn create_handler(
             start_date: None,
             end_date: None,
             hop_count: 0,
+            travel_types: Vec::new(),
         };
         TripResponse::single_format_response(&response, format, StatusCode::CREATED)
     }

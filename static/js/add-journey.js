@@ -16,29 +16,27 @@ const sections = document.querySelectorAll('.type-fields');
 function update() {
   const t = sel.value;
   sections.forEach((s) => {
-    s.style.display = 'none';
+    s.classList.toggle('is-active', s.id === `fields-${t}`);
   });
-  const active = document.getElementById(`fields-${t}`);
-  if (active) active.style.display = '';
 
   if (t === 'air') {
     originLabel.textContent = 'Origin (IATA code)';
     destLabel.textContent = 'Destination (IATA code)';
     originInput.placeholder = 'LHR';
     originInput.maxLength = 4;
-    originInput.style.textTransform = 'uppercase';
+    originInput.classList.add('uppercase-input');
     dest.placeholder = 'JFK';
     dest.maxLength = 4;
-    dest.style.textTransform = 'uppercase';
+    dest.classList.add('uppercase-input');
   } else {
     originLabel.textContent = 'Origin';
     destLabel.textContent = 'Destination';
     originInput.placeholder = 'Paris Gare du Nord';
     originInput.removeAttribute('maxlength');
-    originInput.style.textTransform = '';
+    originInput.classList.remove('uppercase-input');
     dest.placeholder = 'London St Pancras';
     dest.removeAttribute('maxlength');
-    dest.style.textTransform = '';
+    dest.classList.remove('uppercase-input');
   }
 }
 

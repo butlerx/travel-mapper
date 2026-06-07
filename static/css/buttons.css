@@ -60,17 +60,6 @@ button:focus-visible,
   border-color: var(--color-danger);
 }
 
-.btn-warning {
-  background: transparent;
-  color: var(--color-warning);
-  border-color: var(--color-border);
-}
-
-.btn-warning:hover {
-  background: var(--color-warning-bg);
-  border-color: var(--color-warning);
-}
-
 .btn-secondary {
   background: transparent;
   color: var(--color-text-secondary);
@@ -89,4 +78,9 @@ button:focus-visible,
 .btn-sm {
   padding: var(--space-xs) var(--space-sm);
   font-size: var(--text-xs);
+}
+
+.btn-lg {
+  padding: var(--space-md) var(--space-lg);
+  font-size: var(--text-base);
 }

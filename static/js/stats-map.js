@@ -1,39 +1,16 @@
 // @ts-check
 /// <reference path="types.d.ts" />
+import { createMap, escapeHtml } from './map-core.js';
 
 /** @type {CountryCounts} */
 const counts = JSON.parse(document.getElementById('country-counts').textContent || '{}');
 const mapEl = document.getElementById('stats-map');
 if (!mapEl || Object.keys(counts).length === 0) {
 } else {
-  /**
-   * @param {string} str
-   * @returns {string}
-   */
-  function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.appendChild(document.createTextNode(str));
-    return div.innerHTML;
-  }
-
-  const map = L.map('stats-map', {
-    zoomControl: true,
-    scrollWheelZoom: false,
-    worldCopyJump: true,
-    maxBounds: [
-      [-85, -Infinity],
-      [85, Infinity],
-    ],
-    maxBoundsViscosity: 1.0,
-    minZoom: 2,
-  }).setView([30, 10], 2);
-
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png', {
-    attribution:
-      '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
-    maxZoom: 19,
-    subdomains: 'abcd',
-  }).addTo(map);
+  const map = createMap('stats-map', { zoomControl: true, scrollWheelZoom: false }).setView(
+    [30, 10],
+    2,
+  );
 
   const n2a = {
     '004': 'AF',

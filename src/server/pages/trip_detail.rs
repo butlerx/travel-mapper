@@ -121,6 +121,7 @@ fn TripDetailPage(
                     "oLng": h.origin_lng,
                     "dLat": h.dest_lat,
                     "dLng": h.dest_lng,
+                    "type": h.travel_type,
                 })
             })
             .collect::<Vec<_>>(),
@@ -255,7 +256,7 @@ fn TripDetailPage(
                     <hr class="trip-edit-hr" />
 
                     <button
-                        class="btn btn-danger btn-block"
+                        class="btn btn-danger btn-full"
                         type="button"
                         data-delete-trip
                     >"Delete Trip"</button>

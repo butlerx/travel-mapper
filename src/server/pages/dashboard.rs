@@ -206,7 +206,7 @@ fn DashboardPage(
 
             {if has_journeys {
                 view! {
-                    <OverviewCards stats=stats distance=distance year_range=year_range />
+                    <OverviewCards stats=stats distance=distance year_range=year_range compact=true />
                     <StatsFilters
                         available_years=available_years
                         selected_year=query.year
@@ -340,6 +340,10 @@ mod tests {
         assert!(body.contains("map-legend"));
         assert!(body.contains("id=\"initial-journeys\""));
         assert!(body.contains("/static/map.js"));
+        // Slim header: four headline cards inline, the rest behind disclosures.
+        assert!(body.contains("stats-overview-compact"));
+        assert!(body.contains("More stats"));
+        assert!(body.contains("More filters"));
     }
 
     #[tokio::test]

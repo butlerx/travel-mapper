@@ -261,6 +261,12 @@ fn JourneyDetailPage(
             (css, label)
         });
 
+    let aircraft_reg_view = enrichment
+        .as_ref()
+        .map(|e| e.aircraft_reg.trim())
+        .filter(|reg| !reg.is_empty())
+        .map(str::to_owned);
+
     let verification_badge_view = opensky_verification.as_ref().map(|v| {
         if v.status == "verified" {
             (
@@ -310,6 +316,12 @@ fn JourneyDetailPage(
                     })}
                     {countries_view}
                     <div class="journey-detail-meta">
+                        {aircraft_reg_view.map(|reg| view! {
+                            <span class="journey-detail-meta-item">
+                                <span class="journey-detail-meta-label">"Aircraft"</span>
+                                {reg}
+                            </span>
+                        })}
                         {cost_view.map(|text| view! {
                             <span class="journey-detail-meta-item">
                                 <span class="journey-detail-meta-label">"Cost"</span>
@@ -337,6 +349,7 @@ fn JourneyDetailPage(
                     data-origin-lng=origin_lng
                     data-dest-lat=dest_lat
                     data-dest-lng=dest_lng
+                    data-type=journey.travel_type.to_string()
                 ></div>
 
                 {detail_section}
@@ -433,6 +446,49 @@ mod tests {
         assert!(body.contains("Dublin"), "should contain origin name");
         assert!(body.contains("London Heathrow"), "should contain dest name");
         assert!(body.contains("journey-map"), "should contain map div");
+    }
+
+    #[tokio::test]
+    async fn journey_detail_page_renders_aircraft_registration() {
+        let pool = test_pool().await;
+        let (cookie, journey_id) = insert_journey_for_user(&pool, "alice").await;
+
+        db::status_enrichments::Upsert {
+            hop_id: journey_id,
+            provider: "airlabs",
+            status: "landed",
+            delay_minutes: None,
+            dep_gate: "",
+            dep_terminal: "",
+            arr_gate: "",
+            arr_terminal: "",
+            dep_platform: "",
+            arr_platform: "",
+            aircraft_reg: "EI-DEG",
+            raw_json: "{}",
+        }
+        .execute(&pool)
+        .await
+        .expect("upsert enrichment");
+
+        let app = create_router(test_app_state(pool));
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri(format!("/journeys/{journey_id}"))
+                    .header("cookie", &cookie)
+                    .header("accept", "text/html")
+                    .body(Body::empty())
+                    .expect("failed to build request"),
+            )
+            .await
+            .expect("router request failed");
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = body_text(response).await;
+        assert!(body.contains("Aircraft"), "should label the aircraft");
+        assert!(body.contains("EI-DEG"), "should show the tail number");
     }
 
     #[tokio::test]

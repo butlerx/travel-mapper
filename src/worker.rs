@@ -36,6 +36,7 @@ async fn write_no_data_sentinel(pool: &SqlitePool, hop_id: i64, provider: &str) 
         arr_terminal: "",
         dep_platform: "",
         arr_platform: "",
+        aircraft_reg: "",
         raw_json: "",
     })
     .execute(pool)
@@ -48,11 +49,10 @@ async fn write_no_data_sentinel(pool: &SqlitePool, hop_id: i64, provider: &str) 
 pub(crate) const REALTIME_TTL_SECS: i64 = 2 * 60 * 60;
 
 /// How often the worker runs a periodic enrichment sweep across all users.
-const PERIODIC_ENRICHMENT_INTERVAL: std::time::Duration =
-    std::time::Duration::from_secs(4 * 60 * 60);
+const PERIODIC_ENRICHMENT_INTERVAL: std::time::Duration = std::time::Duration::from_hours(4);
 
 /// Backoff duration after an external API signals rate limiting.
-const RATE_LIMIT_BACKOFF: std::time::Duration = std::time::Duration::from_secs(60 * 60);
+const RATE_LIMIT_BACKOFF: std::time::Duration = std::time::Duration::from_hours(1);
 
 /// Result of a successful `TripIt` sync — counts and duration.
 #[derive(Debug)]
@@ -279,6 +279,47 @@ async fn is_enrichment_fresh(
     .fetch_one(pool)
     .await;
     matches!(fresh, Ok(1))
+}
+
+/// Whether a hop's departure is close enough to "now" that live status
+/// transitions are worth pushing — roughly the travel day plus a small margin.
+/// Keeps the delta-push feature from notifying about historical journeys whose
+/// enrichment happens to refresh.
+fn within_notify_window(start_date: &str) -> bool {
+    let Some(dep) = start_date
+        .get(..10)
+        .and_then(|s| chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d").ok())
+    else {
+        return false;
+    };
+    let days_until = (dep - chrono::Utc::now().date_naive()).num_days();
+    (-1..=2).contains(&days_until)
+}
+
+/// Push a live status transition (delay, gate/terminal change, cancellation,
+/// boarding/departed/landed) to the user, if push is configured and the hop is
+/// within the notify window. Title carries the flight/train identifier + route;
+/// the body is the human transition string.
+async fn push_status_transition(
+    config: &SyncWorkerConfig,
+    user_id: i64,
+    hop: &db::hops::Row,
+    identifier: &str,
+    body: &str,
+) {
+    let Some(vapid_key) = &config.vapid_private_key else {
+        return;
+    };
+    if !within_notify_window(&hop.start_date) {
+        return;
+    }
+    let title = format!(
+        "{identifier} \u{00b7} {}\u{2192}{}",
+        hop.origin_name, hop.dest_name
+    );
+    let url = format!("/journeys/{}", hop.id);
+    tracing::info!(user_id, hop_id = hop.id, body, "pushing status transition");
+    crate::server::push::send_to_user(&config.pool, vapid_key, user_id, &title, body, &url).await;
 }
 
 pub(crate) fn departure_aware_ttl(start_date: &str) -> i64 {
@@ -555,6 +596,70 @@ enum FlightEnrichResult {
     Skipped,
 }
 
+/// Store a freshly-fetched flight status and push the user on any meaningful
+/// transition versus the previously stored row.
+async fn store_flight_status_and_notify(
+    config: &SyncWorkerConfig,
+    user_id: i64,
+    hop: &db::hops::Row,
+    flight_number: &str,
+    status: &crate::integrations::flight_status::FlightStatus,
+) -> FlightEnrichResult {
+    let delay = status.dep_delay_minutes.or(status.arr_delay_minutes);
+
+    // Diff against the previously stored row before overwriting it (the upsert
+    // keeps only one row per hop/provider, so the prior must be read first).
+    let prior = (db::status_enrichments::GetByHopIdAndProvider {
+        hop_id: hop.id,
+        provider: "airlabs",
+    })
+    .execute(&config.pool)
+    .await
+    .ok()
+    .flatten();
+    let transition = db::status_enrichments::StatusSnapshot {
+        status: &status.status,
+        delay_minutes: delay,
+        dep_gate: &status.dep_gate,
+        dep_terminal: &status.dep_terminal,
+        arr_gate: &status.arr_gate,
+        arr_terminal: &status.arr_terminal,
+        dep_platform: "",
+        arr_platform: "",
+    }
+    .describe_transition(prior.as_ref());
+
+    if let Err(err) = (db::status_enrichments::Upsert {
+        hop_id: hop.id,
+        provider: "airlabs",
+        status: &status.status,
+        delay_minutes: delay,
+        dep_gate: &status.dep_gate,
+        dep_terminal: &status.dep_terminal,
+        arr_gate: &status.arr_gate,
+        arr_terminal: &status.arr_terminal,
+        dep_platform: "",
+        arr_platform: "",
+        aircraft_reg: &status.aircraft_reg,
+        raw_json: &status.raw_json,
+    })
+    .execute(&config.pool)
+    .await
+    {
+        tracing::warn!(
+            hop_id = hop.id,
+            error = %err,
+            "failed to upsert flight status enrichment",
+        );
+        FlightEnrichResult::Skipped
+    } else {
+        if let Some(body) = transition {
+            push_status_transition(config, user_id, hop, flight_number, &body).await;
+        }
+        FlightEnrichResult::Enriched
+    }
+}
+
 async fn enrich_single_flight_hop(
     config: &SyncWorkerConfig,
     client: &AirLabsClient,
@@ -595,32 +700,7 @@ async fn enrich_single_flight_hop(
         .await
     {
         Ok(Some(status)) => {
-            let delay = status.dep_delay_minutes.or(status.arr_delay_minutes);
-            if let Err(err) = (db::status_enrichments::Upsert {
-                hop_id: hop.id,
-                provider: "airlabs",
-                status: &status.status,
-                delay_minutes: delay,
-                dep_gate: &status.dep_gate,
-                dep_terminal: &status.dep_terminal,
-                arr_gate: &status.arr_gate,
-                arr_terminal: &status.arr_terminal,
-                dep_platform: "",
-                arr_platform: "",
-                raw_json: &status.raw_json,
-            })
-            .execute(&config.pool)
-            .await
-            {
-                tracing::warn!(
-                    hop_id = hop.id,
-                    error = %err,
-                    "failed to upsert flight status enrichment",
-                );
-                FlightEnrichResult::Skipped
-            } else {
-                FlightEnrichResult::Enriched
-            }
+            store_flight_status_and_notify(config, user_id, hop, flight_number, &status).await
         }
         Ok(None) => {
             tracing::debug!(
@@ -776,6 +856,7 @@ async fn verify_air_hop_route(
                 arr_terminal: "",
                 dep_platform: "",
                 arr_platform: "",
+                aircraft_reg: "",
                 raw_json: &verification.raw_json,
             })
             .execute(&config.pool)
@@ -949,6 +1030,69 @@ async fn enrich_single_rail_hop(
     dispatch_and_upsert_rail_status(config, user_id, hop, provider, train_number, &query).await
 }
 
+/// Store a freshly-fetched rail status and push the user on any meaningful
+/// transition (delay, platform change, cancellation) versus the prior row.
+async fn store_rail_status_and_notify(
+    config: &SyncWorkerConfig,
+    user_id: i64,
+    hop: &db::hops::Row,
+    provider: &str,
+    train_number: &str,
+    status: &crate::integrations::rail_status::RailStatus,
+) -> Option<RailEnrichResult> {
+    let delay = status.dep_delay_minutes.or(status.arr_delay_minutes);
+
+    let prior = (db::status_enrichments::GetByHopIdAndProvider {
+        hop_id: hop.id,
+        provider,
+    })
+    .execute(&config.pool)
+    .await
+    .ok()
+    .flatten();
+    let transition = db::status_enrichments::StatusSnapshot {
+        status: &status.status,
+        delay_minutes: delay,
+        dep_gate: "",
+        dep_terminal: "",
+        arr_gate: "",
+        arr_terminal: "",
+        dep_platform: &status.dep_platform,
+        arr_platform: &status.arr_platform,
+    }
+    .describe_transition(prior.as_ref());
+
+    if let Err(err) = (db::status_enrichments::Upsert {
+        hop_id: hop.id,
+        provider,
+        status: &status.status,
+        delay_minutes: delay,
+        dep_gate: "",
+        dep_terminal: "",
+        arr_gate: "",
+        arr_terminal: "",
+        dep_platform: &status.dep_platform,
+        arr_platform: &status.arr_platform,
+        aircraft_reg: "",
+        raw_json: &status.raw_json,
+    })
+    .execute(&config.pool)
+    .await
+    {
+        tracing::warn!(
+            hop_id = hop.id,
+            error = %err,
+            "failed to upsert rail status enrichment",
+        );
+        Some(RailEnrichResult::Skipped)
+    } else {
+        if let Some(body) = transition {
+            push_status_transition(config, user_id, hop, train_number, &body).await;
+        }
+        Some(RailEnrichResult::Enriched)
+    }
+}
+
 async fn dispatch_and_upsert_rail_status(
     config: &SyncWorkerConfig,
     user_id: i64,
@@ -993,32 +1137,8 @@ async fn dispatch_and_upsert_rail_status(
 
     match result {
         Ok(Some(status)) => {
-            let delay = status.dep_delay_minutes.or(status.arr_delay_minutes);
-            if let Err(err) = (db::status_enrichments::Upsert {
-                hop_id: hop.id,
-                provider,
-                status: &status.status,
-                delay_minutes: delay,
-                dep_gate: "",
-                dep_terminal: "",
-                arr_gate: "",
-                arr_terminal: "",
-                dep_platform: &status.dep_platform,
-                arr_platform: &status.arr_platform,
-                raw_json: &status.raw_json,
-            })
-            .execute(&config.pool)
-            .await
-            {
-                tracing::warn!(
-                    hop_id = hop.id,
-                    error = %err,
-                    "failed to upsert rail status enrichment",
-                );
-            } else {
-                return Some(RailEnrichResult::Enriched);
-            }
-            Some(RailEnrichResult::Skipped)
+            store_rail_status_and_notify(config, user_id, hop, provider, train_number, &status)
+                .await
         }
         Ok(None) => {
             tracing::debug!(
@@ -1046,5 +1166,33 @@ async fn dispatch_and_upsert_rail_status(
             );
             Some(RailEnrichResult::Skipped)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::within_notify_window;
+    use chrono::{Duration, Utc};
+
+    fn date_offset(days: i64) -> String {
+        (Utc::now().date_naive() + Duration::days(days))
+            .format("%Y-%m-%d")
+            .to_string()
+    }
+
+    #[test]
+    fn notify_window_includes_travel_day_and_margins() {
+        assert!(within_notify_window(&date_offset(0)));
+        assert!(within_notify_window(&date_offset(1)));
+        assert!(within_notify_window(&date_offset(2)));
+        assert!(within_notify_window(&date_offset(-1)));
+    }
+
+    #[test]
+    fn notify_window_excludes_distant_and_invalid_dates() {
+        assert!(!within_notify_window(&date_offset(5)));
+        assert!(!within_notify_window(&date_offset(-3)));
+        assert!(!within_notify_window("not-a-date"));
+        assert!(!within_notify_window(""));
     }
 }

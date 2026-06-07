@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT\n                   se.id as \"id!: i64\",\n                   se.hop_id as \"hop_id!: i64\",\n                   se.provider as \"provider!: String\",\n                   se.status as \"status!: String\",\n                   se.delay_minutes,\n                   se.dep_gate as \"dep_gate!: String\",\n                   se.dep_terminal as \"dep_terminal!: String\",\n                   se.arr_gate as \"arr_gate!: String\",\n                   se.arr_terminal as \"arr_terminal!: String\",\n                   se.dep_platform as \"dep_platform!: String\",\n                   se.arr_platform as \"arr_platform!: String\",\n                   se.raw_json as \"raw_json!: String\",\n                   se.fetched_at as \"fetched_at!: String\"\n               FROM status_enrichments se\n               WHERE se.hop_id IN (SELECT value FROM json_each(?))\n                 AND se.provider = ?",
+  "query": "SELECT\n                   se.id as \"id!: i64\",\n                   se.hop_id as \"hop_id!: i64\",\n                   se.provider as \"provider!: String\",\n                   se.status as \"status!: String\",\n                   se.delay_minutes,\n                   se.dep_gate as \"dep_gate!: String\",\n                   se.dep_terminal as \"dep_terminal!: String\",\n                   se.arr_gate as \"arr_gate!: String\",\n                   se.arr_terminal as \"arr_terminal!: String\",\n                   se.dep_platform as \"dep_platform!: String\",\n                   se.arr_platform as \"arr_platform!: String\",\n                   se.aircraft_reg as \"aircraft_reg!: String\",\n                   se.raw_json as \"raw_json!: String\",\n                   se.fetched_at as \"fetched_at!: String\"\n               FROM status_enrichments se\n               WHERE se.hop_id IN (SELECT value FROM json_each(?))\n                 AND se.provider = ?",
   "describe": {
     "columns": [
       {
@@ -59,13 +59,18 @@
         "type_info": "Text"
       },
       {
-        "name": "raw_json!: String",
+        "name": "aircraft_reg!: String",
         "ordinal": 11,
         "type_info": "Text"
       },
       {
-        "name": "fetched_at!: String",
+        "name": "raw_json!: String",
         "ordinal": 12,
+        "type_info": "Text"
+      },
+      {
+        "name": "fetched_at!: String",
+        "ordinal": 13,
         "type_info": "Text"
       }
     ],
@@ -85,8 +90,9 @@
       false,
       false,
       false,
+      false,
       false
     ]
   },
-  "hash": "62925ad50c93f24e299d35ca146e89105762204379b8ca4d9722bbacd34a77ee"
+  "hash": "71d61d65055d4d265030d9ffb8f103405be82fcbfc0e7b8894b65d2450d5796b"
 }

@@ -9,6 +9,32 @@ use axum::{
 };
 use leptos::prelude::*;
 
+/// Travel types in display order paired with their glyphs.
+const TYPE_GLYPHS: [(&str, &str); 4] = [
+    ("air", "\u{2708}\u{fe0f}"),
+    ("rail", "\u{1f686}"),
+    ("boat", "\u{1f6a2}"),
+    ("transport", "\u{1f697}"),
+];
+
+/// Space-joined emoji glyphs for the travel types present in a trip.
+fn type_glyphs(types: &[String]) -> String {
+    TYPE_GLYPHS
+        .iter()
+        .filter(|(t, _)| types.iter().any(|x| x == t))
+        .map(|(_, glyph)| *glyph)
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// Dominant travel type for the card accent (first present, in display order).
+fn accent_type(types: &[String]) -> &'static str {
+    TYPE_GLYPHS
+        .iter()
+        .find(|(t, _)| types.iter().any(|x| x == t))
+        .map_or("", |(t, _)| *t)
+}
+
 pub(crate) fn render_page(
     trips: Vec<TripResponse>,
     sort: TripSort,
@@ -79,10 +105,22 @@ fn TripsPage(
                             (None, Some(end)) => end.clone(),
                             (None, None) => "No dates yet".to_string(),
                         };
+                        let glyphs = type_glyphs(&trip.travel_types);
+                        let accent = accent_type(&trip.travel_types);
+                        let card_class = if accent.is_empty() {
+                            "data-card journey-card trip-card".to_owned()
+                        } else {
+                            format!("data-card journey-card trip-card trip-card--{accent}")
+                        };
                         let card = view! {
                             <a href={format!("/trips/{}", trip.id)} class="journey-card-link">
-                                <div class="data-card journey-card">
-                                    <div class="journey-card-route">{trip.name.clone()}</div>
+                                <div class=card_class>
+                                    <div class="journey-card-route">
+                                        {(!glyphs.is_empty()).then(|| view! {
+                                            <span class="trip-card-glyphs">{glyphs}</span>
+                                        })}
+                                        <span class="trip-card-name">{trip.name.clone()}</span>
+                                    </div>
                                     <div class="journey-card-meta">
                                         <span class="journey-card-date">{range}</span>
                                         <span class="journey-card-badge">{format!("{} journeys", trip.hop_count)}</span>
@@ -146,5 +184,32 @@ fn TripsPage(
                 <script src="/static/edit-panel.js" defer></script>
             </main>
         </Shell>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{accent_type, type_glyphs};
+
+    fn owned(types: &[&str]) -> Vec<String> {
+        types.iter().map(|s| (*s).to_owned()).collect()
+    }
+
+    #[test]
+    fn glyphs_render_in_display_order_regardless_of_input_order() {
+        let glyphs = type_glyphs(&owned(&["rail", "air"]));
+        assert_eq!(glyphs, "\u{2708}\u{fe0f} \u{1f686}");
+    }
+
+    #[test]
+    fn glyphs_empty_for_no_types() {
+        assert_eq!(type_glyphs(&[]), "");
+    }
+
+    #[test]
+    fn accent_prefers_air_then_rail_then_boat_then_transport() {
+        assert_eq!(accent_type(&owned(&["transport", "rail"])), "rail");
+        assert_eq!(accent_type(&owned(&["boat"])), "boat");
+        assert_eq!(accent_type(&[]), "");
     }
 }

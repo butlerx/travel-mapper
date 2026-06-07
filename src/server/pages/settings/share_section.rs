@@ -11,7 +11,7 @@ pub(super) fn ShareSection(tokens: Vec<db::share_tokens::Row>, base_url: String)
                 <label>"Label"</label>
                 <div class="input-group">
                     <input type="text" name="label" placeholder="e.g. Year in Review" required />
-                    <button type="submit" class="btn">"Generate Share Link"</button>
+                    <button type="submit" class="btn btn-primary">"Generate Share Link"</button>
                 </div>
             </form>
 
