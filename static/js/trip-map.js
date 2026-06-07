@@ -4,36 +4,61 @@ import { createMap, arcPoints, typeColors } from './map-core.js';
 
 /** @type {HTMLElement | null} */
 const el = document.getElementById('trip-map');
-if (el && typeof L !== 'undefined') {
+if (el && typeof maplibregl !== 'undefined') {
   /** @type {Array<{oLat: number, oLng: number, dLat: number, dLng: number, type?: string}>} */
   const legs = JSON.parse(el.dataset.legs || '[]');
   if (legs.length > 0) {
-    const map = createMap('trip-map', { scrollWheelZoom: false });
+    const map = createMap('trip-map', { scrollZoom: false });
 
-    /** @type {Array<[number, number]>} */
-    const allPoints = [];
-    /** @type {Set<string>} */
-    const markerKeys = new Set();
+    map.on('load', () => {
+      const lineFeatures = legs.map((leg, i) => ({
+        type: 'Feature',
+        properties: { id: i, color: typeColors[leg.type || 'air'] || typeColors.air },
+        geometry: {
+          type: 'LineString',
+          coordinates: arcPoints([leg.oLng, leg.oLat], [leg.dLng, leg.dLat], 60),
+        },
+      }));
 
-    for (const leg of legs) {
-      const color = typeColors[leg.type || 'air'] || typeColors.air;
-      const points = arcPoints([leg.oLat, leg.oLng], [leg.dLat, leg.dLng], 50);
-      L.polyline(points, { color, weight: 3, opacity: 0.85 }).addTo(map);
-
-      const oKey = `${leg.oLat},${leg.oLng}`;
-      const dKey = `${leg.dLat},${leg.dLng}`;
-      if (!markerKeys.has(oKey)) {
-        L.marker([leg.oLat, leg.oLng]).addTo(map);
-        markerKeys.add(oKey);
+      /** @type {Set<string>} */
+      const seen = new Set();
+      const pointFeatures = [];
+      for (const leg of legs) {
+        const oKey = `${leg.oLng},${leg.oLat}`;
+        const dKey = `${leg.dLng},${leg.dLat}`;
+        if (!seen.has(oKey)) {
+          pointFeatures.push({ type: 'Feature', geometry: { type: 'Point', coordinates: [leg.oLng, leg.oLat] }, properties: {} });
+          seen.add(oKey);
+        }
+        if (!seen.has(dKey)) {
+          pointFeatures.push({ type: 'Feature', geometry: { type: 'Point', coordinates: [leg.dLng, leg.dLat] }, properties: {} });
+          seen.add(dKey);
+        }
       }
-      if (!markerKeys.has(dKey)) {
-        L.marker([leg.dLat, leg.dLng]).addTo(map);
-        markerKeys.add(dKey);
+
+      map.addSource('trip-arcs', { type: 'geojson', data: { type: 'FeatureCollection', features: lineFeatures } });
+      map.addLayer({
+        id: 'trip-arc-lines',
+        type: 'line',
+        source: 'trip-arcs',
+        paint: { 'line-color': ['get', 'color'], 'line-width': 2.5, 'line-opacity': 0.85 },
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+      });
+
+      map.addSource('trip-points', { type: 'geojson', data: { type: 'FeatureCollection', features: pointFeatures } });
+      map.addLayer({
+        id: 'trip-endpoint-circles',
+        type: 'circle',
+        source: 'trip-points',
+        paint: { 'circle-radius': 5, 'circle-color': '#56b4e9', 'circle-stroke-width': 1.5, 'circle-stroke-color': '#fff' },
+      });
+
+      const bounds = new maplibregl.LngLatBounds();
+      for (const leg of legs) {
+        bounds.extend([leg.oLng, leg.oLat]);
+        bounds.extend([leg.dLng, leg.dLat]);
       }
-
-      for (const p of points) allPoints.push(p);
-    }
-
-    map.fitBounds(allPoints, { padding: [40, 40] });
+      map.fitBounds(bounds, { padding: 60 });
+    });
   }
 }

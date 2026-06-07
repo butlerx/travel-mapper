@@ -7,244 +7,43 @@ const counts = JSON.parse(document.getElementById('country-counts').textContent 
 const mapEl = document.getElementById('stats-map');
 if (!mapEl || Object.keys(counts).length === 0) {
 } else {
-  const map = createMap('stats-map', { zoomControl: true, scrollWheelZoom: false }).setView(
-    [30, 10],
-    2,
-  );
+  const map = createMap('stats-map', { center: [10, 30], zoom: 2, scrollZoom: false });
 
   const n2a = {
-    '004': 'AF',
-    '008': 'AL',
-    '010': 'AQ',
-    '012': 'DZ',
-    '016': 'AS',
-    '020': 'AD',
-    '024': 'AO',
-    '028': 'AG',
-    '031': 'AZ',
-    '032': 'AR',
-    '036': 'AU',
-    '040': 'AT',
-    '044': 'BS',
-    '048': 'BH',
-    '050': 'BD',
-    '051': 'AM',
-    '052': 'BB',
-    '056': 'BE',
-    '060': 'BM',
-    '064': 'BT',
-    '068': 'BO',
-    '070': 'BA',
-    '072': 'BW',
-    '076': 'BR',
-    '084': 'BZ',
-    '090': 'SB',
-    '096': 'BN',
-    100: 'BG',
-    104: 'MM',
-    108: 'BI',
-    112: 'BY',
-    116: 'KH',
-    120: 'CM',
-    124: 'CA',
-    132: 'CV',
-    140: 'CF',
-    144: 'LK',
-    148: 'TD',
-    152: 'CL',
-    156: 'CN',
-    158: 'TW',
-    170: 'CO',
-    174: 'KM',
-    175: 'YT',
-    178: 'CG',
-    180: 'CD',
-    184: 'CK',
-    188: 'CR',
-    191: 'HR',
-    192: 'CU',
-    196: 'CY',
-    203: 'CZ',
-    204: 'BJ',
-    208: 'DK',
-    212: 'DM',
-    214: 'DO',
-    218: 'EC',
-    222: 'SV',
-    226: 'GQ',
-    231: 'ET',
-    232: 'ER',
-    233: 'EE',
-    234: 'FO',
-    238: 'FK',
-    242: 'FJ',
-    246: 'FI',
-    250: 'FR',
-    254: 'GF',
-    258: 'PF',
-    260: 'TF',
-    262: 'DJ',
-    266: 'GA',
-    268: 'GE',
-    270: 'GM',
-    275: 'PS',
-    276: 'DE',
-    288: 'GH',
-    292: 'GI',
-    296: 'KI',
-    300: 'GR',
-    304: 'GL',
-    308: 'GD',
-    312: 'GP',
-    316: 'GU',
-    320: 'GT',
-    324: 'GN',
-    328: 'GY',
-    332: 'HT',
-    336: 'VA',
-    340: 'HN',
-    344: 'HK',
-    348: 'HU',
-    352: 'IS',
-    356: 'IN',
-    360: 'ID',
-    364: 'IR',
-    368: 'IQ',
-    372: 'IE',
-    376: 'IL',
-    380: 'IT',
-    384: 'CI',
-    388: 'JM',
-    392: 'JP',
-    398: 'KZ',
-    400: 'JO',
-    404: 'KE',
-    408: 'KP',
-    410: 'KR',
-    414: 'KW',
-    417: 'KG',
-    418: 'LA',
-    422: 'LB',
-    426: 'LS',
-    428: 'LV',
-    430: 'LR',
-    434: 'LY',
-    438: 'LI',
-    440: 'LT',
-    442: 'LU',
-    446: 'MO',
-    450: 'MG',
-    454: 'MW',
-    458: 'MY',
-    462: 'MV',
-    466: 'ML',
-    470: 'MT',
-    474: 'MQ',
-    478: 'MR',
-    480: 'MU',
-    484: 'MX',
-    492: 'MC',
-    496: 'MN',
-    498: 'MD',
-    499: 'ME',
-    504: 'MA',
-    508: 'MZ',
-    512: 'OM',
-    516: 'NA',
-    520: 'NR',
-    524: 'NP',
-    528: 'NL',
-    530: 'AN',
-    533: 'AW',
-    540: 'NC',
-    548: 'VU',
-    554: 'NZ',
-    558: 'NI',
-    562: 'NE',
-    566: 'NG',
-    570: 'NU',
-    574: 'NF',
-    578: 'NO',
-    580: 'MP',
-    583: 'FM',
-    584: 'MH',
-    585: 'PW',
-    586: 'PK',
-    591: 'PA',
-    598: 'PG',
-    600: 'PY',
-    604: 'PE',
-    608: 'PH',
-    612: 'PN',
-    616: 'PL',
-    620: 'PT',
-    624: 'GW',
-    626: 'TL',
-    630: 'PR',
-    634: 'QA',
-    638: 'RE',
-    642: 'RO',
-    643: 'RU',
-    646: 'RW',
-    654: 'SH',
-    659: 'KN',
-    660: 'AI',
-    662: 'LC',
-    666: 'PM',
-    670: 'VC',
-    674: 'SM',
-    678: 'ST',
-    682: 'SA',
-    686: 'SN',
-    688: 'RS',
-    690: 'SC',
-    694: 'SL',
-    702: 'SG',
-    703: 'SK',
-    704: 'VN',
-    705: 'SI',
-    706: 'SO',
-    710: 'ZA',
-    716: 'ZW',
-    720: 'YE',
-    724: 'ES',
-    732: 'EH',
-    736: 'SD',
-    740: 'SR',
-    744: 'SJ',
-    748: 'SZ',
-    752: 'SE',
-    756: 'CH',
-    760: 'SY',
-    762: 'TJ',
-    764: 'TH',
-    768: 'TG',
-    772: 'TK',
-    776: 'TO',
-    780: 'TT',
-    784: 'AE',
-    788: 'TN',
-    792: 'TR',
-    795: 'TM',
-    796: 'TC',
-    798: 'TV',
-    800: 'UG',
-    804: 'UA',
-    807: 'MK',
-    818: 'EG',
-    826: 'GB',
-    834: 'TZ',
-    840: 'US',
-    854: 'BF',
-    858: 'UY',
-    860: 'UZ',
-    862: 'VE',
-    876: 'WF',
-    882: 'WS',
-    887: 'YE',
-    894: 'ZM',
-    '-99': 'CY',
-    900: 'XK',
+    '004': 'AF', '008': 'AL', '010': 'AQ', '012': 'DZ', '016': 'AS', '020': 'AD',
+    '024': 'AO', '028': 'AG', '031': 'AZ', '032': 'AR', '036': 'AU', '040': 'AT',
+    '044': 'BS', '048': 'BH', '050': 'BD', '051': 'AM', '052': 'BB', '056': 'BE',
+    '060': 'BM', '064': 'BT', '068': 'BO', '070': 'BA', '072': 'BW', '076': 'BR',
+    '084': 'BZ', '090': 'SB', '096': 'BN', 100: 'BG', 104: 'MM', 108: 'BI',
+    112: 'BY', 116: 'KH', 120: 'CM', 124: 'CA', 132: 'CV', 140: 'CF', 144: 'LK',
+    148: 'TD', 152: 'CL', 156: 'CN', 158: 'TW', 170: 'CO', 174: 'KM', 175: 'YT',
+    178: 'CG', 180: 'CD', 184: 'CK', 188: 'CR', 191: 'HR', 192: 'CU', 196: 'CY',
+    203: 'CZ', 204: 'BJ', 208: 'DK', 212: 'DM', 214: 'DO', 218: 'EC', 222: 'SV',
+    226: 'GQ', 231: 'ET', 232: 'ER', 233: 'EE', 234: 'FO', 238: 'FK', 242: 'FJ',
+    246: 'FI', 250: 'FR', 254: 'GF', 258: 'PF', 260: 'TF', 262: 'DJ', 266: 'GA',
+    268: 'GE', 270: 'GM', 275: 'PS', 276: 'DE', 288: 'GH', 292: 'GI', 296: 'KI',
+    300: 'GR', 304: 'GL', 308: 'GD', 312: 'GP', 316: 'GU', 320: 'GT', 324: 'GN',
+    328: 'GY', 332: 'HT', 336: 'VA', 340: 'HN', 344: 'HK', 348: 'HU', 352: 'IS',
+    356: 'IN', 360: 'ID', 364: 'IR', 368: 'IQ', 372: 'IE', 376: 'IL', 380: 'IT',
+    384: 'CI', 388: 'JM', 392: 'JP', 398: 'KZ', 400: 'JO', 404: 'KE', 408: 'KP',
+    410: 'KR', 414: 'KW', 417: 'KG', 418: 'LA', 422: 'LB', 426: 'LS', 428: 'LV',
+    430: 'LR', 434: 'LY', 438: 'LI', 440: 'LT', 442: 'LU', 446: 'MO', 450: 'MG',
+    454: 'MW', 458: 'MY', 462: 'MV', 466: 'ML', 470: 'MT', 474: 'MQ', 478: 'MR',
+    480: 'MU', 484: 'MX', 492: 'MC', 496: 'MN', 498: 'MD', 499: 'ME', 504: 'MA',
+    508: 'MZ', 512: 'OM', 516: 'NA', 520: 'NR', 524: 'NP', 528: 'NL', 530: 'AN',
+    533: 'AW', 540: 'NC', 548: 'VU', 554: 'NZ', 558: 'NI', 562: 'NE', 566: 'NG',
+    570: 'NU', 574: 'NF', 578: 'NO', 580: 'MP', 583: 'FM', 584: 'MH', 585: 'PW',
+    586: 'PK', 591: 'PA', 598: 'PG', 600: 'PY', 604: 'PE', 608: 'PH', 612: 'PN',
+    616: 'PL', 620: 'PT', 624: 'GW', 626: 'TL', 630: 'PR', 634: 'QA', 638: 'RE',
+    642: 'RO', 643: 'RU', 646: 'RW', 654: 'SH', 659: 'KN', 660: 'AI', 662: 'LC',
+    666: 'PM', 670: 'VC', 674: 'SM', 678: 'ST', 682: 'SA', 686: 'SN', 688: 'RS',
+    690: 'SC', 694: 'SL', 702: 'SG', 703: 'SK', 704: 'VN', 705: 'SI', 706: 'SO',
+    710: 'ZA', 716: 'ZW', 720: 'YE', 724: 'ES', 732: 'EH', 736: 'SD', 740: 'SR',
+    744: 'SJ', 748: 'SZ', 752: 'SE', 756: 'CH', 760: 'SY', 762: 'TJ', 764: 'TH',
+    768: 'TG', 772: 'TK', 776: 'TO', 780: 'TT', 784: 'AE', 788: 'TN', 792: 'TR',
+    795: 'TM', 796: 'TC', 798: 'TV', 800: 'UG', 804: 'UA', 807: 'MK', 818: 'EG',
+    826: 'GB', 834: 'TZ', 840: 'US', 854: 'BF', 858: 'UY', 860: 'UZ', 862: 'VE',
+    876: 'WF', 882: 'WS', 887: 'YE', 894: 'ZM', '-99': 'CY', 900: 'XK',
   };
 
   /**
@@ -263,173 +62,92 @@ if (!mapEl || Object.keys(counts).length === 0) {
     return 'transparent';
   }
 
-  /**
-   * @param {number[][][]} coords
-   * @returns {void}
-   */
-  function fixAntimeridian(coords) {
-    let dominated = 0;
-    let i;
-    let j;
-    for (i = 0; i < coords.length; i++) {
-      for (j = 0; j < coords[i].length; j++) {
-        if (Array.isArray(coords[i][j][0])) {
-          for (let k = 0; k < coords[i][j].length; k++) {
-            if (coords[i][j][k][0] > 0) dominated++;
-            else dominated--;
-          }
-        } else {
-          if (coords[i][j][0] > 0) dominated++;
-          else dominated--;
-        }
-      }
-    }
-    if (dominated <= 0) return;
-    for (i = 0; i < coords.length; i++) {
-      for (j = 0; j < coords[i].length; j++) {
-        if (Array.isArray(coords[i][j][0])) {
-          for (let m = 0; m < coords[i][j].length; m++) {
-            if (coords[i][j][m][0] < 0) coords[i][j][m][0] += 360;
-          }
-        } else {
-          if (coords[i][j][0] < 0) coords[i][j][0] += 360;
-        }
-      }
-    }
-  }
+  // Tooltip overlay
+  const tooltipEl = document.createElement('div');
+  tooltipEl.className = 'stats-map-tooltip';
+  tooltipEl.style.display = 'none';
+  mapEl.appendChild(tooltipEl);
 
-  /**
-   * @param {GeoJSON.Feature} feature
-   * @returns {boolean}
-   */
-  function needsAntimeridianFix(feature) {
-    const coords = /** @type {number[][][]} */ (feature.geometry.coordinates);
-    if (!coords) return false;
-    function checkRing(ring) {
-      let minLng = Infinity;
-      let maxLng = -Infinity;
-      for (let i = 0; i < ring.length; i++) {
-        const lng = ring[i][0];
-        if (lng < minLng) minLng = lng;
-        if (lng > maxLng) maxLng = lng;
-      }
-      return maxLng - minLng > 180;
-    }
-    function checkPolygon(poly) {
-      for (let i = 0; i < poly.length; i++) {
-        if (checkRing(poly[i])) return true;
-      }
-      return false;
-    }
-    const type = feature.geometry.type;
-    if (type === 'Polygon') return checkPolygon(coords);
-    if (type === 'MultiPolygon') {
-      for (let p = 0; p < coords.length; p++) {
-        if (checkPolygon(coords[p])) return true;
-      }
-    }
-    return false;
-  }
+  // Legend
+  const legendEl = document.createElement('div');
+  legendEl.className = 'stats-map-legend';
+  const grades = [1, 2, 3, 5, 10, 15, 25, 50];
+  const labels = ['1', '2', '3\u20134', '5\u20139', '10\u201314', '15\u201324', '25\u201349', '50+'];
+  legendEl.innerHTML = '<strong>Visits</strong>' +
+    grades.map((g, i) => `<div class="stats-map-legend-row"><span class="stats-map-legend-swatch" style="background:${getColor(g)}"></span>${labels[i]}</div>`).join('');
+  mapEl.appendChild(legendEl);
 
-  /**
-   * @param {GeoJSON.Feature} feature
-   * @returns {{fillColor: string, fillOpacity: number, color: string, weight: number}}
-   */
-  function style(feature) {
-    const id = feature.id || (feature.properties && feature.properties.id);
-    const alpha2 = n2a[String(id)] || '';
-    const count = counts[alpha2] || 0;
-    return {
-      fillColor: getColor(count),
-      fillOpacity: count > 0 ? 0.75 : 0,
-      color: count > 0 ? 'rgba(255,255,255,0.4)' : 'transparent',
-      weight: count > 0 ? 0.8 : 0,
-    };
-  }
-
-  const info = L.control({ position: 'topright' });
-  /** @type {HTMLElement | undefined} */
-  let infoDiv;
-  info.onAdd = function () {
-    infoDiv = L.DomUtil.create('div', 'stats-map-tooltip');
-    infoDiv.style.display = 'none';
-    return infoDiv;
-  };
-  /**
-   * @param {string} [name]
-   * @param {number} [count]
-   */
-  const updateInfo = (name, count) => {
-    if (!infoDiv) return;
-    if (name) {
-      infoDiv.innerHTML = `<strong>${escapeHtml(name)}</strong><br>${count || 0} visit${count === 1 ? '' : 's'}`;
-      infoDiv.style.display = 'block';
-    } else {
-      infoDiv.style.display = 'none';
-    }
-  };
-  info.addTo(map);
-
-  const legend = L.control({ position: 'bottomright' });
-  legend.onAdd = function () {
-    const div = L.DomUtil.create('div', 'stats-map-legend');
-    const grades = [1, 2, 3, 5, 10, 15, 25, 50];
-    const labels = [
-      '1',
-      '2',
-      '3\u20134',
-      '5\u20139',
-      '10\u201314',
-      '15\u201324',
-      '25\u201349',
-      '50+',
-    ];
-    div.innerHTML = '<strong>Visits</strong>';
-    for (let i = 0; i < grades.length; i++) {
-      div.innerHTML += `<div class="stats-map-legend-row"><span class="stats-map-legend-swatch" style="background:${getColor(grades[i])}"></span>${labels[i]}</div>`;
-    }
-    return div;
-  };
-  legend.addTo(map);
-
-  /** @returns {Promise<void>} */
-  const loadMap = async () => {
+  map.on('load', async () => {
     try {
       const r = await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json');
       const topo = await r.json();
       const geo = topojson.feature(topo, topo.objects.countries);
-      geo.features.forEach((f) => {
-        if (needsAntimeridianFix(f))
-          fixAntimeridian(/** @type {number[][][]} */ (f.geometry.coordinates));
-      });
-      L.geoJSON(geo, {
-        style,
-        onEachFeature: (feature, layer) => {
-          const id = feature.id || (feature.properties && feature.properties.id);
-          const alpha2 = n2a[String(id)] || '';
-          const count = counts[alpha2] || 0;
-          const name = (feature.properties && feature.properties.name) || alpha2 || 'Unknown';
-          layer.on({
-            mouseover: (e) => {
-              const l = e.target;
-              if (count > 0) {
-                l.setStyle({ weight: 2, color: 'rgba(255,255,255,0.7)', fillOpacity: 0.9 });
-                if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
-                  l.bringToFront();
-                }
-              }
-              updateInfo(name, count);
-            },
-            mouseout: (e) => {
-              const l = e.target;
-              l.setStyle(style(feature));
-              updateInfo();
-            },
-          });
-        },
-      }).addTo(map);
-    } catch {}
-  };
 
-  loadMap();
+      // Inject visit_count into each feature's properties
+      geo.features.forEach((f) => {
+        const id = f.id || (f.properties && f.properties.id);
+        const alpha2 = n2a[String(id)] || '';
+        f.properties = f.properties || {};
+        f.properties.visit_count = counts[alpha2] || 0;
+        f.properties.name = (f.properties && f.properties.name) || alpha2 || 'Unknown';
+      });
+
+      map.addSource('countries', { type: 'geojson', data: geo });
+
+      map.addLayer({
+        id: 'countries-fill',
+        type: 'fill',
+        source: 'countries',
+        paint: {
+          'fill-color': [
+            'step', ['get', 'visit_count'],
+            'transparent',
+            1, '#473677',
+            2, '#482878',
+            3, '#3e4989',
+            5, '#31688e',
+            10, '#26828e',
+            15, '#1f9e89',
+            25, '#6ece58',
+            50, '#fde724',
+          ],
+          'fill-opacity': ['case', ['>', ['get', 'visit_count'], 0], 0.75, 0],
+        },
+      });
+
+      map.addLayer({
+        id: 'countries-outline',
+        type: 'line',
+        source: 'countries',
+        paint: {
+          'line-color': ['case', ['>', ['get', 'visit_count'], 0], 'rgba(255,255,255,0.4)', 'transparent'],
+          'line-width': ['case', ['>', ['get', 'visit_count'], 0], 0.8, 0],
+        },
+      });
+
+      map.on('mousemove', 'countries-fill', (e) => {
+        if (!e.features || e.features.length === 0) return;
+        const f = e.features[0];
+        const name = /** @type {string} */ (f.properties.name);
+        const count = /** @type {number} */ (f.properties.visit_count);
+        tooltipEl.innerHTML = `<strong>${escapeHtml(name)}</strong><br>${count} visit${count === 1 ? '' : 's'}`;
+        tooltipEl.style.display = 'block';
+        map.getCanvas().style.cursor = count > 0 ? 'pointer' : '';
+
+        if (count > 0) {
+          map.setPaintProperty('countries-outline', 'line-width', [
+            'case', ['==', ['id'], f.id], 2, ['>', ['get', 'visit_count'], 0], 0.8, 0,
+          ]);
+        }
+      });
+
+      map.on('mouseleave', 'countries-fill', () => {
+        tooltipEl.style.display = 'none';
+        map.getCanvas().style.cursor = '';
+        map.setPaintProperty('countries-outline', 'line-width', [
+          'case', ['>', ['get', 'visit_count'], 0], 0.8, 0,
+        ]);
+      });
+    } catch {}
+  });
 }

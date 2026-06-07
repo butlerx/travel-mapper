@@ -5,10 +5,8 @@ import { createMap, escapeHtml, haversineKm, arcPoints, cssVar, typeColors } fro
 /** @type {HopResponse[]} */
 const initialJourneys = JSON.parse(document.getElementById('initial-journeys').textContent || '[]');
 
-const map = createMap('map', { zoomControl: true, scrollWheelZoom: true }).setView([48, 10], 4);
+const map = createMap('map', { center: [10, 48], zoom: 4 });
 
-/** @type {Record<string, string>} */
-const colors = typeColors;
 /** @type {Record<string, string>} */
 const emojis = {
   air: '\u2708\uFE0F',
@@ -27,7 +25,6 @@ const fallbackIcons = {
 
 /** @type {Record<string, string>} */
 const carrierDomains = {
-  // Airlines
   'aer lingus': 'aerlingus.com',
   aeroflot: 'aeroflot.ru',
   'air france': 'airfrance.com',
@@ -77,7 +74,6 @@ const carrierDomains = {
   vueling: 'vueling.com',
   'wizz air': 'wizzair.com',
   wizzair: 'wizzair.com',
-  // Rail
   eurostar: 'eurostar.com',
   thalys: 'thalys.com',
   sncf: 'sncf.com',
@@ -124,7 +120,6 @@ const carrierDomains = {
   regiojet: 'regiojet.com',
   'regiojet train': 'regiojet.com',
   'glacier express': 'glacierexpress.ch',
-  // Ferry / Boat
   'stena line': 'stenaline.com',
   stena: 'stenaline.com',
   'irish ferries': 'irishferries.com',
@@ -148,7 +143,6 @@ const carrierDomains = {
   wightlink: 'wightlink.co.uk',
   'caledonian macbrayne': 'calmac.co.uk',
   calmac: 'calmac.co.uk',
-  // Bus / Transport
   flixbus: 'flixbus.com',
   flix: 'flixbus.com',
   greyhound: 'greyhound.com',
@@ -170,23 +164,16 @@ function carrierIconHtml(journey, size) {
   const tt = journey.travel_type || '';
   const fallback = fallbackIcons[tt] || '/static/icons/transport.svg';
   const carrier = journey.carrier || '';
-
   if (!carrier) {
     return `<img src="${fallback}" alt="${escapeHtml(tt)}" width="${s}" height="${s}" style="vertical-align:middle;border-radius:50%;">`;
   }
-
   const domain = carrierDomains[carrier.toLowerCase().trim()];
   if (domain) {
     const src = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
     return `<img src="${src}" alt="${escapeHtml(carrier)}" width="${s}" height="${s}" style="vertical-align:middle;border-radius:50%;" onerror="this.onerror=null;this.src='${fallback}';">`;
   }
-
   return `<img src="${fallback}" alt="${escapeHtml(tt)}" width="${s}" height="${s}" style="vertical-align:middle;border-radius:50%;">`;
 }
-
-const routesLayer = L.layerGroup().addTo(map);
-const airportsLayer = L.layerGroup().addTo(map);
-const offsets = [-360, 0, 360];
 
 /**
  * @param {HopResponse} journey
@@ -208,9 +195,7 @@ function statusBadgeHtml(journey) {
  */
 function verificationBadgeHtml(journey) {
   if (journey.route_verified == null) return '';
-  if (journey.route_verified) {
-    return '<span class="status-badge status-connected">✓ Verified</span>';
-  }
+  if (journey.route_verified) return '<span class="status-badge status-connected">✓ Verified</span>';
   return '<span class="status-badge status-disconnected">Unverified</span>';
 }
 
@@ -246,15 +231,9 @@ function journeyCardHtml(journey) {
     journey.dest_lat != null &&
     journey.dest_lng != null
   ) {
-    const km = haversineKm(
-      journey.origin_lat,
-      journey.origin_lng,
-      journey.dest_lat,
-      journey.dest_lng,
-    );
+    const km = haversineKm(journey.origin_lat, journey.origin_lng, journey.dest_lat, journey.dest_lng);
     dist = km < 1 ? '<1 km' : `${Math.round(km).toLocaleString()} km`;
   }
-
   return `<a href="/journeys/${journey.id}" class="journey-card-link"><div class="journey-card"><div class="journey-route">${carrierIconHtml(journey, 20)} <span class="journey-origin">${originName}</span><span class="journey-arrow">\u2192</span><span class="journey-dest">${destName}</span></div><div class="journey-meta"><span class="journey-badge badge-${travelType}">${emoji} ${typeLabel}</span>${statusBadgeHtml(journey)}${verificationBadgeHtml(journey)}${platformBadgeHtml(journey)}<span class="journey-date">${startDate}</span>${dist ? `<span class="journey-distance">${dist}</span>` : ''}</div></div></a>`;
 }
 
@@ -277,280 +256,210 @@ function countdownText(dateStr) {
 function renderJourneyCards(journeys) {
   const sidebar = document.getElementById('journey-sidebar');
   if (!sidebar) return;
-
   if (journeys.length === 0) {
     sidebar.innerHTML =
       '<h3 class="journey-sidebar-heading">Journeys</h3><div class="journey-empty">No journeys match the current filters.</div>';
     return;
   }
-
   const today = new Date().toISOString().slice(0, 10);
   const upcoming = [];
   const past = [];
-
-  journeys.forEach((journey) => {
-    if (journey.start_date >= today) {
-      upcoming.push(journey);
-    } else {
-      past.push(journey);
-    }
+  journeys.forEach((j) => {
+    (j.start_date >= today ? upcoming : past).push(j);
   });
-
-  upcoming.sort((a, b) => {
-    return a.start_date.localeCompare(b.start_date);
-  });
-  past.sort((a, b) => {
-    return b.start_date.localeCompare(a.start_date);
-  });
+  upcoming.sort((a, b) => a.start_date.localeCompare(b.start_date));
+  past.sort((a, b) => b.start_date.localeCompare(a.start_date));
 
   let html = '';
-
   if (upcoming.length > 0) {
     html += `<h3 class="journey-sidebar-heading journey-sidebar-heading--upcoming">Upcoming (${upcoming.length})</h3>`;
-    upcoming.forEach((journey) => {
-      html += `<a href="/journeys/${journey.id}" class="journey-card-link"><div class="journey-card journey-card--upcoming"><div class="journey-route">${carrierIconHtml(journey, 20)} <span class="journey-origin">${escapeHtml(journey.origin_name || '')}</span><span class="journey-arrow">\u2192</span><span class="journey-dest">${escapeHtml(journey.dest_name || '')}</span></div><div class="journey-meta"><span class="journey-badge badge-${escapeHtml(journey.travel_type || '')}">${emojis[journey.travel_type] || ''} ${escapeHtml((journey.travel_type || '').charAt(0).toUpperCase() + (journey.travel_type || '').slice(1))}</span>${statusBadgeHtml(journey)}${verificationBadgeHtml(journey)}${platformBadgeHtml(journey)}<span class="journey-countdown">${countdownText(journey.start_date)}</span><span class="journey-date">${escapeHtml(journey.start_date || '')}</span></div></div></a>`;
+    upcoming.forEach((j) => {
+      html += `<a href="/journeys/${j.id}" class="journey-card-link"><div class="journey-card journey-card--upcoming"><div class="journey-route">${carrierIconHtml(j, 20)} <span class="journey-origin">${escapeHtml(j.origin_name || '')}</span><span class="journey-arrow">\u2192</span><span class="journey-dest">${escapeHtml(j.dest_name || '')}</span></div><div class="journey-meta"><span class="journey-badge badge-${escapeHtml(j.travel_type || '')}">${emojis[j.travel_type] || ''} ${escapeHtml((j.travel_type || '').charAt(0).toUpperCase() + (j.travel_type || '').slice(1))}</span>${statusBadgeHtml(j)}${verificationBadgeHtml(j)}${platformBadgeHtml(j)}<span class="journey-countdown">${countdownText(j.start_date)}</span><span class="journey-date">${escapeHtml(j.start_date || '')}</span></div></div></a>`;
     });
   }
-
   if (past.length > 0) {
     html += `<h3 class="journey-sidebar-heading">Past Journeys (${past.length})</h3>`;
-    past.forEach((journey) => {
-      html += journeyCardHtml(journey);
-    });
+    past.forEach((j) => { html += journeyCardHtml(j); });
   }
-
   if (upcoming.length === 0 && past.length === 0) {
     html += '<div class="journey-empty">No journeys match the current filters.</div>';
   }
-
   sidebar.innerHTML = html;
 }
 
+/** @type {maplibregl.Popup} */
+const popup = new maplibregl.Popup({ closeButton: true, closeOnClick: true, maxWidth: '360px' });
+
+/** @type {Record<string, {origin_name: string, dest_name: string, from: [number, number], to: [number, number], hops: HopResponse[], freq: number}>} */
+let routeIndex = {};
+
 /** @param {HopResponse[]} journeys */
 function renderJourneys(journeys) {
-  routesLayer.clearLayers();
-  airportsLayer.clearLayers();
-  const bounds = [];
-
   const routes = {};
-  journeys.forEach((journey) => {
-    if ((!journey.origin_lat && !journey.origin_lng) || (!journey.dest_lat && !journey.dest_lng))
-      return;
+  const cities = {};
+  const bounds = new maplibregl.LngLatBounds();
 
-    const key1 = `${journey.origin_name}|${journey.origin_lat}|${journey.origin_lng}\u2192${journey.dest_name}|${journey.dest_lat}|${journey.dest_lng}`;
-    const key2 = `${journey.dest_name}|${journey.dest_lat}|${journey.dest_lng}\u2192${journey.origin_name}|${journey.origin_lat}|${journey.origin_lng}`;
+  journeys.forEach((j) => {
+    if ((!j.origin_lat && !j.origin_lng) || (!j.dest_lat && !j.dest_lng)) return;
+
+    const key1 = `${j.origin_name}|${j.origin_lat}|${j.origin_lng}\u2192${j.dest_name}|${j.dest_lat}|${j.dest_lng}`;
+    const key2 = `${j.dest_name}|${j.dest_lat}|${j.dest_lng}\u2192${j.origin_name}|${j.origin_lat}|${j.origin_lng}`;
     const key = key1 < key2 ? key1 : key2;
-
     if (!routes[key]) {
       routes[key] = {
-        from: [journey.origin_lat, journey.origin_lng],
-        to: [journey.dest_lat, journey.dest_lng],
-        origin_name: journey.origin_name,
-        dest_name: journey.dest_name,
+        from: /** @type {[number, number]} */ ([j.origin_lng, j.origin_lat]),
+        to: /** @type {[number, number]} */ ([j.dest_lng, j.dest_lat]),
+        origin_name: j.origin_name,
+        dest_name: j.dest_name,
         hops: [],
       };
     }
-    routes[key].hops.push(journey);
-  });
+    routes[key].hops.push(j);
 
-  Object.keys(routes).forEach((key) => {
-    const route = routes[key];
-    const from = route.from;
-    const to = route.to;
-    const routeJourneys = route.hops;
-    const freq = routeJourneys.length;
-
-    const typeCounts = {};
-    routeJourneys.forEach((h) => {
-      typeCounts[h.travel_type] = (typeCounts[h.travel_type] || 0) + 1;
-    });
-    const dominantType = Object.keys(typeCounts).sort((a, b) => {
-      return typeCounts[b] - typeCounts[a];
-    })[0];
-    const color = colors[dominantType] || '#6b7280';
-
-    const points = arcPoints(from, to, 50);
-    const dist = haversineKm(from[0], from[1], to[0], to[1]);
-    const distStr = dist < 1 ? '<1' : Math.round(dist).toLocaleString();
-
-    let weight = 2;
-    let opacity = 0.6;
-    if (freq >= 10) {
-      weight = 5.5;
-      opacity = 0.9;
-    } else if (freq >= 5) {
-      weight = 4;
-      opacity = 0.8;
-    } else if (freq >= 2) {
-      weight = 3;
-      opacity = 0.7;
-    }
-
-    let popup = `<div class="journey-popup"><div class="journey-popup-header"><strong>${escapeHtml(route.origin_name || '')} \u2194 ${escapeHtml(route.dest_name || '')}</strong></div><div class="journey-popup-summary"><span>${freq} journey${freq !== 1 ? 's' : ''}</span><span>\uD83D\uDCCF ${distStr} km</span></div><div class="journey-popup-list">`;
-
-    const sorted = routeJourneys.slice().sort((a, b) => {
-      return (b.start_date || '').localeCompare(a.start_date || '');
-    });
-    const shown = sorted.slice(0, 8);
-    shown.forEach((journey) => {
-      const emoji = emojis[journey.travel_type] || '';
-      const startD = escapeHtml(journey.start_date || '');
-      const endD = escapeHtml(journey.end_date || '');
-      const dateStr = startD === endD ? startD : `${startD} \u2192 ${endD}`;
-      const routeOriginName = escapeHtml(route.origin_name || '');
-      const routeDestName = escapeHtml(route.dest_name || '');
-      const journeyOriginName = escapeHtml(journey.origin_name || '');
-      const direction =
-        journeyOriginName === routeOriginName
-          ? `${routeOriginName} \u2192 ${routeDestName}`
-          : `${routeDestName} \u2192 ${routeOriginName}`;
-
-      popup += `<a href="/journeys/${journey.id}" class="journey-popup-item"><span class="journey-popup-item-emoji">${emoji}</span><span class="journey-popup-item-direction">${direction}</span><span class="journey-popup-item-date">${dateStr}</span></a>`;
-    });
-    if (sorted.length > 8) {
-      popup += `<div class="journey-popup-more">+${sorted.length - 8} more</div>`;
-    }
-    popup += '</div></div>';
-
-    offsets.forEach((offset) => {
-      const shifted = /** @type {[number, number][]} */ (
-        points.map((p) => {
-          return [p[0], p[1] + offset];
-        })
-      );
-      L.polyline(shifted, {
-        color,
-        weight,
-        opacity,
-      })
-        .bindPopup(popup, { maxWidth: 360, className: 'journey-popup-container' })
-        .addTo(routesLayer);
-    });
-
-    bounds.push(from);
-    bounds.push(to);
-  });
-
-  const cities = {};
-  journeys.forEach((journey) => {
-    if (journey.origin_lat != null && journey.origin_lng != null) {
-      const oKey = `${journey.origin_name}|${journey.origin_lat}|${journey.origin_lng}`;
-      if (!cities[oKey]) {
-        cities[oKey] = {
-          name: journey.origin_name,
-          lat: journey.origin_lat,
-          lng: journey.origin_lng,
-          count: 0,
-          routes: {},
-        };
-      }
-      cities[oKey].count++;
-      cities[oKey].routes[journey.dest_name] = (cities[oKey].routes[journey.dest_name] || 0) + 1;
-    }
-    if (journey.dest_lat != null && journey.dest_lng != null) {
-      const dKey = `${journey.dest_name}|${journey.dest_lat}|${journey.dest_lng}`;
-      if (!cities[dKey]) {
-        cities[dKey] = {
-          name: journey.dest_name,
-          lat: journey.dest_lat,
-          lng: journey.dest_lng,
-          count: 0,
-          routes: {},
-        };
-      }
-      cities[dKey].count++;
-      cities[dKey].routes[journey.origin_name] =
-        (cities[dKey].routes[journey.origin_name] || 0) + 1;
-    }
-  });
-
-  Object.keys(cities).forEach((key) => {
-    const c = cities[key];
-    const r = Math.max(4, Math.min(8, 3 + Math.sqrt(c.count)));
-    const markerOpts = {
-      radius: r,
-      color: '#1e3a5f',
-      weight: 1.5,
-      fillColor: cssVar('--color-type-air'),
-      fillOpacity: 0.85,
+    const addCity = (/** @type {string} */ name, /** @type {number} */ lat, /** @type {number} */ lng, /** @type {string} */ peer) => {
+      const ck = `${name}|${lat}|${lng}`;
+      if (!cities[ck]) cities[ck] = { name, lat, lng, count: 0, routes: {} };
+      cities[ck].count++;
+      cities[ck].routes[peer] = (cities[ck].routes[peer] || 0) + 1;
     };
-    const sortedRoutes = Object.keys(c.routes)
-      .map((dest) => {
-        return { name: dest, count: c.routes[dest] };
-      })
-      .sort((a, b) => {
-        return b.count - a.count;
-      });
-    let routeListHtml = sortedRoutes
-      .slice(0, 5)
-      .map((rt) => {
-        return `<div class="airport-popup-route"><span class="airport-popup-dest">${escapeHtml(rt.name || '')}</span><span class="airport-popup-freq">${rt.count}\u00d7</span></div>`;
-      })
-      .join('');
-    if (sortedRoutes.length > 5) {
-      routeListHtml += `<div class="airport-popup-more">+${sortedRoutes.length - 5} more destinations</div>`;
+    if (j.origin_lat != null && j.origin_lng != null) {
+      addCity(j.origin_name, j.origin_lat, j.origin_lng, j.dest_name);
+      bounds.extend([j.origin_lng, j.origin_lat]);
     }
-    const popupHtml = `<div class="airport-popup"><div class="airport-popup-header"><strong>${escapeHtml(c.name || '')}</strong></div><div class="airport-popup-stats"><span class="airport-popup-visits">${c.count} visit${c.count !== 1 ? 's' : ''}</span><span class="airport-popup-connections">${sortedRoutes.length} connection${sortedRoutes.length !== 1 ? 's' : ''}</span></div><div class="airport-popup-routes">${routeListHtml}</div></div>`;
-
-    offsets.forEach((offset) => {
-      const marker = L.circleMarker([c.lat, c.lng + offset], markerOpts).bindPopup(popupHtml, {
-        maxWidth: 280,
-        className: 'airport-popup-container',
-      });
-      marker.on('mouseover', function () {
-        marker.openPopup();
-      });
-      marker.on('mouseout', function () {
-        if (!marker._popupHandlingClick) {
-          marker.closePopup();
-        }
-      });
-      marker.on('click', function () {
-        marker._popupHandlingClick = true;
-        marker.openPopup();
-      });
-      marker.on('popupclose', function () {
-        marker._popupHandlingClick = false;
-      });
-      marker.addTo(airportsLayer);
-    });
+    if (j.dest_lat != null && j.dest_lng != null) {
+      addCity(j.dest_name, j.dest_lat, j.dest_lng, j.origin_name);
+      bounds.extend([j.dest_lng, j.dest_lat]);
+    }
   });
 
-  document.getElementById('journey-count').textContent = `${
-    journeys.filter((h) => {
-      return (
-        h.origin_lat != null && h.origin_lng != null && h.dest_lat != null && h.dest_lng != null
-      );
-    }).length
-  } journeys`;
+  const arcFeatures = Object.entries(routes).map(([key, r]) => {
+    const freq = r.hops.length;
+    const typeCounts = {};
+    r.hops.forEach((h) => { typeCounts[h.travel_type] = (typeCounts[h.travel_type] || 0) + 1; });
+    const dominantType = Object.keys(typeCounts).sort((a, b) => typeCounts[b] - typeCounts[a])[0];
+    const color = typeColors[dominantType] || '#6b7280';
+    let width = 1.5;
+    if (freq >= 10) width = 3;
+    else if (freq >= 5) width = 2.5;
+    else if (freq >= 2) width = 2;
+    routes[key].freq = freq;
+    return {
+      type: 'Feature',
+      properties: { key, color, width, opacity: Math.min(0.5 + freq * 0.05, 0.9) },
+      geometry: { type: 'LineString', coordinates: arcPoints(r.from, r.to, 60) },
+    };
+  });
+  routeIndex = routes;
 
-  if (bounds.length > 0) {
-    map.fitBounds(bounds, { padding: [40, 40] });
+  const cityFeatures = Object.values(cities).map((/** @type {any} */ c) => ({
+    type: 'Feature',
+    geometry: { type: 'Point', coordinates: [c.lng, c.lat] },
+    properties: { name: c.name, count: c.count, routes: JSON.stringify(c.routes) },
+  }));
+
+  if (map.getSource('routes')) {
+    /** @type {any} */ (map.getSource('routes')).setData({ type: 'FeatureCollection', features: arcFeatures });
+    /** @type {any} */ (map.getSource('cities')).setData({ type: 'FeatureCollection', features: cityFeatures });
+  } else {
+    map.addSource('routes', { type: 'geojson', data: { type: 'FeatureCollection', features: arcFeatures } });
+    map.addLayer({
+      id: 'route-lines',
+      type: 'line',
+      source: 'routes',
+      paint: {
+        'line-color': ['get', 'color'],
+        'line-width': ['get', 'width'],
+        'line-opacity': ['get', 'opacity'],
+      },
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+    });
+
+    map.addSource('cities', { type: 'geojson', data: { type: 'FeatureCollection', features: cityFeatures } });
+    map.addLayer({
+      id: 'city-circles',
+      type: 'circle',
+      source: 'cities',
+      paint: {
+        'circle-radius': ['interpolate', ['linear'], ['get', 'count'], 1, 4, 5, 6, 20, 8],
+        'circle-color': cssVar('--color-type-air'),
+        'circle-opacity': 0.85,
+        'circle-stroke-width': 1.5,
+        'circle-stroke-color': '#1e3a5f',
+      },
+    });
+
+    map.on('click', 'route-lines', (e) => {
+      if (!e.features || e.features.length === 0) return;
+      const key = /** @type {string} */ (e.features[0].properties.key);
+      const r = routeIndex[key];
+      if (!r) return;
+      const dist = haversineKm(r.from[1], r.from[0], r.to[1], r.to[0]);
+      const distStr = dist < 1 ? '<1' : Math.round(dist).toLocaleString();
+      const sorted = r.hops.slice().sort((a, b) => (b.start_date || '').localeCompare(a.start_date || ''));
+      const shown = sorted.slice(0, 8);
+      let html = `<div class="journey-popup"><div class="journey-popup-header"><strong>${escapeHtml(r.origin_name || '')} \u2194 ${escapeHtml(r.dest_name || '')}</strong></div><div class="journey-popup-summary"><span>${r.freq} journey${r.freq !== 1 ? 's' : ''}</span><span>\uD83D\uDCCF ${distStr} km</span></div><div class="journey-popup-list">`;
+      shown.forEach((j) => {
+        const emoji = emojis[j.travel_type] || '';
+        const startD = escapeHtml(j.start_date || '');
+        const endD = escapeHtml(j.end_date || '');
+        const dateStr = startD === endD ? startD : `${startD} \u2192 ${endD}`;
+        const journeyOrigin = escapeHtml(j.origin_name || '');
+        const routeOrigin = escapeHtml(r.origin_name || '');
+        const routeDest = escapeHtml(r.dest_name || '');
+        const direction = journeyOrigin === routeOrigin ? `${routeOrigin} \u2192 ${routeDest}` : `${routeDest} \u2192 ${routeOrigin}`;
+        html += `<a href="/journeys/${j.id}" class="journey-popup-item"><span class="journey-popup-item-emoji">${emoji}</span><span class="journey-popup-item-direction">${direction}</span><span class="journey-popup-item-date">${dateStr}</span></a>`;
+      });
+      if (sorted.length > 8) html += `<div class="journey-popup-more">+${sorted.length - 8} more</div>`;
+      html += '</div></div>';
+      popup.setLngLat(e.lngLat).setHTML(html).addTo(map);
+    });
+
+    map.on('click', 'city-circles', (e) => {
+      if (!e.features || e.features.length === 0) return;
+      const f = e.features[0];
+      const name = /** @type {string} */ (f.properties.name);
+      const count = /** @type {number} */ (f.properties.count);
+      const cityRoutes = JSON.parse(/** @type {string} */ (f.properties.routes));
+      const sorted = Object.keys(cityRoutes)
+        .map((dest) => ({ name: dest, count: cityRoutes[dest] }))
+        .sort((a, b) => b.count - a.count);
+      let routeListHtml = sorted
+        .slice(0, 5)
+        .map((rt) => `<div class="airport-popup-route"><span class="airport-popup-dest">${escapeHtml(rt.name)}</span><span class="airport-popup-freq">${rt.count}\u00d7</span></div>`)
+        .join('');
+      if (sorted.length > 5) routeListHtml += `<div class="airport-popup-more">+${sorted.length - 5} more destinations</div>`;
+      const html = `<div class="airport-popup"><div class="airport-popup-header"><strong>${escapeHtml(name)}</strong></div><div class="airport-popup-stats"><span class="airport-popup-visits">${count} visit${count !== 1 ? 's' : ''}</span><span class="airport-popup-connections">${sorted.length} connection${sorted.length !== 1 ? 's' : ''}</span></div><div class="airport-popup-routes">${routeListHtml}</div></div>`;
+      const coords = /** @type {[number, number]} */ (/** @type {any} */ (f.geometry).coordinates);
+      popup.setLngLat(coords).setHTML(html).addTo(map);
+    });
+
+    map.on('mouseenter', 'route-lines', () => { map.getCanvas().style.cursor = 'pointer'; });
+    map.on('mouseleave', 'route-lines', () => { map.getCanvas().style.cursor = ''; });
+    map.on('mouseenter', 'city-circles', () => { map.getCanvas().style.cursor = 'pointer'; });
+    map.on('mouseleave', 'city-circles', () => { map.getCanvas().style.cursor = ''; });
   }
+
+  document.getElementById('journey-count').textContent = `${journeys.filter((h) => h.origin_lat != null && h.origin_lng != null && h.dest_lat != null && h.dest_lng != null).length} journeys`;
+
+  if (!bounds.isEmpty()) map.fitBounds(bounds, { padding: 40 });
 }
 
 const toggleRoutes = document.getElementById('toggle-routes');
 const toggleAirports = document.getElementById('toggle-airports');
 if (toggleRoutes) {
-  toggleRoutes.addEventListener('change', (event) => {
-    const target = /** @type {HTMLInputElement} */ (event.target);
-    if (target.checked) {
-      map.addLayer(routesLayer);
-    } else {
-      map.removeLayer(routesLayer);
-    }
+  toggleRoutes.addEventListener('change', (e) => {
+    const checked = /** @type {HTMLInputElement} */ (e.target).checked;
+    try { map.setLayoutProperty('route-lines', 'visibility', checked ? 'visible' : 'none'); } catch {}
   });
 }
 if (toggleAirports) {
-  toggleAirports.addEventListener('change', (event) => {
-    const target = /** @type {HTMLInputElement} */ (event.target);
-    if (target.checked) {
-      map.addLayer(airportsLayer);
-    } else {
-      map.removeLayer(airportsLayer);
-    }
+  toggleAirports.addEventListener('change', (e) => {
+    const checked = /** @type {HTMLInputElement} */ (e.target).checked;
+    try { map.setLayoutProperty('city-circles', 'visibility', checked ? 'visible' : 'none'); } catch {}
   });
 }
 
-renderJourneys(initialJourneys);
-renderJourneyCards(initialJourneys);
+map.on('load', () => {
+  renderJourneys(initialJourneys);
+  renderJourneyCards(initialJourneys);
+});

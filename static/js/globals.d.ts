@@ -5,65 +5,52 @@
  * so we declare just enough surface area for tsc --checkJs to pass.
  */
 
-/** Leaflet global — loaded from CDN <script> tag. */
-declare const L: {
-  map(id: string, options?: Record<string, unknown>): L.Map;
-  tileLayer(url: string, options?: Record<string, unknown>): L.TileLayer;
-  marker(latlng: [number, number]): L.Marker;
-  polyline(latlngs: [number, number][], options?: Record<string, unknown>): L.Polyline;
-  circleMarker(latlng: [number, number], options?: Record<string, unknown>): L.CircleMarker;
-  layerGroup(): L.LayerGroup;
-  geoJSON(data: unknown, options?: Record<string, unknown>): L.GeoJSON;
-  control(options?: Record<string, unknown>): L.Control;
-  DomUtil: {
-    create(tagName: string, className?: string): HTMLElement;
-  };
-  Browser: {
-    ie: boolean;
-    opera: boolean;
-    edge: boolean;
-  };
+/** MapLibre GL JS global — loaded from CDN <script> tag. */
+declare const maplibregl: {
+  Map: new (options: Record<string, unknown>) => maplibregl.Map;
+  NavigationControl: new (options?: Record<string, unknown>) => unknown;
+  Popup: new (options?: Record<string, unknown>) => maplibregl.Popup;
+  LngLatBounds: new (...args: unknown[]) => maplibregl.LngLatBounds;
+  addProtocol(name: string, handler: unknown): void;
 };
 
-declare namespace L {
+declare namespace maplibregl {
   interface Map {
-    setView(center: [number, number], zoom: number): Map;
-    fitBounds(bounds: [number, number][], options?: Record<string, unknown>): Map;
-    addLayer(layer: unknown): Map;
-    removeLayer(layer: unknown): Map;
+    on(event: string, handler: Function): Map;
+    on(event: string, layer: string, handler: Function): Map;
+    addControl(control: unknown, position?: string): Map;
+    removeControl(control: unknown): Map;
+    addSource(id: string, source: Record<string, unknown>): Map;
+    getSource(id: string): unknown;
+    addLayer(layer: Record<string, unknown>): Map;
+    setLayoutProperty(layer: string, name: string, value: unknown): Map;
+    setPaintProperty(layer: string, name: string, value: unknown): Map;
+    getCanvas(): HTMLCanvasElement;
+    fitBounds(bounds: LngLatBounds | [[number, number], [number, number]], options?: Record<string, unknown>): Map;
+    setProjection(projection: Record<string, unknown>): Map;
   }
-  interface TileLayer {
-    addTo(map: Map): TileLayer;
+  interface Popup {
+    setLngLat(lnglat: [number, number]): Popup;
+    setHTML(html: string): Popup;
+    addTo(map: Map): Popup;
+    remove(): Popup;
   }
-  interface Marker {
-    addTo(map: Map): Marker;
-  }
-  interface Polyline {
-    addTo(group: LayerGroup | Map): Polyline;
-    bindPopup(content: string, options?: Record<string, unknown>): Polyline;
-  }
-  interface CircleMarker {
-    addTo(group: LayerGroup | Map): CircleMarker;
-    bindPopup(content: string, options?: Record<string, unknown>): CircleMarker;
-    on(event: string, handler: Function): CircleMarker;
-    openPopup(): CircleMarker;
-    closePopup(): CircleMarker;
-    _popupHandlingClick?: boolean;
-  }
-  interface LayerGroup {
-    addTo(map: Map): LayerGroup;
-    clearLayers(): LayerGroup;
-  }
-  interface GeoJSON {
-    addTo(map: Map): GeoJSON;
-  }
-  interface Control {
-    addTo(map: Map): Control;
-    onAdd?: (map: Map) => HTMLElement;
-    update?: (...args: unknown[]) => void;
-    _div?: HTMLElement;
+  interface LngLatBounds {
+    extend(lnglat: [number, number]): LngLatBounds;
+    isEmpty(): boolean;
   }
 }
+
+/** PMTiles protocol — loaded from CDN <script> tag. */
+declare const pmtiles: {
+  Protocol: new () => { tile: unknown };
+};
+
+/** Protomaps basemaps theme helper — loaded from CDN <script> tag. */
+declare const basemaps: {
+  layers(source: string, flavor: unknown, options?: Record<string, unknown>): unknown[];
+  namedFlavor(name: string): unknown;
+};
 
 /** TopoJSON global — loaded from CDN <script> tag. */
 declare const topojson: {

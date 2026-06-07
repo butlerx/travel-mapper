@@ -229,13 +229,12 @@ fn DashboardPage(
                         </div>
                         <aside id="journey-sidebar" class="journey-sidebar"></aside>
                     </div>
-                    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-                        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-                        crossorigin="" />
-                    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-                        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-                        crossorigin=""></script>
+                    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css" crossorigin="" />
+                    <script src="https://unpkg.com/pmtiles@3/dist/pmtiles.js"></script>
+                    <script src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"></script>
+                    <script src="https://unpkg.com/@protomaps/basemaps@5/dist/basemaps.js"></script>
                     <script type="application/json" id="initial-journeys" inner_html=journeys_json></script>
+                    <script type="module" src="/static/map-core.js"></script>
                     <script type="module" src="/static/map.js"></script>
                 }.into_any()
             } else {

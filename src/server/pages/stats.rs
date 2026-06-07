@@ -427,14 +427,13 @@ fn StatsPage(stats: DetailedStats) -> impl IntoView {
                             <h3 class="stats-section-title">"Country Map"</h3>
                             <div id="stats-map"></div>
                         </section>
-                        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-                            integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-                            crossorigin="" />
-                        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-                            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-                            crossorigin=""></script>
-                        <script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
+                        <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css" crossorigin="" />
+                        <script src="https://unpkg.com/pmtiles@3/dist/pmtiles.js"></script>
+                        <script src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"></script>
+                        <script src="https://unpkg.com/@protomaps/basemaps@5/dist/basemaps.js"></script>
                         <script type="application/json" id="country-counts" inner_html=country_counts_json></script>
+                        <script type="module" src="/static/map-core.js"></script>
+                        <script type="module" src="/static/stats-map.js"></script>
                         <script type="module" src="/static/stats-map.js"></script>
                     </main>
                 }.into_any()
@@ -559,14 +558,13 @@ fn ShareStatsPage(stats: DetailedStats, token: String) -> impl IntoView {
                             <h3 class="stats-section-title">"Country Map"</h3>
                             <div id="stats-map"></div>
                         </section>
-                        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-                            integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-                            crossorigin="" />
-                        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-                            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-                            crossorigin=""></script>
-                        <script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
+                        <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css" crossorigin="" />
+                        <script src="https://unpkg.com/pmtiles@3/dist/pmtiles.js"></script>
+                        <script src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"></script>
+                        <script src="https://unpkg.com/@protomaps/basemaps@5/dist/basemaps.js"></script>
                         <script type="application/json" id="country-counts" inner_html=country_counts_json></script>
+                        <script type="module" src="/static/map-core.js"></script>
+                        <script type="module" src="/static/stats-map.js"></script>
                         <script type="module" src="/static/stats-map.js"></script>
                     </main>
                 }.into_any()
