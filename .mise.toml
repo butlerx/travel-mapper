@@ -10,6 +10,7 @@ zizmor                 = "latest"
 "cargo:sqlx-cli"       = { version = "latest", features = "sqlite" }
 "npm:prettier"         = "latest"
 "npm:typescript"       = "latest"
+"npm:esbuild"          = "latest"
 protoc                 = "latest"
 
 [settings]
@@ -25,7 +26,8 @@ description = "Build the project"
 usage       = 'arg "[args]" var=#true help="Additional arguments passed to cargo build"'
 run         = "cargo build ${usage_args:-}"
 alias       = "b"
-sources     = ["Cargo.lock", "Cargo.toml", "src/**/*.rs"]
+depends     = ["client:build"]
+sources     = ["Cargo.lock", "Cargo.toml", "src/**/*.rs", "static/**/*"]
 outputs     = ["target/debug/travel-mapper"]
 
 [tasks."build:release"]
@@ -63,30 +65,25 @@ usage       = 'arg "[args]" var=#true help="Additional arguments passed to cargo
 run         = "cargo clippy --fix --all-targets --all-features --allow-staged ${usage_args:-} -- -D warnings"
 
 [tasks.format]
-description = "Format Rust code with cargo fmt and JS/CSS with Prettier"
+description = "Format Rust code with cargo fmt and JS/CSS/TS with Prettier"
 run         = [
   "cargo fmt",
-  "prettier --write 'static/**/*.js' 'static/**/*.css'"
+  "prettier --write 'static/**/*.css' 'client/**/*.ts'"
 ]
 alias       = "f"
-sources     = ["static/**/*.js", "static/**/*.css", "src/**/*.rs"]
+sources     = ["static/**/*.css", "client/**/*.ts", "src/**/*.rs"]
 
 [tasks."format:check"]
-description = "Check Rust code formatting with cargo fmt and JS/CSS with Prettier"
+description = "Check Rust code formatting with cargo fmt and JS/CSS/TS with Prettier"
 run         = [
   "cargo fmt --check ",
-  "prettier --check 'static/**/*.js' 'static/**/*.css'",
+  "prettier --check 'static/**/*.css' 'client/**/*.ts'",
 ]
-sources     = ["static/**/*.js", "static/**/*.css", "src/**/*.rs"]
-
-[tasks.typecheck]
-description = "Type-check JS files with TypeScript"
-run         = "tsc --noEmit"
-sources     = ["static/**/*.js", "tsconfig.json"]
+sources     = ["static/**/*.css", "client/**/*.ts", "src/**/*.rs"]
 
 [tasks.check]
 description = "Run all checks (lint + format + typecheck)"
-depends     = ["lint", "format:check", "typecheck"]
+depends     = ["lint", "format:check", "client:check"]
 
 [tasks.test]
 description = "Run tests with cargo"
@@ -118,10 +115,51 @@ depends     = ["db:migrate"]
 sources     = ["src/**/*.rs", "migrations/*.sql"]
 outputs     = [".sqlx/*.json"]
 
+[tasks."wasm:build"]
+description = "Build the map WASM module"
+run         = "wasm-pack build crates/map-wasm --target web --out-dir ../../static/wasm"
+sources     = ["crates/map-wasm/src/**/*.rs", "crates/map-wasm/Cargo.toml"]
+outputs     = ["static/wasm/map_wasm_bg.wasm", "static/wasm/map_wasm.js"]
+
+[tasks."client:build"]
+description = "Bundle TypeScript map modules into static JS"
+run         = [
+  "esbuild client/map.ts client/stats-map.ts client/journey-map.ts client/trip-map.ts --bundle --format=esm --outdir=static/js --external:/static/wasm/* --target=es2022",
+  "esbuild client/nav.ts client/push.ts client/add-journey.ts client/auto-submit.ts client/settings-copy.ts client/sw-register.ts client/edit-panel.ts client/trip-detail.ts client/upcoming-poll.ts client/shared-journey-poll.ts --bundle --format=iife --outdir=static/js --target=es2022",
+]
+depends     = ["wasm:build"]
+sources     = ["client/**/*.ts"]
+outputs     = [
+  "static/js/map.js",
+  "static/js/stats-map.js",
+  "static/js/journey-map.js",
+  "static/js/trip-map.js",
+  "static/js/nav.js",
+  "static/js/push.js",
+  "static/js/add-journey.js",
+  "static/js/auto-submit.js",
+  "static/js/settings-copy.js",
+  "static/js/sw-register.js",
+  "static/js/edit-panel.js",
+  "static/js/trip-detail.js",
+  "static/js/upcoming-poll.js",
+  "static/js/shared-journey-poll.js"
+]
+
+[tasks."client:check"]
+description = "Type-check client TypeScript"
+run         = "tsc --noEmit"
+sources     = ["client/**/*.ts", "tsconfig.json"]
+
 [tasks.seed]
 description = "Seed the database with test users for local development"
 run         = "cargo run -- seed"
 depends     = ["db:migrate"]
+
+[tasks."fix-tripit"]
+description = "Detect and fix incorrect station addresses in TripIt"
+usage       = 'arg "<username>" help="Username to fix TripIt data for" flag "--apply" help="Push corrections to TripIt (dry-run without this)"'
+run         = "cargo run -- fix-tripit --username ${usage_username} ${usage_apply:+--apply}"
 
 [tasks.clean]
 description = "Clean build artifacts"

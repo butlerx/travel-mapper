@@ -1,8 +1,7 @@
-// @ts-check
-/// <reference path="globals.d.ts" />
-import { createMap, arcPoints, typeColors } from './map-core.js';
+import { createMap, arcPoints, typeColors } from './map-core';
 
-/** @type {HTMLElement | null} */
+declare const maplibregl: any;
+
 const el = document.getElementById('journey-map');
 if (el && typeof maplibregl !== 'undefined') {
   const oLat = parseFloat(el.dataset.originLat || '');
@@ -17,7 +16,11 @@ if (el && typeof maplibregl !== 'undefined') {
     map.on('load', () => {
       map.addSource('arc', {
         type: 'geojson',
-        data: { type: 'Feature', geometry: { type: 'LineString', coordinates: points }, properties: {} },
+        data: {
+          type: 'Feature',
+          geometry: { type: 'LineString', coordinates: points },
+          properties: {},
+        },
       });
       map.addLayer({
         id: 'arc-line',
@@ -26,14 +29,21 @@ if (el && typeof maplibregl !== 'undefined') {
         paint: { 'line-color': color, 'line-width': 2.5, 'line-opacity': 0.85 },
         layout: { 'line-cap': 'round', 'line-join': 'round' },
       });
-
       map.addSource('endpoints', {
         type: 'geojson',
         data: {
           type: 'FeatureCollection',
           features: [
-            { type: 'Feature', geometry: { type: 'Point', coordinates: [oLng, oLat] }, properties: {} },
-            { type: 'Feature', geometry: { type: 'Point', coordinates: [dLng, dLat] }, properties: {} },
+            {
+              type: 'Feature',
+              geometry: { type: 'Point', coordinates: [oLng, oLat] },
+              properties: {},
+            },
+            {
+              type: 'Feature',
+              geometry: { type: 'Point', coordinates: [dLng, dLat] },
+              properties: {},
+            },
           ],
         },
       });
@@ -41,11 +51,14 @@ if (el && typeof maplibregl !== 'undefined') {
         id: 'endpoint-circles',
         type: 'circle',
         source: 'endpoints',
-        paint: { 'circle-radius': 5, 'circle-color': color, 'circle-stroke-width': 1.5, 'circle-stroke-color': '#fff' },
+        paint: {
+          'circle-radius': 5,
+          'circle-color': color,
+          'circle-stroke-width': 1.5,
+          'circle-stroke-color': '#fff',
+        },
       });
-
-      const bounds = new maplibregl.LngLatBounds([oLng, oLat], [dLng, dLat]);
-      map.fitBounds(bounds, { padding: 60 });
+      map.fitBounds(new maplibregl.LngLatBounds([oLng, oLat], [dLng, dLat]), { padding: 60 });
     });
   }
 }

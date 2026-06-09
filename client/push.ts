@@ -1,8 +1,6 @@
 (async () => {
-  /** @type {HTMLButtonElement | null} */
-  const button = /** @type {HTMLButtonElement | null} */ (document.getElementById('push-toggle'));
+  const button = document.getElementById('push-toggle') as HTMLButtonElement | null;
   const status = document.getElementById('push-status');
-  /** @type {HTMLElement | null} */
   const config = document.getElementById('push-config');
   if (!button || !status || !config) {
     return;
@@ -10,10 +8,10 @@
 
   const supported = 'PushManager' in window && 'serviceWorker' in navigator;
   const vapidKey = config.dataset.vapidKey || '';
-  let registration = null;
-  let subscription = null;
+  let registration: ServiceWorkerRegistration | null = null;
+  let subscription: PushSubscription | null = null;
 
-  const setSubscribed = (isSubscribed) => {
+  const setSubscribed = (isSubscribed: boolean) => {
     button.dataset.subscribed = isSubscribed ? 'true' : 'false';
     button.textContent = isSubscribed ? 'Disable Push Notifications' : 'Enable Push Notifications';
     button.disabled = false;
@@ -22,11 +20,11 @@
       : 'Push notifications are disabled.';
   };
 
-  const urlBase64ToUint8Array = (base64String) => {
+  const urlBase64ToUint8Array = (base64String: string): Uint8Array<ArrayBuffer> => {
     const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
     const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
     const rawData = atob(base64);
-    return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)));
+    return new Uint8Array([...rawData].map((char) => char.charCodeAt(0)));
   };
 
   if (!supported) {
@@ -36,7 +34,7 @@
   }
 
   try {
-    registration = await navigator.serviceWorker.getRegistration();
+    registration = (await navigator.serviceWorker.getRegistration()) || null;
     if (!registration) {
       registration = await navigator.serviceWorker.register('/sw.js');
     }
@@ -66,7 +64,7 @@
         return;
       }
 
-      subscription = await registration.pushManager.subscribe({
+      subscription = await registration!.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(vapidKey),
       });

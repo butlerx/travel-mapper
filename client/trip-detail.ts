@@ -1,5 +1,4 @@
-/** @type {HTMLElement | null} */
-const page = /** @type {HTMLElement | null} */ (document.querySelector('[data-trip-id]'));
+const page = document.querySelector<HTMLElement>('[data-trip-id]');
 if (page) {
   const tripId = page.dataset.tripId;
 
@@ -17,7 +16,7 @@ if (page) {
 
   document.querySelectorAll('[data-remove-journey]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      const journeyId = /** @type {HTMLElement} */ (btn).dataset.removeJourney;
+      const journeyId = (btn as HTMLElement).dataset.removeJourney;
       if (confirm('Remove this journey from the trip?')) {
         fetch(`/trips/${tripId}/journeys/${journeyId}`, {
           method: 'DELETE',

@@ -1,19 +1,11 @@
-// @ts-check
+const sel = document.getElementById('travel_type') as HTMLSelectElement;
+const originInput = document.getElementById('origin') as HTMLInputElement;
+const dest = document.getElementById('destination') as HTMLInputElement;
+const originLabel = document.getElementById('origin-label') as HTMLElement;
+const destLabel = document.getElementById('destination-label') as HTMLElement;
+const sections = document.querySelectorAll<HTMLElement>('.type-fields');
 
-/** @type {HTMLSelectElement} */
-const sel = /** @type {HTMLSelectElement} */ (document.getElementById('travel_type'));
-const originInput = /** @type {HTMLInputElement} */ (document.getElementById('origin'));
-/** @type {HTMLInputElement} */
-const dest = /** @type {HTMLInputElement} */ (document.getElementById('destination'));
-/** @type {HTMLElement} */
-const originLabel = /** @type {HTMLElement} */ (document.getElementById('origin-label'));
-/** @type {HTMLElement} */
-const destLabel = /** @type {HTMLElement} */ (document.getElementById('destination-label'));
-/** @type {NodeListOf<HTMLElement>} */
-const sections = document.querySelectorAll('.type-fields');
-
-/** @returns {void} */
-function update() {
+function update(): void {
   const t = sel.value;
   sections.forEach((s) => {
     s.classList.toggle('is-active', s.id === `fields-${t}`);
