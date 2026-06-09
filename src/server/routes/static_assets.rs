@@ -66,8 +66,13 @@ static_handler!(
 );
 
 js_handler!(
-    serve_map_core_js,
-    include_str!("../../../static/js/map-core.js")
+    serve_wasm_js,
+    include_str!("../../../static/wasm/map_wasm.js")
+);
+static_handler!(
+    serve_wasm_bg,
+    include_bytes!("../../../static/wasm/map_wasm_bg.wasm").as_slice(),
+    "application/wasm"
 );
 js_handler!(serve_js, include_str!("../../../static/js/map.js"));
 js_handler!(
@@ -100,6 +105,10 @@ js_handler!(
     include_str!("../../../static/js/trip-map.js")
 );
 js_handler!(serve_push_js, include_str!("../../../static/js/push.js"));
+js_handler!(
+    serve_shared_journey_poll_js,
+    include_str!("../../../static/js/shared-journey-poll.js")
+);
 js_handler!(
     serve_settings_copy_js,
     include_str!("../../../static/js/settings-copy.js")
@@ -194,7 +203,8 @@ pub async fn serve_sw() -> impl IntoResponse {
 pub fn routes() -> ApiRouter<crate::server::AppState> {
     ApiRouter::new()
         .route("/style.css", get(serve_css))
-        .route("/map-core.js", get(serve_map_core_js))
+        .route("/wasm/map_wasm.js", get(serve_wasm_js))
+        .route("/wasm/map_wasm_bg.wasm", get(serve_wasm_bg))
         .route("/map.js", get(serve_js))
         .route("/stats-map.js", get(serve_stats_js))
         .route("/nav.js", get(serve_nav_js))
@@ -205,6 +215,7 @@ pub fn routes() -> ApiRouter<crate::server::AppState> {
         .route("/trip-detail.js", get(serve_trip_detail_js))
         .route("/trip-map.js", get(serve_trip_map_js))
         .route("/push.js", get(serve_push_js))
+        .route("/shared-journey-poll.js", get(serve_shared_journey_poll_js))
         .route("/settings-copy.js", get(serve_settings_copy_js))
         .route("/sw-register.js", get(serve_sw_register_js))
         .route("/auto-submit.js", get(serve_auto_submit_js))
@@ -284,31 +295,6 @@ mod tests {
                 Request::builder()
                     .method("GET")
                     .uri("/static/stats-map.js")
-                    .body(Body::empty())
-                    .expect("failed to build request"),
-            )
-            .await
-            .expect("router request failed");
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let content_type = response
-            .headers()
-            .get(header::CONTENT_TYPE)
-            .and_then(|value| value.to_str().ok())
-            .expect("content-type should exist");
-        assert!(content_type.contains("application/javascript"));
-    }
-
-    #[tokio::test]
-    async fn map_core_js_route_serves_javascript_content_type() {
-        let pool = test_pool().await;
-        let app = create_router(test_app_state(pool));
-
-        let response = app
-            .oneshot(
-                Request::builder()
-                    .method("GET")
-                    .uri("/static/map-core.js")
                     .body(Body::empty())
                     .expect("failed to build request"),
             )
@@ -420,6 +406,31 @@ mod tests {
                 Request::builder()
                     .method("GET")
                     .uri("/static/nav.js")
+                    .body(Body::empty())
+                    .expect("failed to build request"),
+            )
+            .await
+            .expect("router request failed");
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let content_type = response
+            .headers()
+            .get(header::CONTENT_TYPE)
+            .and_then(|value| value.to_str().ok())
+            .expect("content-type should exist");
+        assert!(content_type.contains("application/javascript"));
+    }
+
+    #[tokio::test]
+    async fn shared_journey_poll_js_route_serves_javascript_content_type() {
+        let pool = test_pool().await;
+        let app = create_router(test_app_state(pool));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/static/shared-journey-poll.js")
                     .body(Body::empty())
                     .expect("failed to build request"),
             )

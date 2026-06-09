@@ -2,6 +2,8 @@ use clap::Subcommand;
 
 /// Interactive user creation subcommand.
 pub mod create_user;
+/// Detect and fix incorrect station addresses in `TripIt` source data.
+pub mod fix_tripit;
 /// Database seeding subcommand — only available in debug builds.
 #[cfg(debug_assertions)]
 pub mod seed;
@@ -18,6 +20,8 @@ pub enum Command {
     Worker(worker::Args),
     /// Create a new user interactively.
     CreateUser(create_user::Args),
+    /// Detect and fix incorrect addresses in `TripIt` trip data.
+    FixTripit(fix_tripit::Args),
     /// Seed the database with test data for local development.
     #[cfg(debug_assertions)]
     Seed(seed::Args),
@@ -33,6 +37,7 @@ pub async fn run(command: Command) -> Result<(), Box<dyn std::error::Error>> {
         Command::Serve(args) => serve::run(args).await.map_err(Into::into),
         Command::Worker(args) => worker::run(args).await.map_err(Into::into),
         Command::CreateUser(args) => create_user::run(args).await.map_err(Into::into),
+        Command::FixTripit(args) => fix_tripit::run(args).await.map_err(Into::into),
         #[cfg(debug_assertions)]
         Command::Seed(args) => seed::run(args).await.map_err(Into::into),
     }

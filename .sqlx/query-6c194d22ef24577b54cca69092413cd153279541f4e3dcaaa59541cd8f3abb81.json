@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO inbound_email_tokens (user_id, token_hash, label) VALUES (?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "6c194d22ef24577b54cca69092413cd153279541f4e3dcaaa59541cd8f3abb81"
+}

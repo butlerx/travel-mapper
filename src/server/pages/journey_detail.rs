@@ -13,7 +13,7 @@ use crate::{
     db::{
         self,
         hops::{DetailRow, TravelType},
-        status_enrichments,
+        journey_share_tokens, status_enrichments,
     },
     server::{
         components::{CarrierIcon, NavBar, Shell, attachment_gallery::AttachmentGallery},
@@ -49,6 +49,7 @@ pub fn render_page(
     enrichment: Option<status_enrichments::Row>,
     attachments: Vec<db::attachments::Row>,
     opensky_verification: Option<status_enrichments::Row>,
+    share_tokens: Vec<journey_share_tokens::Row>,
 ) -> Response {
     let html = view! {
         <JourneyDetailPage
@@ -58,6 +59,7 @@ pub fn render_page(
             enrichment=enrichment
             attachments=attachments
             opensky_verification=opensky_verification
+            share_tokens=share_tokens
         />
     };
     (StatusCode::OK, axum::response::Html(html.to_html())).into_response()
@@ -152,6 +154,7 @@ fn JourneyDetailPage(
     #[prop(optional_no_strip)] enrichment: Option<status_enrichments::Row>,
     attachments: Vec<db::attachments::Row>,
     #[prop(optional_no_strip)] opensky_verification: Option<status_enrichments::Row>,
+    share_tokens: Vec<journey_share_tokens::Row>,
 ) -> impl IntoView {
     let edit_journey = journey.clone();
 
@@ -354,6 +357,50 @@ fn JourneyDetailPage(
 
                 {detail_section}
 
+                <section class="content-section">
+                    <h2>"Share Live Status"</h2>
+                    <p>
+                        "Create a public link for this journey. The link expires 24 hours after departure."
+                    </p>
+                    <form method="post" action={format!("/journeys/{}/share", journey.id)} class="mt-sm">
+                        <button type="submit" class="btn btn-primary">"Generate Share Link"</button>
+                    </form>
+                    {if share_tokens.is_empty() {
+                        view! { <p class="mt-sm text-muted">"No active share links yet."</p> }.into_any()
+                    } else {
+                        view! {
+                            <ul class="token-list mt-sm">
+                                {share_tokens
+                                    .into_iter()
+                                    .map(|token| {
+                                        let revoke_url = format!("/journeys/{}/share/{}", journey.id, token.id);
+                                        let full_url = format!("/share/journey/{}", token.token_hash);
+                                        view! {
+                                            <li class="token-list-item">
+                                                <div class="token-info">
+                                                    <span class="token-label">{format!("Expires {}", token.expires_at)}</span>
+                                                </div>
+                                                <div class="token-actions">
+                                                    <span class="new-token-value">
+                                                        <code class="hidden" data-copy-value=full_url></code>
+                                                        <button type="button" class="btn btn-sm btn-primary" data-copy-trigger>
+                                                            "Copy URL"
+                                                        </button>
+                                                    </span>
+                                                    <form method="post" action=revoke_url>
+                                                        <button type="submit" class="btn btn-sm btn-danger">"Revoke"</button>
+                                                    </form>
+                                                </div>
+                                            </li>
+                                        }
+                                    })
+                                    .collect_view()}
+                            </ul>
+                        }
+                            .into_any()
+                    }}
+                </section>
+
                 <AttachmentGallery journey_id=journey.id attachments=attachments />
 
                 <EditForm journey=edit_journey />
@@ -365,6 +412,7 @@ fn JourneyDetailPage(
                 <script type="module" src="/static/map-core.js"></script>
                 <script type="module" src="/static/journey-map.js"></script>
                 <script src="/static/edit-panel.js" defer></script>
+                <script src="/static/settings-copy.js" defer></script>
             </main>
         </Shell>
     }

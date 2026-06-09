@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM journey_share_tokens WHERE id = ? AND user_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "6f27ce8f2e4cce51be878d78328690a2e41b43dbc5e1809dd8c0bef1c11fb962"
+}

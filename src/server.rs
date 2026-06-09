@@ -102,6 +102,15 @@ pub(crate) mod test_helpers {
                 _ => Ok(json!({})),
             }
         }
+
+        async fn replace_object(
+            &self,
+            _object_type: &str,
+            _object_id: &str,
+            _payload: &Value,
+        ) -> Result<Value, FetchError> {
+            Ok(json!({}))
+        }
     }
 
     pub async fn test_pool() -> SqlitePool {

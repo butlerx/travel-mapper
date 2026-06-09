@@ -20,8 +20,11 @@ use axum::{
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Redirect, Response},
 };
+use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
+use chrono::{Duration, NaiveDate};
 use leptos::prelude::*;
 use percent_encoding::{AsciiSet, NON_ALPHANUMERIC, utf8_percent_encode};
+use rand::RngCore;
 use schemars::JsonSchema;
 use serde::{Deserialize, Deserializer, Serialize};
 
@@ -783,6 +786,14 @@ pub async fn get_journey_handler(
     .await
     .unwrap_or_default();
 
+    let share_tokens = (db::journey_share_tokens::GetByHopId { hop_id: detail.id })
+        .execute(&state.db)
+        .await
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|row| row.user_id == auth.user_id)
+        .collect();
+
     if format == super::ResponseFormat::Html {
         crate::server::pages::journey_detail::render_page(
             detail,
@@ -790,6 +801,7 @@ pub async fn get_journey_handler(
             enrichment,
             attachments,
             opensky_verification,
+            share_tokens,
         )
     } else {
         let mut response: JourneyResponse = detail.into();
@@ -811,6 +823,190 @@ pub fn get_journey_handler_docs(op: TransformOperation) -> TransformOperation {
                 add_multi_format_docs::<JourneyResponse>(res.inner());
                 res
             }),
+        401 | 404 | 500 => ErrorResponse,
+    )
+    .tag("journeys")
+}
+
+/// JSON response after creating a journey share token.
+#[derive(Debug, Default, Serialize, Deserialize, JsonSchema)]
+pub struct JourneyShareCreateResponse {
+    pub token_hash: String,
+    pub url: String,
+    pub expires_at: String,
+}
+
+impl MultiFormatResponse for JourneyShareCreateResponse {
+    const HTML_TITLE: &'static str = "Journey Share Created";
+    const CSV_HEADERS: &'static [&'static str] = &["token_hash", "url", "expires_at"];
+
+    fn csv_row(&self) -> Vec<String> {
+        vec![
+            self.token_hash.clone(),
+            self.url.clone(),
+            self.expires_at.clone(),
+        ]
+    }
+}
+
+fn share_expiry_from_start_date(start_date: &str) -> Result<String, AppError> {
+    let date_text = start_date.get(..10).unwrap_or(start_date);
+    let departure_date = NaiveDate::parse_from_str(date_text, "%Y-%m-%d")
+        .map_err(|_| AppError::MissingField("invalid journey start date"))?;
+    let departure = departure_date
+        .and_hms_opt(0, 0, 0)
+        .ok_or(AppError::MissingField("invalid journey start date"))?;
+    Ok((departure + Duration::hours(24))
+        .format("%Y-%m-%d %H:%M:%S")
+        .to_string())
+}
+
+pub async fn create_share_handler(
+    State(state): State<AppState>,
+    auth: AuthUser,
+    Path(id): Path<i64>,
+    headers: HeaderMap,
+) -> Response {
+    let format = negotiate_format(&headers);
+
+    let Some(detail) = (match (db::hops::GetById {
+        id,
+        user_id: auth.user_id,
+    })
+    .execute(&state.db)
+    .await
+    {
+        Ok(detail) => detail,
+        Err(err) => return AppError::from(err).into_format_response(format),
+    }) else {
+        return ErrorResponse::into_format_response(
+            "journey not found",
+            format,
+            StatusCode::NOT_FOUND,
+        );
+    };
+
+    let expires_at = match share_expiry_from_start_date(&detail.start_date) {
+        Ok(v) => v,
+        Err(err) => return err.into_format_response(format),
+    };
+
+    let mut token_bytes = [0_u8; 32];
+    rand::thread_rng().fill_bytes(&mut token_bytes);
+    let token = URL_SAFE_NO_PAD.encode(token_bytes);
+    let token_hash = crate::server::session::sha256_hex(&token);
+
+    match (db::journey_share_tokens::Create {
+        user_id: auth.user_id,
+        hop_id: id,
+        token_hash: &token_hash,
+        expires_at: &expires_at,
+    })
+    .execute(&state.db)
+    .await
+    {
+        Ok(_) => {
+            if format == super::ResponseFormat::Html {
+                Redirect::to(&format!("/journeys/{id}")).into_response()
+            } else {
+                let response = JourneyShareCreateResponse {
+                    token_hash: token_hash.clone(),
+                    url: format!("/share/journey/{token_hash}"),
+                    expires_at,
+                };
+                JourneyShareCreateResponse::single_format_response(
+                    &response,
+                    format,
+                    StatusCode::CREATED,
+                )
+            }
+        }
+        Err(err) => AppError::from(err).into_format_response(format),
+    }
+}
+
+/// `OpenAPI` metadata for creating a journey share token.
+pub fn create_share_handler_docs(op: TransformOperation) -> TransformOperation {
+    multi_format_docs!(
+        op.description("Create a public share token for a single journey."),
+        201 => JourneyShareCreateResponse,
+        401 | 404 | 500 => ErrorResponse,
+    )
+    .tag("journeys")
+}
+
+/// Revoke a previously created public journey share token.
+pub async fn revoke_share_handler(
+    State(state): State<AppState>,
+    auth: AuthUser,
+    Path((id, share_id)): Path<(i64, i64)>,
+    headers: HeaderMap,
+) -> Response {
+    let format = negotiate_format(&headers);
+    let is_form = is_form_request(&headers);
+
+    let Some(_) = (match (db::hops::GetById {
+        id,
+        user_id: auth.user_id,
+    })
+    .execute(&state.db)
+    .await
+    {
+        Ok(detail) => detail,
+        Err(err) => return AppError::from(err).into_format_response(format),
+    }) else {
+        return ErrorResponse::into_format_response(
+            "journey not found",
+            format,
+            StatusCode::NOT_FOUND,
+        );
+    };
+
+    let token_rows = match (db::journey_share_tokens::GetByHopId { hop_id: id })
+        .execute(&state.db)
+        .await
+    {
+        Ok(rows) => rows,
+        Err(err) => return AppError::from(err).into_format_response(format),
+    };
+    if !token_rows
+        .iter()
+        .any(|row| row.id == share_id && row.user_id == auth.user_id)
+    {
+        return ErrorResponse::into_format_response(
+            "share token not found",
+            format,
+            StatusCode::NOT_FOUND,
+        );
+    }
+
+    match (db::journey_share_tokens::Delete {
+        id: share_id,
+        user_id: auth.user_id,
+    })
+    .execute(&state.db)
+    .await
+    {
+        Ok(true) => {
+            if is_form || format == super::ResponseFormat::Html {
+                Redirect::to(&format!("/journeys/{id}")).into_response()
+            } else {
+                StatusCode::NO_CONTENT.into_response()
+            }
+        }
+        Ok(false) => ErrorResponse::into_format_response(
+            "share token not found",
+            format,
+            StatusCode::NOT_FOUND,
+        ),
+        Err(err) => AppError::from(err).into_format_response(format),
+    }
+}
+
+/// `OpenAPI` metadata for revoking a journey share token.
+pub fn revoke_share_handler_docs(op: TransformOperation) -> TransformOperation {
+    multi_format_docs!(
+        op.description("Revoke a public share token for a single journey."),
         401 | 404 | 500 => ErrorResponse,
     )
     .tag("journeys")
@@ -1388,7 +1584,9 @@ pub fn update_handler_docs(op: TransformOperation) -> TransformOperation {
 
 #[cfg(test)]
 mod tests {
-    use super::{CreateJourneyResponse, JourneyResponse, JourneyTravelType};
+    use super::{
+        CreateJourneyResponse, JourneyResponse, JourneyShareCreateResponse, JourneyTravelType,
+    };
     use crate::{
         db::{self, hops::TravelType},
         server::create_router,
@@ -1912,5 +2110,116 @@ mod tests {
         assert_eq!(hops.len(), 1);
         assert_eq!(hops[0].origin_name, "Paris Gare du Nord");
         assert_eq!(hops[0].dest_name, "London St Pancras");
+    }
+
+    #[tokio::test]
+    async fn create_share_json_creates_token() {
+        let pool = test_pool().await;
+        let cookie = auth_cookie_for_user(&pool, "alice").await;
+        let user = db::users::GetByUsername { username: "alice" }
+            .execute(&pool)
+            .await
+            .expect("lookup failed")
+            .expect("missing user");
+        db::hops::Create {
+            trip_id: "trip-share",
+            user_id: user.id,
+            hops: &[sample_hop(
+                TravelType::Air,
+                "DUB",
+                "LHR",
+                "2025-07-01",
+                "2025-07-01",
+            )],
+        }
+        .execute(&pool)
+        .await
+        .expect("insert failed");
+        let hop_id = db::hops::GetAll {
+            user_id: user.id,
+            travel_type_filter: None,
+        }
+        .execute(&pool)
+        .await
+        .expect("list hops failed")[0]
+            .id;
+
+        let app = create_router(test_app_state(pool));
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/journeys/{hop_id}/share"))
+                    .header(header::COOKIE, cookie)
+                    .header(header::ACCEPT, "application/json")
+                    .body(Body::empty())
+                    .expect("failed to build request"),
+            )
+            .await
+            .expect("router request failed");
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+        let body = to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("failed to read body");
+        let parsed: JourneyShareCreateResponse = serde_json::from_slice(&body).expect("valid json");
+        assert!(!parsed.token_hash.is_empty());
+        assert_eq!(parsed.url, format!("/share/journey/{}", parsed.token_hash));
+    }
+
+    #[tokio::test]
+    async fn create_share_form_redirects_to_journey_detail() {
+        let pool = test_pool().await;
+        let cookie = auth_cookie_for_user(&pool, "alice").await;
+        let user = db::users::GetByUsername { username: "alice" }
+            .execute(&pool)
+            .await
+            .expect("lookup failed")
+            .expect("missing user");
+        db::hops::Create {
+            trip_id: "trip-share",
+            user_id: user.id,
+            hops: &[sample_hop(
+                TravelType::Air,
+                "DUB",
+                "LHR",
+                "2025-07-01",
+                "2025-07-01",
+            )],
+        }
+        .execute(&pool)
+        .await
+        .expect("insert failed");
+        let hop_id = db::hops::GetAll {
+            user_id: user.id,
+            travel_type_filter: None,
+        }
+        .execute(&pool)
+        .await
+        .expect("list hops failed")[0]
+            .id;
+
+        let app = create_router(test_app_state(pool));
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/journeys/{hop_id}/share"))
+                    .header(header::COOKIE, cookie)
+                    .header(header::ACCEPT, "text/html")
+                    .body(Body::empty())
+                    .expect("failed to build request"),
+            )
+            .await
+            .expect("router request failed");
+
+        assert_eq!(response.status(), StatusCode::SEE_OTHER);
+        let location = response
+            .headers()
+            .get(header::LOCATION)
+            .expect("missing location")
+            .to_str()
+            .expect("ascii location");
+        assert_eq!(location, format!("/journeys/{hop_id}"));
     }
 }

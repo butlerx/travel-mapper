@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO journey_share_tokens (user_id, hop_id, token_hash, expires_at) VALUES (?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "a4a19d169590c24012ce21f98aa5fcacfb029b6810ee55f7ca1dc7b1eb3ae1cb"
+}

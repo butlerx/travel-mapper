@@ -11,6 +11,14 @@ const TRIPIT_API_BASE: &str = "https://api.tripit.com/v1";
 pub trait TripItApi: Send + Sync {
     async fn list_trips(&self, past: bool, page: u64, page_size: u64) -> Result<Value, FetchError>;
     async fn get_trip_objects(&self, trip_id: &str) -> Result<Value, FetchError>;
+    /// Replace a `TripIt` object, updating its data in-place while preserving
+    /// its ID. `object_type` is the lowercased type name (e.g. "rail", "air").
+    async fn replace_object(
+        &self,
+        object_type: &str,
+        object_id: &str,
+        payload: &Value,
+    ) -> Result<Value, FetchError>;
 }
 
 /// HTTP client for the `TripIt` v1 REST API.
@@ -41,20 +49,40 @@ impl TripItClient {
     pub(super) async fn get(&self, path: &str) -> Result<Value, FetchError> {
         let url = format!("{}/{path}/format/json", self.base_url);
         tracing::debug!(url, "GET request");
+        self.request_with_retries("GET", &url, None).await
+    }
 
+    pub(super) async fn post(&self, path: &str, body: &Value) -> Result<Value, FetchError> {
+        let url = format!("{}/{path}/format/json", self.base_url);
+        tracing::debug!(url, "POST request");
+        self.request_with_retries("POST", &url, Some(body)).await
+    }
+
+    async fn request_with_retries(
+        &self,
+        method: &str,
+        url: &str,
+        body: Option<&Value>,
+    ) -> Result<Value, FetchError> {
         let max_retries: u32 = 3;
         let mut attempt = 0;
 
         loop {
             attempt += 1;
-            let auth_header = self.auth.to_header("GET", &url)?;
-            let result = self
-                .client
-                .get(&url)
+            let auth_header = self.auth.to_header(method, url)?;
+            let mut builder = match method {
+                "POST" => self.client.post(url),
+                _ => self.client.get(url),
+            };
+            builder = builder
                 .header("Authorization", auth_header)
-                .timeout(std::time::Duration::from_secs(30))
-                .send()
-                .await;
+                .timeout(std::time::Duration::from_secs(30));
+
+            if let Some(json_body) = body {
+                builder = builder.json(json_body);
+            }
+
+            let result = builder.send().await;
 
             match result {
                 Ok(resp) => {
@@ -78,8 +106,8 @@ impl TripItClient {
                         continue;
                     }
                     resp.error_for_status_ref()?;
-                    let body = resp.bytes().await?;
-                    return Ok(serde_json::from_slice(&body)?);
+                    let resp_body = resp.bytes().await?;
+                    return Ok(serde_json::from_slice(&resp_body)?);
                 }
                 Err(err) => {
                     if (err.is_connect() || err.is_timeout()) && attempt <= max_retries {
@@ -117,6 +145,16 @@ impl TripItApi for TripItClient {
 
     async fn get_trip_objects(&self, trip_id: &str) -> Result<Value, FetchError> {
         self.get(&format!("get/trip/id/{trip_id}/include_objects/true"))
+            .await
+    }
+
+    async fn replace_object(
+        &self,
+        object_type: &str,
+        object_id: &str,
+        payload: &Value,
+    ) -> Result<Value, FetchError> {
+        self.post(&format!("replace/{object_type}/id/{object_id}"), payload)
             .await
     }
 }

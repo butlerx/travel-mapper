@@ -98,6 +98,13 @@ pub async fn handler(
     .await
     .unwrap_or_default();
 
+    let inbound_email_tokens = db::inbound_email_tokens::GetByUserId {
+        user_id: auth.user_id,
+    }
+    .execute(&state.db)
+    .await
+    .unwrap_or_default();
+
     let (email, email_verified, first_name, last_name) = user
         .map(|u| (u.email, u.email_verified, u.first_name, u.last_name))
         .unwrap_or_default();
@@ -117,6 +124,7 @@ pub async fn handler(
             feed_tokens,
             share_tokens,
             api_keys,
+            inbound_email_tokens,
             base_url,
         }),
         ResponseFormat::Json => {

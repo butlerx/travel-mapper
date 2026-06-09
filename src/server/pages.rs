@@ -11,6 +11,7 @@ pub(super) mod login;
 pub(super) mod not_found;
 pub(super) mod register;
 pub(super) mod settings;
+pub(crate) mod shared_journey;
 pub(crate) mod stats;
 pub(crate) mod trip_detail;
 pub(crate) mod trips;

@@ -6,9 +6,12 @@ description = "TripIt travel history web server with API and SQLite storage"
 homepage    = "https://github.com/butlerx/travel-mapper"
 license     = "Apache-2.0"
 
+[workspace]
+members = ["crates/map-wasm"]
+
 [dependencies]
-aes-gcm      = "0.10"
-aide         = {
+aes-gcm            = "0.10"
+aide               = {
   version  = "0.15",
   features = [
     "axum",
@@ -19,8 +22,7 @@ aide         = {
     "swagger",
   ]
 }
-airport-data = "1.0"
-
+airport-data       = "1.0"
 argon2             = "0.5"
 async-trait        = "0.1"
 axum               = "0.8"
@@ -58,6 +60,7 @@ lettre             = {
     "tokio1-native-tls",
   ]
 }
+mail-parser        = { version = "0.11.3", features = ["encoding_rs"] }
 nominatim          = "0.3"
 percent-encoding   = "2"
 prost              = "0.14"

@@ -4,6 +4,8 @@ mod api_keys_section;
 mod calendar_import_section;
 /// Generic CSV/delimited import section.
 mod csv_import_section;
+/// Inbound email forwarding address section.
+mod email_import_section;
 /// Email address and verification status section.
 mod email_section;
 /// Calendar feed subscription section.
@@ -27,6 +29,7 @@ use axum::{
 };
 use calendar_import_section::CalendarImportSection;
 use csv_import_section::CsvImportSection;
+use email_import_section::EmailImportSection;
 use email_section::EmailSection;
 use feed_section::FeedSection;
 use leptos::prelude::*;
@@ -47,6 +50,9 @@ pub struct SettingsFeedback {
     pub profile: Option<String>,
     /// Raw API key shown once after creation (not persisted).
     pub new_api_key: Option<String>,
+    /// Raw email import token shown once after generation (not persisted).
+    #[serde(rename = "email_token")]
+    pub new_email_token: Option<String>,
 }
 
 /// User profile fields submitted from the settings form.
@@ -67,6 +73,7 @@ pub struct PageData {
     pub feed_tokens: Vec<db::feed_tokens::Row>,
     pub share_tokens: Vec<db::share_tokens::Row>,
     pub api_keys: Vec<db::api_keys::Row>,
+    pub inbound_email_tokens: Vec<db::inbound_email_tokens::Row>,
     pub base_url: String,
 }
 
@@ -93,7 +100,9 @@ pub fn render_page(data: PageData) -> Response {
             feed_tokens=data.feed_tokens
             share_tokens=data.share_tokens
             api_keys=data.api_keys
+            inbound_email_tokens=data.inbound_email_tokens
             new_api_key=data.feedback.new_api_key
+            new_email_token=data.feedback.new_email_token
             base_url=data.base_url
         />
     };
@@ -121,7 +130,9 @@ fn Settings(
     feed_tokens: Vec<db::feed_tokens::Row>,
     share_tokens: Vec<db::share_tokens::Row>,
     api_keys: Vec<db::api_keys::Row>,
+    inbound_email_tokens: Vec<db::inbound_email_tokens::Row>,
     #[prop(optional_no_strip)] new_api_key: Option<String>,
+    #[prop(optional_no_strip)] new_email_token: Option<String>,
     base_url: String,
 ) -> impl IntoView {
     let email_alert = email_feedback
@@ -188,6 +199,7 @@ fn Settings(
                     />
                     <CsvImportSection />
                     <CalendarImportSection />
+                    <EmailImportSection tokens=inbound_email_tokens new_token=new_email_token base_url=base_url.clone() />
                 </div>
 
                 <div class="settings-group">

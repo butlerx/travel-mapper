@@ -198,9 +198,18 @@ pub fn create_router(state: AppState) -> Router {
         .nest("/stations", routes::stations_api_routes())
         .nest("/rail", routes::rail_api_routes())
         .nest("/import", routes::import_api_routes())
+        .nest("/email", routes::email_import_api_routes())
         .route("/feed/{token}", get(routes::feed::handler))
         .route("/share/{token}", get(routes::share::handler))
         .route("/share/{token}/review", get(routes::share::review_handler))
+        .route(
+            "/share/journey/{token}",
+            get(routes::share::shared_journey_handler),
+        )
+        .route(
+            "/share/journey/{token}/enrichments",
+            get(routes::share::shared_journey_enrichments_handler),
+        )
         .route(
             "/docs",
             get(Swagger::new("/openapi.json")

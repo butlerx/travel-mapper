@@ -97,7 +97,7 @@ async fn import_from_url(state: &AppState, user_id: i64, raw_url: &str) -> Resul
 
 /// Create the parsed journeys, skipping any that duplicate an existing hop with
 /// the same date and route (so re-running an import is idempotent).
-async fn create_journeys(
+pub(crate) async fn create_journeys(
     pool: &sqlx::SqlitePool,
     user_id: i64,
     journeys: Vec<ParsedJourney>,
@@ -147,7 +147,7 @@ async fn create_journeys(
     Ok(imported)
 }
 
-fn detail_for(travel_type: &TravelType, carrier: String) -> ManualDetail {
+pub(crate) fn detail_for(travel_type: &TravelType, carrier: String) -> ManualDetail {
     match travel_type {
         TravelType::Air => ManualDetail::Air(FlightDetail {
             airline: carrier,
