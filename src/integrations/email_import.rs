@@ -368,7 +368,7 @@ fn extract_regex(text: &str) -> Vec<ParsedJourney> {
     // Find flight numbers for carrier info
     let flight_numbers: Vec<String> = FLIGHT_PATTERN
         .captures_iter(text)
-        .map(|cap| format!("{}{}", &cap[1].to_uppercase(), &cap[2]))
+        .map(|cap| format!("{}{}", cap[1].to_uppercase(), &cap[2]))
         .collect();
 
     // Match routes with the nearest date (or first date found)
