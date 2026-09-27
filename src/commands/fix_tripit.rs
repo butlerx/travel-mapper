@@ -290,24 +290,48 @@ async fn check_segment(
 
         let (existing_lat, existing_lng) = extract_coords(addr);
 
-        let resolved = geocoder.geocode_with_fallbacks(station_name, None).await;
+        let country = addr
+            .get("country")
+            .and_then(|v| v.as_str())
+            .filter(|s| !s.is_empty());
+        let city = addr
+            .get("city")
+            .and_then(|v| v.as_str())
+            .filter(|s| !s.is_empty());
 
+        if existing_lat == 0.0 && existing_lng == 0.0 {
+            let qualified_query = build_qualified_query(station_name, city, country);
+            let resolved =
+                resolve_station(geocoder, station_name, qualified_query.as_deref()).await;
+            if let Some((geo_lat, geo_lng)) = resolved {
+                results.push((
+                    station_name.to_string(),
+                    endpoint.to_string(),
+                    geo_lat,
+                    geo_lng,
+                    existing_lat,
+                    existing_lng,
+                    0.0,
+                ));
+            }
+            continue;
+        }
+
+        if let Some(co) = country {
+            let country_center = geocoder.geocode_with_fallbacks(co, None).await;
+            if let Some((cc_lat, cc_lng)) = country_center {
+                let dist_to_country = haversine_km(existing_lat, existing_lng, cc_lat, cc_lng);
+                if dist_to_country < 1000.0 {
+                    continue;
+                }
+            }
+        }
+
+        let qualified_query = build_qualified_query(station_name, city, country);
+        let resolved = resolve_station(geocoder, station_name, qualified_query.as_deref()).await;
         let Some((geo_lat, geo_lng)) = resolved else {
             continue;
         };
-
-        if existing_lat == 0.0 && existing_lng == 0.0 {
-            results.push((
-                station_name.to_string(),
-                endpoint.to_string(),
-                geo_lat,
-                geo_lng,
-                existing_lat,
-                existing_lng,
-                0.0,
-            ));
-            continue;
-        }
 
         let distance = haversine_km(existing_lat, existing_lng, geo_lat, geo_lng);
         if distance > DISTANCE_THRESHOLD_KM {
@@ -324,6 +348,35 @@ async fn check_segment(
     }
 
     results
+}
+
+async fn resolve_station(
+    geocoder: &Geocoder,
+    station_name: &str,
+    qualified_query: Option<&str>,
+) -> Option<(f64, f64)> {
+    if let Some(q) = qualified_query {
+        let r = geocoder.geocode_with_fallbacks(q, None).await;
+        if r.is_some() {
+            return r;
+        }
+    }
+    geocoder
+        .geocode_with_fallbacks(station_name, qualified_query)
+        .await
+}
+
+fn build_qualified_query(
+    station_name: &str,
+    city: Option<&str>,
+    country: Option<&str>,
+) -> Option<String> {
+    match (city, country) {
+        (Some(c), Some(co)) => Some(format!("{station_name}, {c}, {co}")),
+        (None, Some(co)) => Some(format!("{station_name}, {co}")),
+        (Some(c), None) => Some(format!("{station_name}, {c}")),
+        (None, None) => None,
+    }
 }
 
 fn apply_coord_fix(
