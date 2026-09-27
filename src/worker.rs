@@ -681,12 +681,16 @@ async fn enrich_single_flight_hop(
         }
     };
 
-    let flight_number = detail
-        .flight_detail
-        .as_ref()
-        .map(|d| d.flight_number.as_str())
-        .unwrap_or_default();
-    if flight_number.is_empty() || hop.start_date.is_empty() {
+    let flight_iata = detail.flight_detail.as_ref().map_or_else(String::new, |d| {
+        if d.flight_number.is_empty() {
+            String::new()
+        } else if d.airline.is_empty() || d.flight_number.starts_with(char::is_alphabetic) {
+            d.flight_number.clone()
+        } else {
+            format!("{}{}", d.airline, d.flight_number)
+        }
+    });
+    if flight_iata.is_empty() || hop.start_date.is_empty() {
         return FlightEnrichResult::Skipped;
     }
 
@@ -696,16 +700,16 @@ async fn enrich_single_flight_hop(
     }
 
     match client
-        .get_flight_status(flight_number, &hop.start_date)
+        .get_flight_status(&flight_iata, &hop.start_date)
         .await
     {
         Ok(Some(status)) => {
-            store_flight_status_and_notify(config, user_id, hop, flight_number, &status).await
+            store_flight_status_and_notify(config, user_id, hop, &flight_iata, &status).await
         }
         Ok(None) => {
             tracing::debug!(
                 hop_id = hop.id,
-                flight_number,
+                flight_iata,
                 "no flight status data returned, writing sentinel",
             );
             write_no_data_sentinel(&config.pool, hop.id, "airlabs").await;
@@ -715,7 +719,7 @@ async fn enrich_single_flight_hop(
         Err(err) => {
             tracing::warn!(
                 hop_id = hop.id,
-                flight_number,
+                flight_iata,
                 error = %err,
                 "flight status API request failed",
             );
@@ -816,12 +820,16 @@ async fn verify_air_hop_route(
         }
     };
 
-    let flight_number = detail
-        .flight_detail
-        .as_ref()
-        .map(|d| d.flight_number.as_str())
-        .unwrap_or_default();
-    if flight_number.is_empty() || hop.start_date.is_empty() {
+    let flight_iata = detail.flight_detail.as_ref().map_or_else(String::new, |d| {
+        if d.flight_number.is_empty() {
+            String::new()
+        } else if d.airline.is_empty() || d.flight_number.starts_with(char::is_alphabetic) {
+            d.flight_number.clone()
+        } else {
+            format!("{}{}", d.airline, d.flight_number)
+        }
+    });
+    if flight_iata.is_empty() || hop.start_date.is_empty() {
         return RouteVerificationOutcome::Noop;
     }
 
@@ -832,7 +840,7 @@ async fn verify_air_hop_route(
 
     match client
         .verify_route(
-            flight_number,
+            &flight_iata,
             &hop.start_date,
             &hop.origin_name,
             &hop.dest_name,
@@ -871,7 +879,7 @@ async fn verify_air_hop_route(
         Ok(None) => {
             tracing::debug!(
                 hop_id = hop.id,
-                flight_number,
+                flight_iata,
                 "no opensky route data found, writing sentinel",
             );
             write_no_data_sentinel(&config.pool, hop.id, "opensky").await;
@@ -881,7 +889,7 @@ async fn verify_air_hop_route(
             RouteVerificationOutcome::RateLimited
         }
         Err(err) => {
-            tracing::warn!(hop_id = hop.id, flight_number, error = %err, "opensky route verification failed");
+            tracing::warn!(hop_id = hop.id, flight_iata, error = %err, "opensky route verification failed");
             RouteVerificationOutcome::Noop
         }
     }
