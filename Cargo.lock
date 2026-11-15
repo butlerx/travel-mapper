@@ -2114,9 +2114,9 @@ dependencies = [
 
 [[package]]
 name = "icalendar"
-version = "0.17.6"
+version = "0.17.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cc3b69b799a03e059f6dc984c25a8bf847d8ca4cbddb079c39ede7b3d24854c3"
+checksum = "2fe2f2ca4a82ec12ebd129ca664030add9b80d17a2b79ce885884fefb1c650e6"
 dependencies = [
  "chrono",
  "iso8601",
@@ -2328,9 +2328,9 @@ dependencies = [
 
 [[package]]
 name = "iso8601"
-version = "0.6.3"
+version = "0.6.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e1082f0c48f143442a1ac6122f67e360ceee130b967af4d50996e5154a45df46"
+checksum = "4ffd3254cf2b0fc53e38414bdba99719f3e269db8a6519731b68a3a90040c41b"
 dependencies = [
  "nom",
 ]
@@ -5299,9 +5299,9 @@ checksum = "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
 
 [[package]]
 name = "uuid"
-version = "1.22.0"
+version = "1.29.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a68d3c8f01c0cfa54a75291d83601161799e4a89a39e0929f4b0354d88757a37"
+checksum = "bed99139f7dac9b5cfe5f17be4d66dc7079a34dee1d74bcc77217119240e267c"
 dependencies = [
  "getrandom 0.4.2",
  "js-sys",
