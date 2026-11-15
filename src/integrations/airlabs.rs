@@ -148,6 +148,13 @@ fn parse_flight_entry(entry: &Value) -> Result<FlightStatus, FlightStatusError> 
         .unwrap_or_default()
         .to_string();
 
+    // Aircraft registration (tail number) — AirLabs reports it as `reg_number`.
+    let aircraft_reg = entry
+        .get("reg_number")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_string();
+
     let raw_json = serde_json::to_string(entry)?;
 
     Ok(FlightStatus {
@@ -158,6 +165,7 @@ fn parse_flight_entry(entry: &Value) -> Result<FlightStatus, FlightStatusError> 
         dep_terminal,
         arr_gate,
         arr_terminal,
+        aircraft_reg,
         raw_json,
     })
 }
@@ -210,7 +218,7 @@ mod tests {
             let mut buf = vec![0_u8; 4096];
             let _ = tokio::io::AsyncReadExt::read(&mut stream, &mut buf).await;
 
-            let body = r#"{"response":[{"flight_iata":"AA100","dep_time":"2026-03-25 08:00","dep_time_utc":"2026-03-25 13:00","status":"landed","dep_delayed":15,"arr_delayed":7,"dep_gate":"A1","dep_terminal":"5","arr_gate":"B3","arr_terminal":"2"}]}"#;
+            let body = r#"{"response":[{"flight_iata":"AA100","dep_time":"2026-03-25 08:00","dep_time_utc":"2026-03-25 13:00","status":"landed","dep_delayed":15,"arr_delayed":7,"dep_gate":"A1","dep_terminal":"5","arr_gate":"B3","arr_terminal":"2","reg_number":"N12345"}]}"#;
             let response = format!(
                 "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n{body}",
                 body.len()
@@ -238,6 +246,7 @@ mod tests {
         assert_eq!(status.dep_terminal, "5");
         assert_eq!(status.arr_gate, "B3");
         assert_eq!(status.arr_terminal, "2");
+        assert_eq!(status.aircraft_reg, "N12345");
         let raw_json: Value = serde_json::from_str(&status.raw_json).unwrap();
         assert_eq!(raw_json["status"], "landed");
         assert_eq!(raw_json["dep_delayed"], 15);

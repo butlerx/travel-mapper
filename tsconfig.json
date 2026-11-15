@@ -1,24 +1,17 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
-    "module": "ES2020",
-    "lib": [
-      "ES2020",
-      "DOM",
-      "DOM.Iterable"
-    ],
-    "checkJs": true,
-    "allowJs": true,
+    "target": "ES2022",
+    "module": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "strict": true,
     "noEmit": true,
-    "strict": false,
     "skipLibCheck": true,
-    "moduleResolution": "bundler"
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "paths": {
+      "/static/wasm/map_wasm.js": ["./static/wasm/map_wasm.d.ts"]
+    }
   },
-  "include": [
-    "static/js/**/*.js",
-    "static/js/**/*.d.ts"
-  ],
-  "exclude": [
-    "static/sw.js"
-  ]
+  "include": ["client/**/*.ts"],
+  "exclude": ["static/wasm"]
 }

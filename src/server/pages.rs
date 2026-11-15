@@ -11,10 +11,13 @@ pub(super) mod login;
 pub(super) mod not_found;
 pub(super) mod register;
 pub(super) mod settings;
+pub(crate) mod shared_journey;
 pub(crate) mod stats;
 pub(crate) mod trip_detail;
 pub(crate) mod trips;
 pub(super) mod unauthorized;
+pub(super) mod upcoming;
+pub(crate) mod year_in_review;
 
 use super::{AppState, components::ErrorPage};
 use crate::db;
@@ -31,6 +34,7 @@ pub(super) fn page_routes() -> ApiRouter<AppState> {
         .route("/register", get(register::page))
         .route("/login", get(login::page))
         .route("/dashboard", get(dashboard::page))
+        .route("/upcoming", get(upcoming::page))
         .route("/journeys/new", get(add_journey::page))
 }
 

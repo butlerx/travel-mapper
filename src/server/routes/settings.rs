@@ -98,9 +98,15 @@ pub async fn handler(
     .await
     .unwrap_or_default();
 
-    let (email, email_verified, first_name, last_name) = user
-        .map(|u| (u.email, u.email_verified, u.first_name, u.last_name))
-        .unwrap_or_default();
+    let inbound_email_tokens = db::inbound_email_tokens::GetByUserId {
+        user_id: auth.user_id,
+    }
+    .execute(&state.db)
+    .await
+    .unwrap_or_default();
+
+    let (email, email_verified, first_name, last_name) =
+        user.map_or_default(|u| (u.email, u.email_verified, u.first_name, u.last_name));
 
     match format {
         ResponseFormat::Html => pages::settings::render_page(pages::settings::PageData {
@@ -117,6 +123,7 @@ pub async fn handler(
             feed_tokens,
             share_tokens,
             api_keys,
+            inbound_email_tokens,
             base_url,
         }),
         ResponseFormat::Json => {

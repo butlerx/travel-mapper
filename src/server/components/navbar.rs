@@ -24,6 +24,7 @@ pub fn NavBar(#[prop(into)] current: String) -> impl IntoView {
             </button>
             <div id="nav-menu" class="nav-menu">
                 <a class="nav-link" href="/dashboard" aria-current=aria("dashboard")>"Dashboard"</a>
+                <a class="nav-link" href="/upcoming" aria-current=aria("upcoming")>"Upcoming"</a>
                 <a class="nav-link" href="/journeys" aria-current=aria("journeys")>"Journeys"</a>
                 <a class="nav-link" href="/trips" aria-current=aria("trips")>"Trips"</a>
                 <a class="nav-link" href="/journeys/new" aria-current=aria("add-journey")>"Add Journey"</a>

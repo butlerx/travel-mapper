@@ -6,7 +6,7 @@ fn configured_section(vapid_key: String) -> AnyView {
             <h2>"Push Notifications"</h2>
             <p>"Receive a notification when your TripIt sync completes."</p>
             <div id="push-config" data-vapid-key=vapid_key></div>
-            <button id="push-toggle" type="button" class="btn mt-sm" disabled>
+            <button id="push-toggle" type="button" class="btn btn-primary mt-sm" disabled>
                 "Enable Push Notifications"
             </button>
             <p id="push-status" class="mt-sm">"Checking push notification status..."</p>

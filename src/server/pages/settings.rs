@@ -1,7 +1,11 @@
 /// API keys management section.
 mod api_keys_section;
+/// iCalendar (`.ics`) URL import section.
+mod calendar_import_section;
 /// Generic CSV/delimited import section.
 mod csv_import_section;
+/// Inbound email forwarding address section.
+mod email_import_section;
 /// Email address and verification status section.
 mod email_section;
 /// Calendar feed subscription section.
@@ -23,7 +27,9 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
+use calendar_import_section::CalendarImportSection;
 use csv_import_section::CsvImportSection;
+use email_import_section::EmailImportSection;
 use email_section::EmailSection;
 use feed_section::FeedSection;
 use leptos::prelude::*;
@@ -39,10 +45,14 @@ pub struct SettingsFeedback {
     pub error: Option<String>,
     pub tripit: Option<String>,
     pub csv: Option<String>,
+    pub ics: Option<String>,
     pub email: Option<String>,
     pub profile: Option<String>,
     /// Raw API key shown once after creation (not persisted).
     pub new_api_key: Option<String>,
+    /// Raw email import token shown once after generation (not persisted).
+    #[serde(rename = "email_token")]
+    pub new_email_token: Option<String>,
 }
 
 /// User profile fields submitted from the settings form.
@@ -63,6 +73,7 @@ pub struct PageData {
     pub feed_tokens: Vec<db::feed_tokens::Row>,
     pub share_tokens: Vec<db::share_tokens::Row>,
     pub api_keys: Vec<db::api_keys::Row>,
+    pub inbound_email_tokens: Vec<db::inbound_email_tokens::Row>,
     pub base_url: String,
 }
 
@@ -78,6 +89,7 @@ pub fn render_page(data: PageData) -> Response {
             error=data.feedback.error
             tripit_connected=data.feedback.tripit
             csv_imported=data.feedback.csv
+            ics_imported=data.feedback.ics
             email_feedback=data.feedback.email
             profile_feedback=data.feedback.profile
             email=data.profile.email
@@ -88,7 +100,9 @@ pub fn render_page(data: PageData) -> Response {
             feed_tokens=data.feed_tokens
             share_tokens=data.share_tokens
             api_keys=data.api_keys
+            inbound_email_tokens=data.inbound_email_tokens
             new_api_key=data.feedback.new_api_key
+            new_email_token=data.feedback.new_email_token
             base_url=data.base_url
         />
     };
@@ -105,6 +119,7 @@ fn Settings(
     #[prop(optional_no_strip)] error: Option<String>,
     #[prop(optional_no_strip)] tripit_connected: Option<String>,
     #[prop(optional_no_strip)] csv_imported: Option<String>,
+    #[prop(optional_no_strip)] ics_imported: Option<String>,
     #[prop(optional_no_strip)] email_feedback: Option<String>,
     #[prop(optional_no_strip)] profile_feedback: Option<String>,
     #[prop(optional_no_strip)] email: String,
@@ -115,7 +130,9 @@ fn Settings(
     feed_tokens: Vec<db::feed_tokens::Row>,
     share_tokens: Vec<db::share_tokens::Row>,
     api_keys: Vec<db::api_keys::Row>,
+    inbound_email_tokens: Vec<db::inbound_email_tokens::Row>,
     #[prop(optional_no_strip)] new_api_key: Option<String>,
+    #[prop(optional_no_strip)] new_email_token: Option<String>,
     base_url: String,
 ) -> impl IntoView {
     let email_alert = email_feedback
@@ -151,6 +168,11 @@ fn Settings(
                         {format!("Successfully imported {count} flights!")}
                     </div>
                 })}
+                {ics_imported.map(|count| view! {
+                    <div class="alert alert-success" role="status">
+                        {format!("Imported {count} journeys from calendar!")}
+                    </div>
+                })}
                 {email_alert.map(|msg| view! {
                     <div class="alert alert-success" role="status">{msg}</div>
                 })}
@@ -176,6 +198,8 @@ fn Settings(
                         hops_fetched=hops_fetched
                     />
                     <CsvImportSection />
+                    <CalendarImportSection />
+                    <EmailImportSection tokens=inbound_email_tokens new_token=new_email_token base_url=base_url.clone() />
                 </div>
 
                 <div class="settings-group">

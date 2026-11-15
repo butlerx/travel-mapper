@@ -90,7 +90,7 @@ mod tests {
     #[test]
     fn all_operators_have_country_code() {
         for operator in supported_operators() {
-            assert!(!operator.country_code().is_empty());
+            assert_ne!(operator.country_code().len(), 0);
         }
     }
 }

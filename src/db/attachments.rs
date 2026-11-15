@@ -244,7 +244,7 @@ mod tests {
             .execute(&pool)
             .await
             .expect("get after delete");
-        assert!(after_delete.is_empty());
+        assert_eq!(after_delete.len(), 0);
     }
 
     #[tokio::test]

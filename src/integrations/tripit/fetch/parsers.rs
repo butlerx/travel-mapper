@@ -422,8 +422,8 @@ mod tests {
         let empty = json!({"Segment": []});
         let null = json!({"Segment": null});
 
-        assert!(parse_air(&empty).is_empty());
-        assert!(parse_air(&null).is_empty());
+        assert_eq!(parse_air(&empty).len(), 0);
+        assert_eq!(parse_air(&null).len(), 0);
     }
 
     #[test]
@@ -496,7 +496,7 @@ mod tests {
         });
 
         let hops = parse_air(&obj);
-        assert!(hops.is_empty());
+        assert_eq!(hops.len(), 0);
     }
 
     #[test]
@@ -566,8 +566,8 @@ mod tests {
         let empty = json!({"Segment": []});
         let null = json!({"Segment": null});
 
-        assert!(parse_rail(&empty).is_empty());
-        assert!(parse_rail(&null).is_empty());
+        assert_eq!(parse_rail(&empty).len(), 0);
+        assert_eq!(parse_rail(&null).len(), 0);
     }
 
     #[test]
@@ -809,7 +809,7 @@ mod tests {
     #[test]
     fn parse_transport_handles_empty_segment_array() {
         let obj = json!({"Segment": []});
-        assert!(parse_transport(&obj).is_empty());
+        assert_eq!(parse_transport(&obj).len(), 0);
     }
 
     #[test]

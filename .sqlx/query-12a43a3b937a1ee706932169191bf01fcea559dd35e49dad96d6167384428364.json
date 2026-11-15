@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM journey_share_tokens WHERE expires_at < datetime('now')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "12a43a3b937a1ee706932169191bf01fcea559dd35e49dad96d6167384428364"
+}

@@ -44,6 +44,7 @@ static_handler!(
         include_str!("../../../static/css/buttons.css"),
         include_str!("../../../static/css/forms.css"),
         include_str!("../../../static/css/dashboard.css"),
+        include_str!("../../../static/css/upcoming.css"),
         include_str!("../../../static/css/hop-list.css"),
         include_str!("../../../static/css/journey-cards.css"),
         include_str!("../../../static/css/status-badges.css"),
@@ -54,6 +55,7 @@ static_handler!(
         include_str!("../../../static/css/data.css"),
         include_str!("../../../static/css/hop-cards.css"),
         include_str!("../../../static/css/stats.css"),
+        include_str!("../../../static/css/year-in-review.css"),
         include_str!("../../../static/css/journey-detail.css"),
         include_str!("../../../static/css/edit-panel.css"),
         include_str!("../../../static/css/trip-detail.css"),
@@ -63,12 +65,25 @@ static_handler!(
     "text/css; charset=utf-8"
 );
 
+js_handler!(
+    serve_wasm_js,
+    include_str!("../../../static/wasm/map_wasm.js")
+);
+static_handler!(
+    serve_wasm_bg,
+    include_bytes!("../../../static/wasm/map_wasm_bg.wasm").as_slice(),
+    "application/wasm"
+);
 js_handler!(serve_js, include_str!("../../../static/js/map.js"));
 js_handler!(
     serve_stats_js,
     include_str!("../../../static/js/stats-map.js")
 );
 js_handler!(serve_nav_js, include_str!("../../../static/js/nav.js"));
+js_handler!(
+    serve_upcoming_poll_js,
+    include_str!("../../../static/js/upcoming-poll.js")
+);
 js_handler!(
     serve_add_journey_js,
     include_str!("../../../static/js/add-journey.js")
@@ -90,6 +105,10 @@ js_handler!(
     include_str!("../../../static/js/trip-map.js")
 );
 js_handler!(serve_push_js, include_str!("../../../static/js/push.js"));
+js_handler!(
+    serve_shared_journey_poll_js,
+    include_str!("../../../static/js/shared-journey-poll.js")
+);
 js_handler!(
     serve_settings_copy_js,
     include_str!("../../../static/js/settings-copy.js")
@@ -184,15 +203,19 @@ pub async fn serve_sw() -> impl IntoResponse {
 pub fn routes() -> ApiRouter<crate::server::AppState> {
     ApiRouter::new()
         .route("/style.css", get(serve_css))
+        .route("/wasm/map_wasm.js", get(serve_wasm_js))
+        .route("/wasm/map_wasm_bg.wasm", get(serve_wasm_bg))
         .route("/map.js", get(serve_js))
         .route("/stats-map.js", get(serve_stats_js))
         .route("/nav.js", get(serve_nav_js))
+        .route("/upcoming-poll.js", get(serve_upcoming_poll_js))
         .route("/add-journey.js", get(serve_add_journey_js))
         .route("/journey-map.js", get(serve_journey_map_js))
         .route("/edit-panel.js", get(serve_edit_panel_js))
         .route("/trip-detail.js", get(serve_trip_detail_js))
         .route("/trip-map.js", get(serve_trip_map_js))
         .route("/push.js", get(serve_push_js))
+        .route("/shared-journey-poll.js", get(serve_shared_journey_poll_js))
         .route("/settings-copy.js", get(serve_settings_copy_js))
         .route("/sw-register.js", get(serve_sw_register_js))
         .route("/auto-submit.js", get(serve_auto_submit_js))
@@ -349,6 +372,31 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn upcoming_poll_js_route_serves_javascript_content_type() {
+        let pool = test_pool().await;
+        let app = create_router(test_app_state(pool));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/static/upcoming-poll.js")
+                    .body(Body::empty())
+                    .expect("failed to build request"),
+            )
+            .await
+            .expect("router request failed");
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let content_type = response
+            .headers()
+            .get(header::CONTENT_TYPE)
+            .and_then(|value| value.to_str().ok())
+            .expect("content-type should exist");
+        assert!(content_type.contains("application/javascript"));
+    }
+
+    #[tokio::test]
     async fn nav_js_route_serves_javascript_content_type() {
         let pool = test_pool().await;
         let app = create_router(test_app_state(pool));
@@ -358,6 +406,31 @@ mod tests {
                 Request::builder()
                     .method("GET")
                     .uri("/static/nav.js")
+                    .body(Body::empty())
+                    .expect("failed to build request"),
+            )
+            .await
+            .expect("router request failed");
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let content_type = response
+            .headers()
+            .get(header::CONTENT_TYPE)
+            .and_then(|value| value.to_str().ok())
+            .expect("content-type should exist");
+        assert!(content_type.contains("application/javascript"));
+    }
+
+    #[tokio::test]
+    async fn shared_journey_poll_js_route_serves_javascript_content_type() {
+        let pool = test_pool().await;
+        let app = create_router(test_app_state(pool));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri("/static/shared-journey-poll.js")
                     .body(Body::empty())
                     .expect("failed to build request"),
             )

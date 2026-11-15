@@ -96,6 +96,39 @@
   box-shadow: var(--shadow-glow);
 }
 
+/* Trip cards — travel-type glyphs and a left-border accent by dominant mode. */
+.trip-card {
+  border-left: 3px solid var(--color-border);
+}
+
+.trip-card--air {
+  border-left-color: var(--color-type-air);
+}
+
+.trip-card--rail {
+  border-left-color: var(--color-type-rail);
+}
+
+.trip-card--boat {
+  border-left-color: var(--color-type-boat);
+}
+
+.trip-card--transport {
+  border-left-color: var(--color-type-transport);
+}
+
+.trip-card .journey-card-route {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.trip-card-glyphs {
+  font-size: var(--text-base);
+  line-height: 1;
+  flex-shrink: 0;
+}
+
 /* Generic key-value card fields (default html_card) */
 .data-card-field {
   display: flex;

@@ -13,7 +13,7 @@ use crate::{
     db::{
         self,
         hops::{DetailRow, TravelType},
-        status_enrichments,
+        journey_share_tokens, status_enrichments,
     },
     server::{
         components::{CarrierIcon, NavBar, Shell, attachment_gallery::AttachmentGallery},
@@ -49,6 +49,7 @@ pub fn render_page(
     enrichment: Option<status_enrichments::Row>,
     attachments: Vec<db::attachments::Row>,
     opensky_verification: Option<status_enrichments::Row>,
+    share_tokens: Vec<journey_share_tokens::Row>,
 ) -> Response {
     let html = view! {
         <JourneyDetailPage
@@ -58,6 +59,7 @@ pub fn render_page(
             enrichment=enrichment
             attachments=attachments
             opensky_verification=opensky_verification
+            share_tokens=share_tokens
         />
     };
     (StatusCode::OK, axum::response::Html(html.to_html())).into_response()
@@ -152,6 +154,7 @@ fn JourneyDetailPage(
     #[prop(optional_no_strip)] enrichment: Option<status_enrichments::Row>,
     attachments: Vec<db::attachments::Row>,
     #[prop(optional_no_strip)] opensky_verification: Option<status_enrichments::Row>,
+    share_tokens: Vec<journey_share_tokens::Row>,
 ) -> impl IntoView {
     let edit_journey = journey.clone();
 
@@ -261,6 +264,12 @@ fn JourneyDetailPage(
             (css, label)
         });
 
+    let aircraft_reg_view = enrichment
+        .as_ref()
+        .map(|e| e.aircraft_reg.trim())
+        .filter(|reg| !reg.is_empty())
+        .map(str::to_owned);
+
     let verification_badge_view = opensky_verification.as_ref().map(|v| {
         if v.status == "verified" {
             (
@@ -310,6 +319,12 @@ fn JourneyDetailPage(
                     })}
                     {countries_view}
                     <div class="journey-detail-meta">
+                        {aircraft_reg_view.map(|reg| view! {
+                            <span class="journey-detail-meta-item">
+                                <span class="journey-detail-meta-label">"Aircraft"</span>
+                                {reg}
+                            </span>
+                        })}
                         {cost_view.map(|text| view! {
                             <span class="journey-detail-meta-item">
                                 <span class="journey-detail-meta-label">"Cost"</span>
@@ -337,22 +352,67 @@ fn JourneyDetailPage(
                     data-origin-lng=origin_lng
                     data-dest-lat=dest_lat
                     data-dest-lng=dest_lng
+                    data-type=journey.travel_type.to_string()
                 ></div>
 
                 {detail_section}
+
+                <section class="content-section">
+                    <h2>"Share Live Status"</h2>
+                    <p>
+                        "Create a public link for this journey. The link expires 24 hours after departure."
+                    </p>
+                    <form method="post" action={format!("/journeys/{}/share", journey.id)} class="mt-sm">
+                        <button type="submit" class="btn btn-primary">"Generate Share Link"</button>
+                    </form>
+                    {if share_tokens.is_empty() {
+                        view! { <p class="mt-sm text-muted">"No active share links yet."</p> }.into_any()
+                    } else {
+                        view! {
+                            <ul class="token-list mt-sm">
+                                {share_tokens
+                                    .into_iter()
+                                    .map(|token| {
+                                        let revoke_url = format!("/journeys/{}/share/{}", journey.id, token.id);
+                                        let full_url = format!("/share/journey/{}", token.token_hash);
+                                        view! {
+                                            <li class="token-list-item">
+                                                <div class="token-info">
+                                                    <span class="token-label">{format!("Expires {}", token.expires_at)}</span>
+                                                </div>
+                                                <div class="token-actions">
+                                                    <span class="new-token-value">
+                                                        <code class="hidden" data-copy-value=full_url></code>
+                                                        <button type="button" class="btn btn-sm btn-primary" data-copy-trigger>
+                                                            "Copy URL"
+                                                        </button>
+                                                    </span>
+                                                    <form method="post" action=revoke_url>
+                                                        <button type="submit" class="btn btn-sm btn-danger">"Revoke"</button>
+                                                    </form>
+                                                </div>
+                                            </li>
+                                        }
+                                    })
+                                    .collect_view()}
+                            </ul>
+                        }
+                            .into_any()
+                    }}
+                </section>
 
                 <AttachmentGallery journey_id=journey.id attachments=attachments />
 
                 <EditForm journey=edit_journey />
 
-                <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-                    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-                    crossorigin="" />
-                <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-                    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-                    crossorigin=""></script>
+                <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css" crossorigin="" />
+                <script src="https://unpkg.com/pmtiles@3/dist/pmtiles.js"></script>
+                <script src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"></script>
+                <script src="https://unpkg.com/@protomaps/basemaps@5/dist/basemaps.js"></script>
+                <script type="module" src="/static/map-core.js"></script>
                 <script type="module" src="/static/journey-map.js"></script>
                 <script src="/static/edit-panel.js" defer></script>
+                <script src="/static/settings-copy.js" defer></script>
             </main>
         </Shell>
     }
@@ -433,6 +493,49 @@ mod tests {
         assert!(body.contains("Dublin"), "should contain origin name");
         assert!(body.contains("London Heathrow"), "should contain dest name");
         assert!(body.contains("journey-map"), "should contain map div");
+    }
+
+    #[tokio::test]
+    async fn journey_detail_page_renders_aircraft_registration() {
+        let pool = test_pool().await;
+        let (cookie, journey_id) = insert_journey_for_user(&pool, "alice").await;
+
+        db::status_enrichments::Upsert {
+            hop_id: journey_id,
+            provider: "airlabs",
+            status: "landed",
+            delay_minutes: None,
+            dep_gate: "",
+            dep_terminal: "",
+            arr_gate: "",
+            arr_terminal: "",
+            dep_platform: "",
+            arr_platform: "",
+            aircraft_reg: "EI-DEG",
+            raw_json: "{}",
+        }
+        .execute(&pool)
+        .await
+        .expect("upsert enrichment");
+
+        let app = create_router(test_app_state(pool));
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri(format!("/journeys/{journey_id}"))
+                    .header("cookie", &cookie)
+                    .header("accept", "text/html")
+                    .body(Body::empty())
+                    .expect("failed to build request"),
+            )
+            .await
+            .expect("router request failed");
+
+        assert_eq!(response.status(), StatusCode::OK);
+        let body = body_text(response).await;
+        assert!(body.contains("Aircraft"), "should label the aircraft");
+        assert!(body.contains("EI-DEG"), "should show the tail number");
     }
 
     #[tokio::test]

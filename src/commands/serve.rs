@@ -150,9 +150,11 @@ pub async fn run(args: Args) -> Result<(), Error> {
 
     let address = format!("0.0.0.0:{}", args.port);
     let listener = tokio::net::TcpListener::bind(&address).await?;
+    let service = app.into_make_service_with_connect_info::<std::net::SocketAddr>();
+
     tracing::info!(address, "listening");
 
-    axum::serve(listener, app)
+    axum::serve(listener, service)
         .with_graceful_shutdown(crate::shutdown_signal())
         .await
         .map_err(Error::Bind)?;
