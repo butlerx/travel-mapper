@@ -22,7 +22,7 @@ chrono             = { version = "0.4", default-features = false }
 clap               = { version = "4", features = ["derive", "env"] }
 csv                = "1"
 deunicode          = "1.6.2"
-governor           = { version = "0.8", default-features = false, features = ["jitter", "std"] }
+governor           = { version = "0.10", default-features = false, features = ["jitter", "std"] }
 gtfs-realtime      = "0.2"
 gtfs-structures    = "0.42"
 hmac               = "0.12"
