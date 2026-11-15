@@ -18,6 +18,12 @@ updates:
       include: 'scope'
     cooldown:
       default-days: 7
+    ignore:
+      # aide 0.15 (latest stable) requires schemars 0.9; drop this once aide
+      # ships a stable release on schemars 1.
+      - dependency-name: 'schemars'
+        update-types:
+          - 'version-update:semver-major'
 
   - package-ecosystem: 'github-actions'
     directory: '/'
