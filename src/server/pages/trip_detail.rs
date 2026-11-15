@@ -121,6 +121,7 @@ fn TripDetailPage(
                     "oLng": h.origin_lng,
                     "dLat": h.dest_lat,
                     "dLng": h.dest_lng,
+                    "type": h.travel_type,
                 })
             })
             .collect::<Vec<_>>(),
@@ -255,18 +256,17 @@ fn TripDetailPage(
                     <hr class="trip-edit-hr" />
 
                     <button
-                        class="btn btn-danger btn-block"
+                        class="btn btn-danger btn-full"
                         type="button"
                         data-delete-trip
                     >"Delete Trip"</button>
                 </section>
 
-                <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-                    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-                    crossorigin="" />
-                <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-                    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-                    crossorigin=""></script>
+                <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css" crossorigin="" />
+                <script src="https://unpkg.com/pmtiles@3/dist/pmtiles.js"></script>
+                <script src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"></script>
+                <script src="https://unpkg.com/@protomaps/basemaps@5/dist/basemaps.js"></script>
+                <script type="module" src="/static/map-core.js"></script>
                 <script type="module" src="/static/trip-map.js"></script>
                 <script src="/static/edit-panel.js" defer></script>
                 <script src="/static/trip-detail.js" defer></script>

@@ -65,7 +65,7 @@ mise will automatically install all other tools when you run `mise install`:
 | cargo-watch      | Auto-reload server on file changes  |
 | cargo-nextest    | Test runner                         |
 | cargo-binstall   | Fast binary installation            |
-| taplo            | TOML formatting                     |
+| tombi            | TOML formatting + linting           |
 | prettier         | JS/CSS formatting                   |
 | typescript       | JS type-checking                    |
 

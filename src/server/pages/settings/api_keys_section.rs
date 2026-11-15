@@ -15,7 +15,7 @@ pub(super) fn ApiKeysSection(
                 <label>"Label"</label>
                 <div class="input-group">
                     <input type="text" name="label" placeholder="e.g. My Script" required />
-                    <button type="submit" class="btn">"Create API Key"</button>
+                    <button type="submit" class="btn btn-primary">"Create API Key"</button>
                 </div>
             </form>
 
@@ -26,7 +26,7 @@ pub(super) fn ApiKeysSection(
                     <p class="new-token-heading">"API key created! Copy it now \u{2014} it won\u{2019}t be shown again."</p>
                     <div class="new-token-value">
                         <code data-copy-value=key_attr>{key}</code>
-                        <button type="button" class="btn btn-sm copy-btn" data-copy-trigger>"Copy"</button>
+                        <button type="button" class="btn btn-secondary btn-sm copy-btn" data-copy-trigger>"Copy"</button>
                     </div>
                 </div>
             }})}

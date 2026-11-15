@@ -99,7 +99,25 @@ struct ExtendedFilterValues {
 }
 
 fn extended_filters(_action: &str, vals: ExtendedFilterValues) -> impl IntoView {
+    // Open the panel by default when any of its filters is already active, so a
+    // user never has an applied filter hidden behind a collapsed disclosure.
+    let any_active = [
+        &vals.q,
+        &vals.origin,
+        &vals.dest,
+        &vals.date_from,
+        &vals.date_to,
+        &vals.airline,
+        &vals.cabin_class,
+        &vals.flight_reason,
+    ]
+    .iter()
+    .any(|opt| opt.as_deref().is_some_and(|s| !s.is_empty()));
+
     view! {
+        <details class="filters-more" open=any_active>
+        <summary class="filters-more-summary">"More filters"</summary>
+        <div class="filters-more-panel">
         <div class="stats-filter-group">
             <label for="filter-q">"Search:"</label>
             <input
@@ -166,6 +184,8 @@ fn extended_filters(_action: &str, vals: ExtendedFilterValues) -> impl IntoView 
         </div>
         {cabin_class_filter(vals.cabin_class)}
         {flight_reason_filter(vals.flight_reason)}
+        </div>
+        </details>
     }
 }
 

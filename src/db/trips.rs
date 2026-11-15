@@ -8,6 +8,9 @@ pub struct Row {
     pub start_date: Option<String>,
     pub end_date: Option<String>,
     pub hop_count: i64,
+    /// Comma-separated distinct travel types present in the trip (e.g.
+    /// `"air,rail"`), or `None` for a trip with no journeys.
+    pub travel_types: Option<String>,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -53,6 +56,7 @@ impl GetAll {
                    t.start_date,
                    t.end_date,
                    COUNT(h.id) as "hop_count!: i64",
+                   GROUP_CONCAT(DISTINCT h.travel_type) as "travel_types?: String",
                    t.created_at as "created_at!: String",
                    t.updated_at as "updated_at!: String"
                FROM trips t
@@ -87,6 +91,7 @@ impl GetById {
                    t.start_date,
                    t.end_date,
                    COUNT(h.id) as "hop_count!: i64",
+                   GROUP_CONCAT(DISTINCT h.travel_type) as "travel_types?: String",
                    t.created_at as "created_at!: String",
                    t.updated_at as "updated_at!: String"
                FROM trips t

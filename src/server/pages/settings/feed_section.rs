@@ -11,7 +11,7 @@ pub(super) fn FeedSection(tokens: Vec<db::feed_tokens::Row>, base_url: String) -
                 <label>"Label"</label>
                 <div class="input-group">
                     <input type="text" name="label" placeholder="e.g. My iPhone" required />
-                    <button type="submit" class="btn">"Generate Feed URL"</button>
+                    <button type="submit" class="btn btn-primary">"Generate Feed URL"</button>
                 </div>
             </form>
 

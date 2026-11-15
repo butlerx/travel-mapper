@@ -82,7 +82,7 @@ impl Geocoder {
         Some((lat, lon))
     }
 
-    pub(super) async fn geocode_with_fallbacks(
+    pub async fn geocode_with_fallbacks(
         &self,
         name: &str,
         address_query: Option<&str>,

@@ -14,6 +14,10 @@ pub mod feed_tokens;
 pub mod geocode_cache;
 /// Query objects for the `hops` table — individual travel legs.
 pub mod hops;
+/// Query objects for the `inbound_email_tokens` table — per-user email import forwarding tokens.
+pub mod inbound_email_tokens;
+/// Query objects for the `journey_share_tokens` table — per-journey public live status share links.
+pub mod journey_share_tokens;
 /// Query objects for the `oauth_request_tokens` table — temporary OAuth flow tokens.
 pub mod oauth_tokens;
 /// Query objects for the `push_subscriptions` table — Web Push notification subscriptions.

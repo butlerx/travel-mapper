@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM inbound_email_tokens WHERE id = ? AND user_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "3fa7fa3446fdcfa6281c729c003dfd50da7730ee0057a1120bd6affea5b6e4e9"
+}

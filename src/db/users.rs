@@ -190,7 +190,7 @@ mod tests {
             .expect("user lookup failed")
             .expect("user should exist");
         assert_eq!(user.id, user_id);
-        assert!(user.email.is_empty());
+        assert_eq!(user.email.len(), 0);
         assert!(!user.email_verified);
 
         crate::db::sessions::Create {

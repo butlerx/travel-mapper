@@ -27,6 +27,8 @@ pub(super) mod attachments;
 pub(super) mod csv_import;
 /// Email address update and verification resend handlers.
 pub(super) mod email;
+/// Inbound email import webhook and token management.
+pub(super) mod email_import;
 /// Status enrichment detail records for journeys.
 pub(super) mod enrichments;
 /// Public ICS calendar feed served by token.
@@ -34,6 +36,8 @@ pub(super) mod feed;
 /// Authenticated feed token create/revoke handlers.
 pub(super) mod feed_tokens;
 pub(super) mod health;
+/// Import journeys from a user-supplied iCalendar (`.ics`) URL.
+pub(super) mod ics_import;
 pub(super) mod journeys;
 pub(super) mod login;
 pub(super) mod logout;
@@ -457,6 +461,24 @@ pub(super) fn journeys_api_routes() -> ApiRouter<super::AppState> {
             .put_with(journeys::update_handler, journeys::update_handler_docs)
             .post_with(journeys::update_handler, journeys::update_handler_docs),
         )
+        .api_route(
+            "/{id}/share",
+            post_with(
+                journeys::create_share_handler,
+                journeys::create_share_handler_docs,
+            ),
+        )
+        .api_route(
+            "/{id}/share/{share_id}",
+            delete_with(
+                journeys::revoke_share_handler,
+                journeys::revoke_share_handler_docs,
+            )
+            .post_with(
+                journeys::revoke_share_handler,
+                journeys::revoke_share_handler_docs,
+            ),
+        )
 }
 
 /// Trip API routes, nested under `/trips`.
@@ -516,7 +538,9 @@ pub(super) fn tripit_api_routes() -> ApiRouter<super::AppState> {
 
 /// Import API routes, nested under `/import`.
 pub(super) fn import_api_routes() -> ApiRouter<super::AppState> {
-    ApiRouter::new().route("/csv", axum::routing::post(csv_import::handler))
+    ApiRouter::new()
+        .route("/csv", axum::routing::post(csv_import::handler))
+        .route("/ics", axum::routing::post(ics_import::handler))
 }
 
 /// Attachment API routes, nested under `/journeys/{id}/attachments`.
@@ -610,4 +634,21 @@ impl ErrorResponse {
         let err = Self { error: msg.into() };
         <Self as MultiFormatResponse>::single_format_response(&err, format, status)
     }
+}
+
+pub(super) fn email_import_api_routes() -> ApiRouter<super::AppState> {
+    ApiRouter::new()
+        .route(
+            "/webhook",
+            axum::routing::post(email_import::webhook_handler),
+        )
+        .route("/manual", axum::routing::post(email_import::manual_handler))
+        .route(
+            "/tokens",
+            axum::routing::post(email_import::generate_token_handler),
+        )
+        .route(
+            "/tokens/delete",
+            axum::routing::post(email_import::delete_token_handler),
+        )
 }
