@@ -7,7 +7,7 @@ homepage    = "https://github.com/butlerx/travel-mapper"
 license     = "Apache-2.0"
 
 [features]
-ssr = ["leptos_meta/ssr", "leptos_router/ssr", "leptos/ssr"]
+ssr = ["leptos/ssr"]
 
 [dependencies]
 aes-gcm            = "0.10"
@@ -15,7 +15,7 @@ aide               = { version = "0.15", features = ["axum", "axum-extra-cookie"
 airport-data       = "1.0"
 argon2             = "0.5"
 async-trait        = "0.1"
-axum               = "0.8"
+axum               = { version = "0.8", features = ["multipart"] }
 axum-extra         = { version = "0.10", features = ["cookie"] }
 base64             = "0.22"
 chrono             = { version = "0.4", default-features = false }
@@ -29,9 +29,6 @@ hmac               = "0.12"
 icalendar          = "0.17"
 indexmap           = "2"
 leptos             = { version = "0.8" }
-leptos_axum        = { version = "0.8" }
-leptos_meta        = { version = "0.8" }
-leptos_router      = { version = "0.8" }
 lettre             = { version = "0.11", default-features = false, features = ["builder", "hostname", "smtp-transport", "tokio1", "tokio1-native-tls"] }
 mail-parser        = { version = "0.11.3", features = ["encoding_rs"] }
 nominatim          = "0.3"
