@@ -15,9 +15,7 @@
     button.dataset.subscribed = isSubscribed ? 'true' : 'false';
     button.textContent = isSubscribed ? 'Disable Push Notifications' : 'Enable Push Notifications';
     button.disabled = false;
-    status.textContent = isSubscribed
-      ? 'Push notifications are enabled.'
-      : 'Push notifications are disabled.';
+    status.textContent = isSubscribed ? 'Push notifications are enabled.' : 'Push notifications are disabled.';
   };
 
   const urlBase64ToUint8Array = (base64String: string): Uint8Array<ArrayBuffer> => {

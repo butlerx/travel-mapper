@@ -2,7 +2,7 @@
 rust                     = { version = "stable", profile = "default", components = "rust-analyzer" }
 node                     = "lts"
 prek                     = "latest"
-tombi                    = "1.2.5"
+tombi                    = "1.11.2"
 zizmor                   = "latest"
 shellcheck               = "latest"                                                                   # used by actionlint
 "cargo:wasm-bindgen-cli" = "0.2.114"
@@ -68,10 +68,7 @@ run         = "cargo clippy --fix --all-targets --all-features --allow-staged ${
 
 [tasks.format]
 description = "Format Rust code with cargo fmt and JS/CSS/TS with Prettier"
-run         = [
-  "cargo fmt",
-  "prettier --write 'static/**/*.css' 'client/**/*.ts'"
-]
+run         = ["cargo fmt", "prettier --write 'static/**/*.css' 'client/**/*.ts'"]
 alias       = "f"
 sources     = ["static/**/*.css", "client/**/*.ts", "src/**/*.rs"]
 
@@ -104,11 +101,7 @@ depends     = ["db:create"]
 
 [tasks."db:reset"]
 description = "Drop and recreate the database, then run migrations"
-run         = [
-  "sqlx database drop -y",
-  "sqlx database create",
-  "sqlx migrate run"
-]
+run         = ["sqlx database drop -y", "sqlx database create", "sqlx migrate run"]
 
 [tasks."db:prepare"]
 description = "Generate .sqlx/ query cache for offline compile-time checking"
@@ -131,22 +124,7 @@ run         = [
 ]
 depends     = ["wasm:build"]
 sources     = ["client/**/*.ts"]
-outputs     = [
-  "static/js/map.js",
-  "static/js/stats-map.js",
-  "static/js/journey-map.js",
-  "static/js/trip-map.js",
-  "static/js/nav.js",
-  "static/js/push.js",
-  "static/js/add-journey.js",
-  "static/js/auto-submit.js",
-  "static/js/settings-copy.js",
-  "static/js/sw-register.js",
-  "static/js/edit-panel.js",
-  "static/js/trip-detail.js",
-  "static/js/upcoming-poll.js",
-  "static/js/shared-journey-poll.js"
-]
+outputs     = ["static/js/map.js", "static/js/stats-map.js", "static/js/journey-map.js", "static/js/trip-map.js", "static/js/nav.js", "static/js/push.js", "static/js/add-journey.js", "static/js/auto-submit.js", "static/js/settings-copy.js", "static/js/sw-register.js", "static/js/edit-panel.js", "static/js/trip-detail.js", "static/js/upcoming-poll.js", "static/js/shared-journey-poll.js"]
 
 [tasks."client:check"]
 description = "Type-check client TypeScript"

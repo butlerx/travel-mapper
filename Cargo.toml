@@ -6,29 +6,12 @@ description = "TripIt travel history web server with API and SQLite storage"
 homepage    = "https://github.com/butlerx/travel-mapper"
 license     = "Apache-2.0"
 
-[workspace]
-members = ["crates/map-wasm"]
-
-[workspace.lints.clippy]
-all      = { level = "warn", priority = -1 }
-pedantic = { level = "warn", priority = -1 }
-
-[workspace.lints.rust]
-unsafe_code = "deny"
+[features]
+ssr = ["leptos_meta/ssr", "leptos_router/ssr", "leptos/ssr"]
 
 [dependencies]
 aes-gcm            = "0.10"
-aide               = {
-  version  = "0.15",
-  features = [
-    "axum",
-    "axum-extra-cookie",
-    "axum-form",
-    "axum-json",
-    "axum-query",
-    "swagger",
-  ]
-}
+aide               = { version = "0.15", features = ["axum", "axum-extra-cookie", "axum-form", "axum-json", "axum-query", "swagger"] }
 airport-data       = "1.0"
 argon2             = "0.5"
 async-trait        = "0.1"
@@ -39,14 +22,7 @@ chrono             = { version = "0.4", default-features = false }
 clap               = { version = "4", features = ["derive", "env"] }
 csv                = "1"
 deunicode          = "1.6.2"
-governor           = {
-  version          = "0.8",
-  default-features = false,
-  features         = [
-    "jitter",
-    "std",
-  ]
-}
+governor           = { version = "0.8", default-features = false, features = ["jitter", "std"] }
 gtfs-realtime      = "0.2"
 gtfs-structures    = "0.42"
 hmac               = "0.12"
@@ -56,17 +32,7 @@ leptos             = { version = "0.8" }
 leptos_axum        = { version = "0.8" }
 leptos_meta        = { version = "0.8" }
 leptos_router      = { version = "0.8" }
-lettre             = {
-  version          = "0.11",
-  default-features = false,
-  features         = [
-    "builder",
-    "hostname",
-    "smtp-transport",
-    "tokio1",
-    "tokio1-native-tls",
-  ]
-}
+lettre             = { version = "0.11", default-features = false, features = ["builder", "hostname", "smtp-transport", "tokio1", "tokio1-native-tls"] }
 mail-parser        = { version = "0.11.3", features = ["encoding_rs"] }
 nominatim          = "0.3"
 percent-encoding   = "2"
@@ -82,10 +48,7 @@ serde_json         = "1"
 serde_urlencoded   = "0.7"
 sha1               = "0.10"
 sha2               = "0.10"
-sqlx               = {
-  version  = "0.8",
-  features = ["macros", "runtime-tokio", "sqlite"]
-}
+sqlx               = { version = "0.8", features = ["macros", "runtime-tokio", "sqlite"] }
 strsim             = "0.11.1"
 tempfile           = "3.27.0"
 thiserror          = "2"
@@ -101,11 +64,18 @@ zip                = "8.4.0"
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }
 
-[features]
-ssr = ["leptos_meta/ssr", "leptos_router/ssr", "leptos/ssr"]
-
 [lints]
 workspace = true
+
+[workspace]
+members = ["crates/map-wasm"]
+
+[workspace.lints.clippy]
+all      = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+
+[workspace.lints.rust]
+unsafe_code = "deny"
 
 [profile.release]
 strip = true
