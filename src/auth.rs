@@ -5,10 +5,7 @@ use aes_gcm::{
     Aes256Gcm, Key, Nonce,
     aead::{Aead, AeadCore, KeyInit, OsRng},
 };
-use argon2::{
-    Argon2, PasswordHash, PasswordVerifier,
-    password_hash::{PasswordHasher, SaltString},
-};
+use argon2::{Argon2, PasswordHash, PasswordVerifier, password_hash::PasswordHasher};
 
 /// Errors returned by AES-256-GCM encryption and decryption operations.
 #[derive(Debug, thiserror::Error)]
@@ -94,8 +91,7 @@ pub(crate) fn decrypt_token(
 /// Returns an error if hashing fails (e.g. invalid parameters or RNG failure).
 pub fn hash_password(password: &str) -> Result<String, argon2::password_hash::Error> {
     let argon2 = Argon2::default();
-    let salt = SaltString::generate(&mut OsRng);
-    let hash = argon2.hash_password(password.as_bytes(), &salt)?;
+    let hash = argon2.hash_password(password.as_bytes())?;
     Ok(hash.to_string())
 }
 

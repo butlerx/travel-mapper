@@ -13,7 +13,7 @@ ssr = ["leptos/ssr"]
 aes-gcm            = "0.10"
 aide               = { version = "0.15", features = ["axum", "axum-extra-cookie", "axum-form", "axum-json", "axum-query", "swagger"] }
 airport-data       = "1.0"
-argon2             = "0.5"
+argon2             = "0.6"
 async-trait        = "0.1"
 axum               = { version = "0.8", features = ["multipart"] }
 axum-extra         = { version = "0.10", features = ["cookie"] }
