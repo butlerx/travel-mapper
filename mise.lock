@@ -30,6 +30,11 @@ version = "0.2.114"
 backend = "cargo:wasm-bindgen-cli"
 specifiers = ["0.2.114"]
 
+[[tools."cargo:wasm-pack"]]
+version = "0.15.1"
+backend = "cargo:wasm-pack"
+specifiers = ["latest"]
+
 [[tools.node]]
 version = "26.13.1"
 backend = "core:node"
@@ -183,6 +188,7 @@ specifiers = ["stable"]
 [tools.rust.options]
 components = "rust-analyzer"
 profile = "default"
+targets = "wasm32-unknown-unknown"
 
 [[tools.shellcheck]]
 version = "0.11.0"

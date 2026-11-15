@@ -1,11 +1,12 @@
 [tools]
-rust                     = { version = "stable", profile = "default", components = "rust-analyzer" }
+rust                     = { version = "stable", profile = "default", components = "rust-analyzer", targets = "wasm32-unknown-unknown" }
 node                     = "lts"
 prek                     = "latest"
 tombi                    = "1.11.2"
 zizmor                   = "latest"
 shellcheck               = "latest"                                                                   # used by actionlint
 "cargo:wasm-bindgen-cli" = "0.2.114"
+"cargo:wasm-pack"          = "latest"
 "cargo:cargo-binstall"   = "latest"
 "cargo:cargo-nextest"    = "0.9.129"
 "cargo:cargo-watch"      = "latest"
