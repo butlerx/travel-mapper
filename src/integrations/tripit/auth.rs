@@ -2,7 +2,7 @@
 //! OAuth 1.0 request signing for the `TripIt` API.
 
 use base64::{Engine as _, engine::general_purpose::STANDARD as base64};
-use hmac::{Hmac, Mac};
+use hmac::{Hmac, KeyInit, Mac};
 use percent_encoding::{AsciiSet, NON_ALPHANUMERIC};
 use reqwest::header::CONTENT_LENGTH;
 use sha1::Sha1;
