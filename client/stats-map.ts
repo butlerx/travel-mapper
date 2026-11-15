@@ -4,9 +4,7 @@ import { country_alpha2, visit_color } from '/static/wasm/map_wasm.js';
 declare const maplibregl: any;
 declare const topojson: any;
 
-const counts: Record<string, number> = JSON.parse(
-  document.getElementById('country-counts')?.textContent || '{}',
-);
+const counts: Record<string, number> = JSON.parse(document.getElementById('country-counts')?.textContent || '{}');
 const mapEl = document.getElementById('stats-map');
 
 if (mapEl && Object.keys(counts).length > 0) {
@@ -20,16 +18,7 @@ if (mapEl && Object.keys(counts).length > 0) {
   const legendEl = document.createElement('div');
   legendEl.className = 'stats-map-legend';
   const grades = [1, 2, 3, 5, 10, 15, 25, 50];
-  const labels = [
-    '1',
-    '2',
-    '3\u20134',
-    '5\u20139',
-    '10\u201314',
-    '15\u201324',
-    '25\u201349',
-    '50+',
-  ];
+  const labels = ['1', '2', '3\u20134', '5\u20139', '10\u201314', '15\u201324', '25\u201349', '50+'];
   legendEl.innerHTML =
     '<strong>Visits</strong>' +
     grades
@@ -89,12 +78,7 @@ if (mapEl && Object.keys(counts).length > 0) {
         type: 'line',
         source: 'countries',
         paint: {
-          'line-color': [
-            'case',
-            ['>', ['get', 'visit_count'], 0],
-            'rgba(255,255,255,0.4)',
-            'transparent',
-          ],
+          'line-color': ['case', ['>', ['get', 'visit_count'], 0], 'rgba(255,255,255,0.4)', 'transparent'],
           'line-width': ['case', ['>', ['get', 'visit_count'], 0], 0.8, 0],
         },
       });
@@ -119,12 +103,7 @@ if (mapEl && Object.keys(counts).length > 0) {
       map.on('mouseleave', 'countries-fill', () => {
         tooltipEl.style.display = 'none';
         map.getCanvas().style.cursor = '';
-        map.setPaintProperty('countries-outline', 'line-width', [
-          'case',
-          ['>', ['get', 'visit_count'], 0],
-          0.8,
-          0,
-        ]);
+        map.setPaintProperty('countries-outline', 'line-width', ['case', ['>', ['get', 'visit_count'], 0], 0.8, 0]);
       });
     } catch {}
   });

@@ -120,7 +120,7 @@ mod tests {
         let single = json!({"id": 99});
 
         assert_eq!(ensure_list(&arr).len(), 2);
-        assert!(ensure_list(&null).is_empty());
+        assert_eq!(ensure_list(&null).len(), 0);
         assert_eq!(ensure_list(&single).len(), 1);
         assert_eq!(ensure_list(&single)[0]["id"], json!(99));
     }

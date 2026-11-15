@@ -1,10 +1,5 @@
 import { createMap, cssVar } from './map-core';
-import {
-  compute_routes,
-  journey_sidebar_html,
-  route_popup_html,
-  city_popup_html,
-} from '/static/wasm/map_wasm.js';
+import { compute_routes, journey_sidebar_html, route_popup_html, city_popup_html } from '/static/wasm/map_wasm.js';
 
 declare const maplibregl: any;
 
@@ -21,9 +16,7 @@ interface HopResponse {
   [k: string]: any;
 }
 
-const initialJourneys: HopResponse[] = JSON.parse(
-  document.getElementById('initial-journeys')!.textContent || '[]',
-);
+const initialJourneys: HopResponse[] = JSON.parse(document.getElementById('initial-journeys')!.textContent || '[]');
 const map = createMap('map', { center: [10, 48], zoom: 4 });
 const popup = new maplibregl.Popup({ closeButton: true, closeOnClick: true, maxWidth: '360px' });
 let routeIndexJson = '{}';
@@ -109,20 +102,12 @@ function renderJourneys(journeys: HopResponse[]) {
 
 document.getElementById('toggle-routes')?.addEventListener('change', (e) => {
   try {
-    map.setLayoutProperty(
-      'route-lines',
-      'visibility',
-      (e.target as HTMLInputElement).checked ? 'visible' : 'none',
-    );
+    map.setLayoutProperty('route-lines', 'visibility', (e.target as HTMLInputElement).checked ? 'visible' : 'none');
   } catch {}
 });
 document.getElementById('toggle-airports')?.addEventListener('change', (e) => {
   try {
-    map.setLayoutProperty(
-      'city-circles',
-      'visibility',
-      (e.target as HTMLInputElement).checked ? 'visible' : 'none',
-    );
+    map.setLayoutProperty('city-circles', 'visibility', (e.target as HTMLInputElement).checked ? 'visible' : 'none');
   } catch {}
 });
 

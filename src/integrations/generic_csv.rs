@@ -823,7 +823,7 @@ Business;;;DEF456;flight;J;import;BA;709;A320;LHR;DUB;2024-03-15T07:30:00Z;2024-
         let csv = "Date,Flight number,From,To,Dep time,Arr time,Duration,Airline,Aircraft,Registration,Seat number,Seat type,Flight class,Flight reason,Note,Dep_id,Arr_id,Airline_id,Aircraft_id\n";
         let rows =
             parse_csv(csv.as_bytes(), Some(ImportFormat::MyFlightradar24)).expect("parse failed");
-        assert!(rows.is_empty());
+        assert_eq!(rows.len(), 0);
     }
 
     #[test]
@@ -945,7 +945,7 @@ Date,Airline,Flight,From,To,Dep Terminal,Dep Gate,Arr Terminal,Arr Gate,Canceled
     fn parse_flighty_empty_input_returns_empty() {
         let csv = "Date,Airline,Flight,From,To,Dep Terminal,Dep Gate,Arr Terminal,Arr Gate,Canceled,Diverted To,Gate Departure (Scheduled),Gate Departure (Actual),Take off (Scheduled),Take off (Actual),Landing (Scheduled),Landing (Actual),Gate Arrival (Scheduled),Gate Arrival (Actual),Aircraft Type Name,Tail Number,PNR,Seat,Seat Type,Cabin Class,Flight Reason,Notes,Flight Flighty ID,Airline Flighty ID,Departure Airport Flighty ID,Arrival Airport Flighty ID,Diverted To Airport Flighty ID,Aircraft Type Flighty ID\n";
         let rows = parse_csv(csv.as_bytes(), Some(ImportFormat::Flighty)).expect("parse failed");
-        assert!(rows.is_empty());
+        assert_eq!(rows.len(), 0);
     }
 
     #[test]

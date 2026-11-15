@@ -229,9 +229,9 @@ mod tests {
         assert_eq!(trips.len(), 2, "should exclude the trip with 0 hops");
         assert_eq!(trips[0].id, "1");
         assert_eq!(trips[0].display_name, "Trip With Hops");
-        assert!(!trips[0].hops.is_empty());
+        assert_ne!(trips[0].hops.len(), 0);
         assert_eq!(trips[1].id, "3");
         assert_eq!(trips[1].display_name, "Another Trip With Hops");
-        assert!(!trips[1].hops.is_empty());
+        assert_ne!(trips[1].hops.len(), 0);
     }
 }

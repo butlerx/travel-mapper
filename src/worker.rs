@@ -981,8 +981,7 @@ async fn enrich_single_rail_hop(
     let train_number = detail
         .rail_detail
         .as_ref()
-        .map(|d| d.train_number.as_str())
-        .unwrap_or_default();
+        .map_or_default(|d| d.train_number.as_str());
     if train_number.is_empty() || hop.start_date.is_empty() {
         return None;
     }
@@ -1017,8 +1016,7 @@ async fn enrich_single_rail_hop(
     let carrier = detail
         .rail_detail
         .as_ref()
-        .map(|d| d.carrier.as_str())
-        .unwrap_or_default();
+        .map_or_default(|d| d.carrier.as_str());
 
     let query = crate::integrations::rail_status::RailStatusQuery {
         carrier,

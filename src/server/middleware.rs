@@ -33,8 +33,7 @@ fn client_ip(request: &Request<Body>) -> String {
     request
         .extensions()
         .get::<ConnectInfo<SocketAddr>>()
-        .map(|info| info.0.ip().to_string())
-        .unwrap_or_default()
+        .map_or_default(|info| info.0.ip().to_string())
 }
 
 /// Build the tracing span for each incoming HTTP request. Carries the request
