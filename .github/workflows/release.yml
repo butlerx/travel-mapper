@@ -2,8 +2,8 @@ name: Release
 
 on:
   push:
-    tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+*'
+    branches:
+      - main
 
 permissions: {}
 
@@ -13,9 +13,28 @@ env:
   DATABASE_URL: 'sqlite:travel.db'
 
 jobs:
+  release-please:
+    name: Release Please
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        id: release
+        with:
+          token: ${{ github.token }}
+
   build:
     name: Build (${{ matrix.target }})
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -31,23 +50,24 @@ jobs:
             os: macos-latest
 
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
       - uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac # v2
         with:
           cache: false
-      - uses: actions-rust-lang/setup-rust-toolchain@150fca883cd4034361b621bd4e6a9d34e5143606 # v1
+      - uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1
         with:
           target: ${{ matrix.target }}
           cache: false
 
       - name: Install cross
         if: matrix.cross
-        uses: taiki-e/install-action@d858f8113943481093e02986a7586a4819a3bfd6 # v2
+        uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2
         with:
           tool: cross
 
+      - run: mise run client:build
       - run: mise run db:prepare
       - name: Build release binary
         run: mise run ci:release-build ${{ matrix.target }}
@@ -62,14 +82,17 @@ jobs:
           name: travel-mapper-${{ matrix.target }}
           path: travel-mapper-${{ matrix.target }}.tar.gz
 
-  release:
-    name: Create Release
-    needs: build
+  publish:
+    name: Upload to Release
+    needs:
+      - release-please
+      - build
+    if: needs.release-please.outputs.release_created == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
       - uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac # v2
@@ -79,7 +102,8 @@ jobs:
         with:
           path: artifacts
           merge-multiple: true
-      - name: Create GitHub Release
+      - name: Upload archives to the release
+        run: mise run ci:publish "${TAG_NAME}"
         env:
-          GH_TOKEN: ${{ github.token }}
-        run: mise run ci:publish "${GITHUB_REF_NAME}"
+          TAG_NAME: ${{ needs.release-please.outputs.tag_name }}
+          # The release already exists: release-please created it from the changelog.

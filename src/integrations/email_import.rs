@@ -579,7 +579,7 @@ mod tests {
         </script>"#;
 
         let results = extract_json_ld(html);
-        assert!(results.is_empty());
+        assert_eq!(results.len(), 0);
     }
 
     #[test]
@@ -678,7 +678,7 @@ Content-Type: text/html; charset=utf-8\r\n\
     #[test]
     fn empty_email_returns_nothing() {
         let results = parse_email(b"");
-        assert!(results.is_empty());
+        assert_eq!(results.len(), 0);
     }
 
     #[test]
@@ -690,6 +690,6 @@ Content-Type: text/plain\r\n\
 Hey, how are you doing? Let's catch up soon.";
 
         let results = parse_email(raw);
-        assert!(results.is_empty());
+        assert_eq!(results.len(), 0);
     }
 }

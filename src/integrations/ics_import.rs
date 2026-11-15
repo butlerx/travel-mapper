@@ -177,17 +177,17 @@ mod tests {
     #[test]
     fn skips_events_without_a_route() {
         let ics = wrap("DTSTART:20240601\r\nSUMMARY:Dentist appointment");
-        assert!(parse_ics(&ics).is_empty());
+        assert_eq!(parse_ics(&ics).len(), 0);
     }
 
     #[test]
     fn skips_events_without_a_date() {
         let ics = wrap("SUMMARY:DUB \u{2192} LHR");
-        assert!(parse_ics(&ics).is_empty());
+        assert_eq!(parse_ics(&ics).len(), 0);
     }
 
     #[test]
     fn invalid_ics_returns_empty() {
-        assert!(parse_ics("not a calendar").is_empty());
+        assert_eq!(parse_ics("not a calendar").len(), 0);
     }
 }

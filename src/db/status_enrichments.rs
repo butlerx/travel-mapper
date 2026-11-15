@@ -632,7 +632,7 @@ mod tests {
         .execute(&pool)
         .await
         .expect("empty batch get failed");
-        assert!(results.is_empty());
+        assert_eq!(results.len(), 0);
     }
 
     fn row_with(status: &str, delay: Option<i64>, dep_gate: &str, dep_terminal: &str) -> Row {

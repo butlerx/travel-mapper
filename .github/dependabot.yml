@@ -1,0 +1,28 @@
+version: 2
+
+updates:
+  - package-ecosystem: 'cargo'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+    groups:
+      leptos-stack:
+        patterns:
+          - 'leptos*'
+          - 'wasm-bindgen*'
+          - 'js-sys'
+          - 'web-sys'
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: 'deps'
+      include: 'scope'
+    cooldown:
+      default-days: 7
+
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+    open-pull-requests-limit: 10
+    cooldown:
+      default-days: 7

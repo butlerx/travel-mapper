@@ -454,9 +454,9 @@ mod tests {
     }
 
     fn service_xml(std: &str, etd: &str, platform: Option<&str>) -> String {
-        let platform_xml = platform
-            .map(|value| format!("<lt7:platform>{value}</lt7:platform>"))
-            .unwrap_or_default();
+        let platform_xml = platform.map_or_else(String::new, |value| {
+            format!("<lt7:platform>{value}</lt7:platform>")
+        });
 
         format!(
             r"<lt7:service>

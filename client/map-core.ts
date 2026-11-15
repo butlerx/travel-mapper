@@ -7,8 +7,7 @@ declare const pmtiles: any;
 declare const basemaps: any;
 
 const PMTILES_URL = 'pmtiles://https://build.protomaps.com/20260601.pmtiles';
-const SATELLITE_URL =
-  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+const SATELLITE_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
 const NIGHT_LIGHTS_URL =
   'https://map1.vis.earthdata.nasa.gov/wmts-webmerc/VIIRS_CityLights_2012/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpg';
 const STORAGE_KEY = 'travel-mapper-satellite';
@@ -29,11 +28,7 @@ export const typeColors: Record<string, string> = {
 
 export { escape_html as escapeHtml };
 
-export function arcPoints(
-  from: [number, number],
-  to: [number, number],
-  numPoints: number,
-): [number, number][] {
+export function arcPoints(from: [number, number], to: [number, number], numPoints: number): [number, number][] {
   return arc_points(from[0], from[1], to[0], to[1], numPoints);
 }
 
@@ -119,8 +114,7 @@ export function createMap(containerId: string, options?: Record<string, unknown>
     } catch {}
     try {
       map.setLayoutProperty('satellite-tiles', 'visibility', satActive ? 'visible' : 'none');
-      for (const id of opaqueIds)
-        map.setLayoutProperty(id, 'visibility', satActive ? 'none' : 'visible');
+      for (const id of opaqueIds) map.setLayoutProperty(id, 'visibility', satActive ? 'none' : 'visible');
     } catch {}
   };
   const applyLights = () => {
@@ -147,9 +141,7 @@ export function createMap(containerId: string, options?: Record<string, unknown>
   map.on('load', () => {
     const layers: any[] = map.getStyle().layers;
     opaqueIds = layers
-      .filter(
-        (l: any) => (l.type === 'fill' || l.type === 'background') && l.id !== 'satellite-tiles',
-      )
+      .filter((l: any) => (l.type === 'fill' || l.type === 'background') && l.id !== 'satellite-tiles')
       .map((l: any) => l.id);
     const symbolIds = layers.filter((l: any) => l.type === 'symbol').map((l: any) => l.id);
     for (const id of symbolIds) {

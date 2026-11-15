@@ -4,8 +4,9 @@ declare const maplibregl: any;
 
 const el = document.getElementById('trip-map');
 if (el && typeof maplibregl !== 'undefined') {
-  const legs: { oLat: number; oLng: number; dLat: number; dLng: number; type?: string }[] =
-    JSON.parse(el.dataset.legs || '[]');
+  const legs: { oLat: number; oLng: number; dLat: number; dLng: number; type?: string }[] = JSON.parse(
+    el.dataset.legs || '[]',
+  );
   if (legs.length > 0) {
     const map = createMap('trip-map', { scrollZoom: false });
 

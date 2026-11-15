@@ -145,7 +145,7 @@ mod tests {
             .execute(&pool)
             .await
             .expect("push subscription list failed");
-        assert!(rows_after.is_empty());
+        assert_eq!(rows_after.len(), 0);
     }
 
     #[tokio::test]
