@@ -97,9 +97,9 @@ dependencies = [
 
 [[package]]
 name = "airport-data"
-version = "1.0.2"
+version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e746e25dd5b71780db47f6e6ebe9f309e39f9a8fa1fd7514566e8dc5eddbdc32"
+checksum = "1f8d779dbb8f8a28ba7a6192725b0e926d5011024d2a89623f868df07313678d"
 dependencies = [
  "flate2",
  "once_cell",
