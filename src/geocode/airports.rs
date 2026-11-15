@@ -63,7 +63,7 @@ mod tests {
         let dub = lookup_enriched("DUB").expect("DUB not found");
         assert_eq!(dub.country_code, "ie");
         assert_eq!(dub.timezone, "Europe/Dublin");
-        assert!(!dub.name.is_empty());
+        assert_ne!(dub.name.len(), 0);
 
         let jfk = lookup_enriched("JFK").expect("JFK not found");
         assert_eq!(jfk.country_code, "us");

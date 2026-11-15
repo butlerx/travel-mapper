@@ -826,7 +826,7 @@ mod tests {
         assert_eq!(stats.total_journeys, 0);
         assert_eq!(stats.total_flights, 0);
         assert_eq!(stats.unique_airports, 0);
-        assert!(stats.top_airlines.is_empty());
+        assert_eq!(stats.top_airlines.len(), 0);
     }
 
     #[test]

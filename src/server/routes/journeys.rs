@@ -2163,7 +2163,7 @@ mod tests {
             .await
             .expect("failed to read body");
         let parsed: JourneyShareCreateResponse = serde_json::from_slice(&body).expect("valid json");
-        assert!(!parsed.token_hash.is_empty());
+        assert_ne!(parsed.token_hash.len(), 0);
         assert_eq!(parsed.url, format!("/share/journey/{}", parsed.token_hash));
     }
 
