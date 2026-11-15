@@ -2,8 +2,8 @@ name: Release
 
 on:
   push:
-    tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+*'
+    branches:
+      - main
 
 permissions: {}
 
@@ -13,9 +13,28 @@ env:
   DATABASE_URL: 'sqlite:travel.db'
 
 jobs:
+  release-please:
+    name: Release Please
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        id: release
+        with:
+          token: ${{ github.token }}
+
   build:
     name: Build (${{ matrix.target }})
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -62,9 +81,12 @@ jobs:
           name: travel-mapper-${{ matrix.target }}
           path: travel-mapper-${{ matrix.target }}.tar.gz
 
-  release:
-    name: Create Release
-    needs: build
+  publish:
+    name: Upload to Release
+    needs:
+      - release-please
+      - build
+    if: needs.release-please.outputs.release_created == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -79,7 +101,8 @@ jobs:
         with:
           path: artifacts
           merge-multiple: true
-      - name: Create GitHub Release
+      - name: Upload archives to the release
+        run: mise run ci:publish "${TAG_NAME}"
         env:
-          GH_TOKEN: ${{ github.token }}
-        run: mise run ci:publish "${GITHUB_REF_NAME}"
+          TAG_NAME: ${{ needs.release-please.outputs.tag_name }}
+          # The release already exists: release-please created it from the changelog.
