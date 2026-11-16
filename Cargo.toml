@@ -61,9 +61,9 @@ zip                = "8.4.0"
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }
 
-# Build OpenSSL from source on Linux so cargo-zigbuild can cross-compile
-# web-push's OpenSSL dependency without a target sysroot.
-[target.'cfg(target_os = "linux")'.dependencies]
+# Build OpenSSL from source so Linux and macOS release targets can
+# cross-compile web-push's OpenSSL dependency without target libraries.
+[target.'cfg(any(target_os = "linux", target_os = "macos"))'.dependencies]
 openssl = { version = "0.10", features = ["vendored"] }
 
 [lints]
