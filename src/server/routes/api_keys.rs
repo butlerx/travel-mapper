@@ -54,7 +54,7 @@ pub async fn handler(
         };
 
     let mut key_bytes = [0_u8; 32];
-    rand::thread_rng().fill_bytes(&mut key_bytes);
+    rand::rng().fill_bytes(&mut key_bytes);
     let key = URL_SAFE_NO_PAD.encode(key_bytes);
     let key_hash = sha256_hex(&key);
     let label = parsed.label.unwrap_or_default();
