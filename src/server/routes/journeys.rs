@@ -892,7 +892,7 @@ pub async fn create_share_handler(
     };
 
     let mut token_bytes = [0_u8; 32];
-    rand::thread_rng().fill_bytes(&mut token_bytes);
+    rand::rng().fill_bytes(&mut token_bytes);
     let token = URL_SAFE_NO_PAD.encode(token_bytes);
     let token_hash = crate::server::session::sha256_hex(&token);
 
