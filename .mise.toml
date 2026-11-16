@@ -147,19 +147,26 @@ description = "Clean build artifacts"
 run         = "rm -rf target"
 
 [tasks."ci:release-build"]
-description = "Build release binary, using cross for cross-compilation when CROSS=true"
+description = "Build release binary, using cargo-zigbuild when ZIGBUILD=true"
 usage       = 'arg "<target>" help="Rust target triple"'
-run         = '''cross build --release --target "${usage_args}"'''
+run         = '''
+if [ "${ZIGBUILD:-}" = "true" ]; then
+  # zig's linker warns about rustc's -O1 flag, which CARGO_BUILD_WARNINGS=deny turns into an error.
+  RUSTFLAGS="${RUSTFLAGS:-} -A linker-messages" cargo zigbuild --release --target "${usage_target}"
+else
+  cargo build --release --target "${usage_target}"
+fi
+'''
 hide        = true
 
 [tasks."ci:package"]
 description = "Package a release binary into a .tar.gz archive"
 usage       = 'arg "<target>" help="Rust target triple"'
-run         = "tar czf travel-mapper-${usage_args}.tar.gz -C target/${usage_args}/release travel_mapper"
+run         = "tar czf travel-mapper-${usage_target}.tar.gz -C target/${usage_target}/release travel_mapper"
 hide        = true
 
 [tasks."ci:publish"]
 description = "Upload release archives to the GitHub Release release-please created"
 usage       = 'arg "<tag>" help="Git tag of the existing release"'
-run         = "gh release upload ${usage_args} artifacts/*.tar.gz --clobber"
+run         = "gh release upload ${usage_tag} artifacts/*.tar.gz --clobber"
 hide        = true

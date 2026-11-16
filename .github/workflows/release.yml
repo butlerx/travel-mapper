@@ -41,9 +41,10 @@ jobs:
         include:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
+            zigbuild: true
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-latest
-            cross: true
+            zigbuild: true
           - target: x86_64-apple-darwin
             os: macos-latest
           - target: aarch64-apple-darwin
@@ -61,18 +62,21 @@ jobs:
           target: ${{ matrix.target }}
           cache: false
 
-      - name: Install cross
-        if: matrix.cross
+      - name: Install zig
+        if: matrix.zigbuild
+        uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2
+      - name: Install cargo-zigbuild
+        if: matrix.zigbuild
         uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2
         with:
-          tool: cross
+          tool: cargo-zigbuild
 
       - run: mise run client:build
       - run: mise run db:prepare
       - name: Build release binary
         run: mise run ci:release-build ${{ matrix.target }}
         env:
-          CROSS: ${{ matrix.cross && 'true' || '' }}
+          ZIGBUILD: ${{ matrix.zigbuild && 'true' || '' }}
 
       - name: Package artifact
         run: mise run ci:package ${{ matrix.target }}
