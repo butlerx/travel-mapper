@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/butlerx/travel-mapper/compare/v0.1.1...v0.1.2) (2026-11-16)
+
+
+### Bug Fixes
+
+* **release:** build with cargo-zigbuild instead of cross ([#41](https://github.com/butlerx/travel-mapper/issues/41)) ([edb2c38](https://github.com/butlerx/travel-mapper/commit/edb2c38a8741ed52eaae939c1104ea66e282c9fc))
+
 ## [0.1.1](https://github.com/butlerx/travel-mapper/compare/v0.1.0...v0.1.1) (2026-11-16)
 
 
