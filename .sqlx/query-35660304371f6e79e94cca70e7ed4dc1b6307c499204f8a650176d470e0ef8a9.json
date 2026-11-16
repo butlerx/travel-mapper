@@ -6,34 +6,64 @@
       {
         "name": "eva_number!: i64",
         "ordinal": 0,
-        "type_info": "Integer"
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "station_eva_cache",
+            "name": "eva_number"
+          }
+        }
       },
       {
         "name": "name!: String",
         "ordinal": 1,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "station_eva_cache",
+            "name": "name"
+          }
+        }
       },
       {
         "name": "lat",
         "ordinal": 2,
-        "type_info": "Float"
+        "type_info": "Float",
+        "origin": {
+          "Table": {
+            "table": "station_eva_cache",
+            "name": "lat"
+          }
+        }
       },
       {
         "name": "lng",
         "ordinal": 3,
-        "type_info": "Float"
+        "type_info": "Float",
+        "origin": {
+          "Table": {
+            "table": "station_eva_cache",
+            "name": "lng"
+          }
+        }
       },
       {
         "name": "updated_at!: String",
         "ordinal": 4,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "station_eva_cache",
+            "name": "updated_at"
+          }
+        }
       }
     ],
     "parameters": {
       "Right": 1
     },
     "nullable": [
-      true,
+      false,
       false,
       true,
       true,

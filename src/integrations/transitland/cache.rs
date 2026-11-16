@@ -83,18 +83,11 @@ impl GtfsCache {
                     expires_at = %record.expires_at,
                     "Feed cache is fresh"
                 );
-                return record
-                    .id
-                    .ok_or(CacheError::ParseError("missing feed_id".to_string()));
+                return Ok(record.id);
             }
 
             info!(feed = onestop_id, "Feed cache expired, refreshing");
-            self.delete_feed(
-                record
-                    .id
-                    .ok_or(CacheError::ParseError("missing feed_id".to_string()))?,
-            )
-            .await?;
+            self.delete_feed(record.id).await?;
         }
 
         // Download and cache the feed
@@ -184,7 +177,7 @@ impl GtfsCache {
             "GTFS feed cached successfully"
         );
 
-        Ok(feed_id.expect("feed_id should always exist after insert"))
+        Ok(feed_id)
     }
 
     /// Extracts a ZIP file to a directory.

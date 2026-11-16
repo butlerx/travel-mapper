@@ -6,12 +6,24 @@
       {
         "name": "ship_name",
         "ordinal": 0,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "boat_details",
+            "name": "ship_name"
+          }
+        }
       },
       {
         "name": "confirmation_num",
         "ordinal": 1,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "boat_details",
+            "name": "confirmation_num"
+          }
+        }
       }
     ],
     "parameters": {

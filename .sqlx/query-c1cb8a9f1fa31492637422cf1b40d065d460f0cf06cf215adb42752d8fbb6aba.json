@@ -6,17 +6,35 @@
       {
         "name": "token_secret_enc",
         "ordinal": 0,
-        "type_info": "Blob"
+        "type_info": "Blob",
+        "origin": {
+          "Table": {
+            "table": "oauth_request_tokens",
+            "name": "token_secret_enc"
+          }
+        }
       },
       {
         "name": "nonce",
         "ordinal": 1,
-        "type_info": "Blob"
+        "type_info": "Blob",
+        "origin": {
+          "Table": {
+            "table": "oauth_request_tokens",
+            "name": "nonce"
+          }
+        }
       },
       {
         "name": "user_id",
         "ordinal": 2,
-        "type_info": "Integer"
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "oauth_request_tokens",
+            "name": "user_id"
+          }
+        }
       }
     ],
     "parameters": {

@@ -6,17 +6,35 @@
       {
         "name": "carrier_name",
         "ordinal": 0,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transport_details",
+            "name": "carrier_name"
+          }
+        }
       },
       {
         "name": "vehicle_description",
         "ordinal": 1,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transport_details",
+            "name": "vehicle_description"
+          }
+        }
       },
       {
         "name": "notes",
         "ordinal": 2,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transport_details",
+            "name": "notes"
+          }
+        }
       }
     ],
     "parameters": {

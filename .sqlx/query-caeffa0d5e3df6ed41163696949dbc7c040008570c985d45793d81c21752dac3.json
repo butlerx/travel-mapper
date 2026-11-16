@@ -6,14 +6,20 @@
       {
         "name": "id",
         "ordinal": 0,
-        "type_info": "Integer"
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "gtfs_feeds",
+            "name": "id"
+          }
+        }
       }
     ],
     "parameters": {
       "Right": 1
     },
     "nullable": [
-      true
+      false
     ]
   },
   "hash": "caeffa0d5e3df6ed41163696949dbc7c040008570c985d45793d81c21752dac3"

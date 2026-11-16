@@ -6,292 +6,640 @@
       {
         "name": "id!: i64",
         "ordinal": 0,
-        "type_info": "Integer"
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "hops",
+            "name": "id"
+          }
+        }
       },
       {
         "name": "travel_type",
         "ordinal": 1,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "hops",
+            "name": "travel_type"
+          }
+        }
       },
       {
         "name": "origin_name",
         "ordinal": 2,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "hops",
+            "name": "origin_name"
+          }
+        }
       },
       {
         "name": "origin_lat",
         "ordinal": 3,
-        "type_info": "Float"
+        "type_info": "Float",
+        "origin": {
+          "Table": {
+            "table": "hops",
+            "name": "origin_lat"
+          }
+        }
       },
       {
         "name": "origin_lng",
         "ordinal": 4,
-        "type_info": "Float"
+        "type_info": "Float",
+        "origin": {
+          "Table": {
+            "table": "hops",
+            "name": "origin_lng"
+          }
+        }
       },
       {
         "name": "origin_country",
         "ordinal": 5,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "hops",
+            "name": "origin_country"
+          }
+        }
       },
       {
         "name": "dest_name",
         "ordinal": 6,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "hops",
+            "name": "dest_name"
+          }
+        }
       },
       {
         "name": "dest_lat",
         "ordinal": 7,
-        "type_info": "Float"
+        "type_info": "Float",
+        "origin": {
+          "Table": {
+            "table": "hops",
+            "name": "dest_lat"
+          }
+        }
       },
       {
         "name": "dest_lng",
         "ordinal": 8,
-        "type_info": "Float"
+        "type_info": "Float",
+        "origin": {
+          "Table": {
+            "table": "hops",
+            "name": "dest_lng"
+          }
+        }
       },
       {
         "name": "dest_country",
         "ordinal": 9,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "hops",
+            "name": "dest_country"
+          }
+        }
       },
       {
         "name": "start_date",
         "ordinal": 10,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "hops",
+            "name": "start_date"
+          }
+        }
       },
       {
         "name": "end_date",
         "ordinal": 11,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "hops",
+            "name": "end_date"
+          }
+        }
       },
       {
         "name": "airline",
         "ordinal": 12,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "flight_details",
+            "name": "airline"
+          }
+        }
       },
       {
         "name": "flight_number",
         "ordinal": 13,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "flight_details",
+            "name": "flight_number"
+          }
+        }
       },
       {
         "name": "dep_terminal",
         "ordinal": 14,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "flight_details",
+            "name": "dep_terminal"
+          }
+        }
       },
       {
         "name": "dep_gate",
         "ordinal": 15,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "flight_details",
+            "name": "dep_gate"
+          }
+        }
       },
       {
         "name": "arr_terminal",
         "ordinal": 16,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "flight_details",
+            "name": "arr_terminal"
+          }
+        }
       },
       {
         "name": "arr_gate",
         "ordinal": 17,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "flight_details",
+            "name": "arr_gate"
+          }
+        }
       },
       {
         "name": "canceled",
         "ordinal": 18,
-        "type_info": "Integer"
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "flight_details",
+            "name": "canceled"
+          }
+        }
       },
       {
         "name": "diverted_to",
         "ordinal": 19,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "flight_details",
+            "name": "diverted_to"
+          }
+        }
       },
       {
         "name": "gate_dep_scheduled",
         "ordinal": 20,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "flight_details",
+            "name": "gate_dep_scheduled"
+          }
+        }
       },
       {
         "name": "gate_dep_actual",
         "ordinal": 21,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "flight_details",
+            "name": "gate_dep_actual"
+          }
+        }
       },
       {
         "name": "takeoff_scheduled",
         "ordinal": 22,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "flight_details",
+            "name": "takeoff_scheduled"
+          }
+        }
       },
       {
         "name": "takeoff_actual",
         "ordinal": 23,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "flight_details",
+            "name": "takeoff_actual"
+          }
+        }
       },
       {
         "name": "landing_scheduled",
         "ordinal": 24,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "flight_details",
+            "name": "landing_scheduled"
+          }
+        }
       },
       {
         "name": "landing_actual",
         "ordinal": 25,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "flight_details",
+            "name": "landing_actual"
+          }
+        }
       },
       {
         "name": "gate_arr_scheduled",
         "ordinal": 26,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "flight_details",
+            "name": "gate_arr_scheduled"
+          }
+        }
       },
       {
         "name": "gate_arr_actual",
         "ordinal": 27,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "flight_details",
+            "name": "gate_arr_actual"
+          }
+        }
       },
       {
         "name": "aircraft_type",
         "ordinal": 28,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "flight_details",
+            "name": "aircraft_type"
+          }
+        }
       },
       {
         "name": "tail_number",
         "ordinal": 29,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "flight_details",
+            "name": "tail_number"
+          }
+        }
       },
       {
         "name": "pnr",
         "ordinal": 30,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "flight_details",
+            "name": "pnr"
+          }
+        }
       },
       {
         "name": "seat",
         "ordinal": 31,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "flight_details",
+            "name": "seat"
+          }
+        }
       },
       {
         "name": "seat_type",
         "ordinal": 32,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "flight_details",
+            "name": "seat_type"
+          }
+        }
       },
       {
         "name": "cabin_class",
         "ordinal": 33,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "flight_details",
+            "name": "cabin_class"
+          }
+        }
       },
       {
         "name": "flight_reason",
         "ordinal": 34,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "flight_details",
+            "name": "flight_reason"
+          }
+        }
       },
       {
         "name": "flight_notes",
         "ordinal": 35,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "flight_details",
+            "name": "notes"
+          }
+        }
       },
       {
         "name": "rail_carrier",
         "ordinal": 36,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rail_details",
+            "name": "carrier"
+          }
+        }
       },
       {
         "name": "train_number",
         "ordinal": 37,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rail_details",
+            "name": "train_number"
+          }
+        }
       },
       {
         "name": "service_class",
         "ordinal": 38,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rail_details",
+            "name": "service_class"
+          }
+        }
       },
       {
         "name": "coach_number",
         "ordinal": 39,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rail_details",
+            "name": "coach_number"
+          }
+        }
       },
       {
         "name": "rail_seats",
         "ordinal": 40,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rail_details",
+            "name": "seats"
+          }
+        }
       },
       {
         "name": "rail_confirmation",
         "ordinal": 41,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rail_details",
+            "name": "confirmation_num"
+          }
+        }
       },
       {
         "name": "rail_booking_site",
         "ordinal": 42,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rail_details",
+            "name": "booking_site"
+          }
+        }
       },
       {
         "name": "rail_notes",
         "ordinal": 43,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rail_details",
+            "name": "notes"
+          }
+        }
       },
       {
         "name": "ship_name",
         "ordinal": 44,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "boat_details",
+            "name": "ship_name"
+          }
+        }
       },
       {
         "name": "cabin_type",
         "ordinal": 45,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "boat_details",
+            "name": "cabin_type"
+          }
+        }
       },
       {
         "name": "cabin_number",
         "ordinal": 46,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "boat_details",
+            "name": "cabin_number"
+          }
+        }
       },
       {
         "name": "boat_confirmation",
         "ordinal": 47,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "boat_details",
+            "name": "confirmation_num"
+          }
+        }
       },
       {
         "name": "boat_booking_site",
         "ordinal": 48,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "boat_details",
+            "name": "booking_site"
+          }
+        }
       },
       {
         "name": "boat_notes",
         "ordinal": 49,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "boat_details",
+            "name": "notes"
+          }
+        }
       },
       {
         "name": "transport_carrier",
         "ordinal": 50,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transport_details",
+            "name": "carrier_name"
+          }
+        }
       },
       {
         "name": "vehicle_description",
         "ordinal": 51,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transport_details",
+            "name": "vehicle_description"
+          }
+        }
       },
       {
         "name": "transport_confirmation",
         "ordinal": 52,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transport_details",
+            "name": "confirmation_num"
+          }
+        }
       },
       {
         "name": "transport_notes",
         "ordinal": 53,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transport_details",
+            "name": "notes"
+          }
+        }
       },
       {
         "name": "cost_amount",
         "ordinal": 54,
-        "type_info": "Float"
+        "type_info": "Float",
+        "origin": {
+          "Table": {
+            "table": "hops",
+            "name": "cost_amount"
+          }
+        }
       },
       {
         "name": "cost_currency",
         "ordinal": 55,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "hops",
+            "name": "cost_currency"
+          }
+        }
       },
       {
         "name": "loyalty_program",
         "ordinal": 56,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "hops",
+            "name": "loyalty_program"
+          }
+        }
       },
       {
         "name": "miles_earned",
         "ordinal": 57,
-        "type_info": "Float"
+        "type_info": "Float",
+        "origin": {
+          "Table": {
+            "table": "hops",
+            "name": "miles_earned"
+          }
+        }
       }
     ],
     "parameters": {
