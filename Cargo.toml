@@ -1,6 +1,6 @@
 [package]
 name        = "travel_mapper"
-version     = "0.1.0"
+version     = "0.1.1"
 edition     = "2024"
 description = "TripIt travel history web server with API and SQLite storage"
 homepage    = "https://github.com/butlerx/travel-mapper"

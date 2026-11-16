@@ -2739,7 +2739,7 @@ dependencies = [
 
 [[package]]
 name = "map-wasm"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "js-sys",
  "serde",
@@ -5085,7 +5085,7 @@ dependencies = [
 
 [[package]]
 name = "travel_mapper"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "aes-gcm",
  "aide",
