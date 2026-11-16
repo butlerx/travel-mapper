@@ -6,27 +6,57 @@
       {
         "name": "stop_id",
         "ordinal": 0,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "gtfs_stops",
+            "name": "stop_id"
+          }
+        }
       },
       {
         "name": "stop_name",
         "ordinal": 1,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "gtfs_stops",
+            "name": "stop_name"
+          }
+        }
       },
       {
         "name": "stop_name_normalized",
         "ordinal": 2,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "gtfs_stops",
+            "name": "stop_name_normalized"
+          }
+        }
       },
       {
         "name": "lat",
         "ordinal": 3,
-        "type_info": "Float"
+        "type_info": "Float",
+        "origin": {
+          "Table": {
+            "table": "gtfs_stops",
+            "name": "lat"
+          }
+        }
       },
       {
         "name": "lng",
         "ordinal": 4,
-        "type_info": "Float"
+        "type_info": "Float",
+        "origin": {
+          "Table": {
+            "table": "gtfs_stops",
+            "name": "lng"
+          }
+        }
       }
     ],
     "parameters": {

@@ -6,24 +6,42 @@
       {
         "name": "id!: i64",
         "ordinal": 0,
-        "type_info": "Integer"
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "hops",
+            "name": "id"
+          }
+        }
       },
       {
         "name": "start_date!: String",
         "ordinal": 1,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "hops",
+            "name": "start_date"
+          }
+        }
       },
       {
         "name": "end_date!: String",
         "ordinal": 2,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "hops",
+            "name": "end_date"
+          }
+        }
       }
     ],
     "parameters": {
       "Right": 1
     },
     "nullable": [
-      true,
+      false,
       false,
       false
     ]

@@ -6,12 +6,24 @@
       {
         "name": "lat",
         "ordinal": 0,
-        "type_info": "Float"
+        "type_info": "Float",
+        "origin": {
+          "Table": {
+            "table": "geocode_cache",
+            "name": "lat"
+          }
+        }
       },
       {
         "name": "lng",
         "ordinal": 1,
-        "type_info": "Float"
+        "type_info": "Float",
+        "origin": {
+          "Table": {
+            "table": "geocode_cache",
+            "name": "lng"
+          }
+        }
       }
     ],
     "parameters": {

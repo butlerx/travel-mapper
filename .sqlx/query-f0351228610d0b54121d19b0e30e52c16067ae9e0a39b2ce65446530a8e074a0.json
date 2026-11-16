@@ -6,59 +6,113 @@
       {
         "name": "id!: i64",
         "ordinal": 0,
-        "type_info": "Integer"
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "hops",
+            "name": "id"
+          }
+        }
       },
       {
         "name": "travel_type!: String",
         "ordinal": 1,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "hops",
+            "name": "travel_type"
+          }
+        }
       },
       {
         "name": "origin_name!: String",
         "ordinal": 2,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "hops",
+            "name": "origin_name"
+          }
+        }
       },
       {
         "name": "origin_lat!: f64",
         "ordinal": 3,
-        "type_info": "Float"
+        "type_info": "Float",
+        "origin": {
+          "Table": {
+            "table": "hops",
+            "name": "origin_lat"
+          }
+        }
       },
       {
         "name": "origin_lng!: f64",
         "ordinal": 4,
-        "type_info": "Float"
+        "type_info": "Float",
+        "origin": {
+          "Table": {
+            "table": "hops",
+            "name": "origin_lng"
+          }
+        }
       },
       {
         "name": "dest_name!: String",
         "ordinal": 5,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "hops",
+            "name": "dest_name"
+          }
+        }
       },
       {
         "name": "dest_lat!: f64",
         "ordinal": 6,
-        "type_info": "Float"
+        "type_info": "Float",
+        "origin": {
+          "Table": {
+            "table": "hops",
+            "name": "dest_lat"
+          }
+        }
       },
       {
         "name": "dest_lng!: f64",
         "ordinal": 7,
-        "type_info": "Float"
+        "type_info": "Float",
+        "origin": {
+          "Table": {
+            "table": "hops",
+            "name": "dest_lng"
+          }
+        }
       },
       {
         "name": "start_date!: String",
         "ordinal": 8,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "hops",
+            "name": "start_date"
+          }
+        }
       },
       {
         "name": "carrier: String",
         "ordinal": 9,
-        "type_info": "Null"
+        "type_info": "Text",
+        "origin": "Expression"
       }
     ],
     "parameters": {
       "Right": 1
     },
     "nullable": [
-      true,
       false,
       false,
       false,
@@ -67,7 +121,8 @@
       false,
       false,
       false,
-      null
+      false,
+      false
     ]
   },
   "hash": "f0351228610d0b54121d19b0e30e52c16067ae9e0a39b2ce65446530a8e074a0"

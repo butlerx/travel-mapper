@@ -6,137 +6,299 @@
       {
         "name": "travel_type",
         "ordinal": 0,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "hops",
+            "name": "travel_type"
+          }
+        }
       },
       {
         "name": "origin_name",
         "ordinal": 1,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "hops",
+            "name": "origin_name"
+          }
+        }
       },
       {
         "name": "origin_lat",
         "ordinal": 2,
-        "type_info": "Float"
+        "type_info": "Float",
+        "origin": {
+          "Table": {
+            "table": "hops",
+            "name": "origin_lat"
+          }
+        }
       },
       {
         "name": "origin_lng",
         "ordinal": 3,
-        "type_info": "Float"
+        "type_info": "Float",
+        "origin": {
+          "Table": {
+            "table": "hops",
+            "name": "origin_lng"
+          }
+        }
       },
       {
         "name": "origin_country",
         "ordinal": 4,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "hops",
+            "name": "origin_country"
+          }
+        }
       },
       {
         "name": "dest_name",
         "ordinal": 5,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "hops",
+            "name": "dest_name"
+          }
+        }
       },
       {
         "name": "dest_lat",
         "ordinal": 6,
-        "type_info": "Float"
+        "type_info": "Float",
+        "origin": {
+          "Table": {
+            "table": "hops",
+            "name": "dest_lat"
+          }
+        }
       },
       {
         "name": "dest_lng",
         "ordinal": 7,
-        "type_info": "Float"
+        "type_info": "Float",
+        "origin": {
+          "Table": {
+            "table": "hops",
+            "name": "dest_lng"
+          }
+        }
       },
       {
         "name": "dest_country",
         "ordinal": 8,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "hops",
+            "name": "dest_country"
+          }
+        }
       },
       {
         "name": "start_date",
         "ordinal": 9,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "hops",
+            "name": "start_date"
+          }
+        }
       },
       {
         "name": "end_date",
         "ordinal": 10,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "hops",
+            "name": "end_date"
+          }
+        }
       },
       {
         "name": "airline",
         "ordinal": 11,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "flight_details",
+            "name": "airline"
+          }
+        }
       },
       {
         "name": "aircraft_type",
         "ordinal": 12,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "flight_details",
+            "name": "aircraft_type"
+          }
+        }
       },
       {
         "name": "cabin_class",
         "ordinal": 13,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "flight_details",
+            "name": "cabin_class"
+          }
+        }
       },
       {
         "name": "seat_type",
         "ordinal": 14,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "flight_details",
+            "name": "seat_type"
+          }
+        }
       },
       {
         "name": "flight_reason",
         "ordinal": 15,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "flight_details",
+            "name": "flight_reason"
+          }
+        }
       },
       {
         "name": "rail_carrier",
         "ordinal": 16,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rail_details",
+            "name": "carrier"
+          }
+        }
       },
       {
         "name": "train_number",
         "ordinal": 17,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rail_details",
+            "name": "train_number"
+          }
+        }
       },
       {
         "name": "service_class",
         "ordinal": 18,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rail_details",
+            "name": "service_class"
+          }
+        }
       },
       {
         "name": "ship_name",
         "ordinal": 19,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "boat_details",
+            "name": "ship_name"
+          }
+        }
       },
       {
         "name": "boat_cabin_type",
         "ordinal": 20,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "boat_details",
+            "name": "cabin_type"
+          }
+        }
       },
       {
         "name": "transport_carrier",
         "ordinal": 21,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transport_details",
+            "name": "carrier_name"
+          }
+        }
       },
       {
         "name": "vehicle_description",
         "ordinal": 22,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "transport_details",
+            "name": "vehicle_description"
+          }
+        }
       },
       {
         "name": "cost_amount",
         "ordinal": 23,
-        "type_info": "Float"
+        "type_info": "Float",
+        "origin": {
+          "Table": {
+            "table": "hops",
+            "name": "cost_amount"
+          }
+        }
       },
       {
         "name": "cost_currency",
         "ordinal": 24,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "hops",
+            "name": "cost_currency"
+          }
+        }
       },
       {
         "name": "loyalty_program",
         "ordinal": 25,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "hops",
+            "name": "loyalty_program"
+          }
+        }
       },
       {
         "name": "miles_earned",
         "ordinal": 26,
-        "type_info": "Float"
+        "type_info": "Float",
+        "origin": {
+          "Table": {
+            "table": "hops",
+            "name": "miles_earned"
+          }
+        }
       }
     ],
     "parameters": {
@@ -154,18 +316,18 @@
       true,
       false,
       false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
       true,
       true,
       true,

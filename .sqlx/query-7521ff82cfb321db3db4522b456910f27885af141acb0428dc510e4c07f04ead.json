@@ -6,12 +6,24 @@
       {
         "name": "carrier",
         "ordinal": 0,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rail_details",
+            "name": "carrier"
+          }
+        }
       },
       {
         "name": "train_number",
         "ordinal": 1,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rail_details",
+            "name": "train_number"
+          }
+        }
       }
     ],
     "parameters": {

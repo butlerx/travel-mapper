@@ -6,79 +6,163 @@
       {
         "name": "id!: i64",
         "ordinal": 0,
-        "type_info": "Integer"
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "status_enrichments",
+            "name": "id"
+          }
+        }
       },
       {
         "name": "hop_id!: i64",
         "ordinal": 1,
-        "type_info": "Integer"
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "status_enrichments",
+            "name": "hop_id"
+          }
+        }
       },
       {
         "name": "provider!: String",
         "ordinal": 2,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "status_enrichments",
+            "name": "provider"
+          }
+        }
       },
       {
         "name": "status!: String",
         "ordinal": 3,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "status_enrichments",
+            "name": "status"
+          }
+        }
       },
       {
         "name": "delay_minutes",
         "ordinal": 4,
-        "type_info": "Integer"
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "status_enrichments",
+            "name": "delay_minutes"
+          }
+        }
       },
       {
         "name": "dep_gate!: String",
         "ordinal": 5,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "status_enrichments",
+            "name": "dep_gate"
+          }
+        }
       },
       {
         "name": "dep_terminal!: String",
         "ordinal": 6,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "status_enrichments",
+            "name": "dep_terminal"
+          }
+        }
       },
       {
         "name": "arr_gate!: String",
         "ordinal": 7,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "status_enrichments",
+            "name": "arr_gate"
+          }
+        }
       },
       {
         "name": "arr_terminal!: String",
         "ordinal": 8,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "status_enrichments",
+            "name": "arr_terminal"
+          }
+        }
       },
       {
         "name": "dep_platform!: String",
         "ordinal": 9,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "status_enrichments",
+            "name": "dep_platform"
+          }
+        }
       },
       {
         "name": "arr_platform!: String",
         "ordinal": 10,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "status_enrichments",
+            "name": "arr_platform"
+          }
+        }
       },
       {
         "name": "aircraft_reg!: String",
         "ordinal": 11,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "status_enrichments",
+            "name": "aircraft_reg"
+          }
+        }
       },
       {
         "name": "raw_json!: String",
         "ordinal": 12,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "status_enrichments",
+            "name": "raw_json"
+          }
+        }
       },
       {
         "name": "fetched_at!: String",
         "ordinal": 13,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "status_enrichments",
+            "name": "fetched_at"
+          }
+        }
       }
     ],
     "parameters": {
       "Right": 2
     },
     "nullable": [
-      true,
+      false,
       false,
       false,
       false,
