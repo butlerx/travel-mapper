@@ -5145,7 +5145,7 @@ dependencies = [
  "serde_json",
  "serde_urlencoded",
  "sha1 0.11.0",
- "sha2 0.10.9",
+ "sha2 0.11.1",
  "sqlx",
  "strsim",
  "tempfile",
