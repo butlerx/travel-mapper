@@ -34,7 +34,7 @@ mail-parser        = { version = "0.11.3", features = ["encoding_rs"] }
 nominatim          = "0.3"
 percent-encoding   = "2"
 prost              = "0.14"
-quick-xml          = "0.37"
+quick-xml          = "0.42"
 rand               = "0.9"
 regex              = "1"
 reqwest            = { version = "0.12", features = ["json"] }
