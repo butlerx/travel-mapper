@@ -24,7 +24,7 @@ csv                         = "1"
 deunicode                   = "1.6.2"
 governor                    = { version = "0.10", default-features = false, features = ["jitter", "std"] }
 gtfs-realtime               = "0.2"
-gtfs-structures             = "0.42"
+gtfs-structures             = "0.48"
 hmac                        = "0.13"
 icalendar                   = "0.17"
 indexmap                    = "2"
