@@ -67,7 +67,7 @@ jobs:
         uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2
       - name: Install cargo-zigbuild
         if: matrix.zigbuild
-        uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2
+        uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
         with:
           tool: cargo-zigbuild
 
