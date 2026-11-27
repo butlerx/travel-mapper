@@ -95,27 +95,10 @@ pub enum Error {
 ///
 /// # Errors
 ///
-/// Returns an error if database access, telemetry setup, TCP binding, or server startup fails.
+/// Returns an error if database access, telemetry setup, TCP binding, or server
+/// startup fails.
 pub async fn run(args: Args) -> Result<(), Error> {
-    let builder = metrics_exporter_prometheus::PrometheusBuilder::new()
-        .with_http_listener(args.metrics_prometheus_endpoint)
-        .with_recommended_naming(true);
-    let builder = builder.set_buckets_for_metric(
-        metrics_exporter_prometheus::Matcher::Full("http.server.request.duration".to_owned()),
-        &tower_telemetry::metrics::DURATION_BUCKETS,
-    )?;
-    let builder = builder.set_buckets_for_metric(
-        metrics_exporter_prometheus::Matcher::Full("http.server.request.body.size".to_owned()),
-        &tower_telemetry::metrics::BODY_SIZE_BUCKETS,
-    )?;
-    let builder = builder.set_buckets_for_metric(
-        metrics_exporter_prometheus::Matcher::Full("http.server.response.body.size".to_owned()),
-        &tower_telemetry::metrics::BODY_SIZE_BUCKETS,
-    )?;
-    builder.install()?;
-    tower_telemetry::metrics::install_panic_counter("process.panics");
-    let _runtime_metrics = tower_telemetry::metrics::export_runtime_metrics();
-    let _process_metrics = tower_telemetry::metrics::export_process_metrics();
+    let _metrics_tasks = crate::metrics::init_server_metrics(args.metrics_prometheus_endpoint)?;
 
     let encryption_key = parse_encryption_key(&args.encryption_key)?;
     let pool = crate::db::create_pool(&args.database_url).await?;

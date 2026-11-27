@@ -2,7 +2,6 @@
 //! dashboard, REST API, or CSV export.
 
 #![recursion_limit = "256"]
-#![warn(clippy::pedantic)]
 
 /// Encryption and password-hashing helpers — AES-256-GCM and Argon2.
 pub mod auth;
@@ -16,6 +15,8 @@ pub(crate) mod distance;
 pub(crate) mod geocode;
 /// Third-party travel data integrations — TripIt, flight status, rail status, CSV import.
 pub(crate) mod integrations;
+/// Prometheus exporter and process metric setup.
+pub mod metrics;
 /// Axum web server — routing, pages, extractors, and middleware.
 pub mod server;
 /// Logging and tracing initialisation.

@@ -511,12 +511,12 @@ where
     T: Deserialize<'de>,
 {
     let s: Option<String> = Option::deserialize(deserializer)?;
-    match s.as_deref() {
-        None | Some("") => Ok(None),
-        Some(_) => {
-            let value = T::deserialize(serde::de::value::StringDeserializer::<D::Error>::new(
-                s.unwrap(),
-            ))?;
+    match s {
+        None => Ok(None),
+        Some(value) if value.is_empty() => Ok(None),
+        Some(value) => {
+            let value =
+                T::deserialize(serde::de::value::StringDeserializer::<D::Error>::new(value))?;
             Ok(Some(value))
         }
     }
@@ -662,8 +662,8 @@ fn build_journey_list_html(
     let mut groups: Vec<(String, Vec<AnyView>)> = Vec::new();
     for resp in responses {
         let key = sort.group_key(resp);
-        if groups.last().is_some_and(|(k, _)| *k == key) {
-            groups.last_mut().unwrap().1.push(resp.html_card());
+        if let Some((_, cards)) = groups.last_mut().filter(|(group_key, _)| *group_key == key) {
+            cards.push(resp.html_card());
         } else {
             groups.push((key, vec![resp.html_card()]));
         }

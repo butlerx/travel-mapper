@@ -20,20 +20,13 @@ pub enum RailStatusError {
 
 /// Input query for rail status lookup — providers use whichever fields they need.
 #[derive(Debug, Clone)]
-#[allow(dead_code)] // providers use different field subsets
 pub struct RailStatusQuery<'a> {
     pub carrier: &'a str,
     pub train_number: &'a str,
     pub origin_name: &'a str,
     pub dest_name: &'a str,
     pub origin_country: Option<&'a str>,
-    pub dest_country: Option<&'a str>,
     pub start_date: &'a str,
-    pub end_date: &'a str,
-    pub origin_lat: f64,
-    pub origin_lng: f64,
-    pub dest_lat: f64,
-    pub dest_lng: f64,
 }
 
 /// Rail status result from a provider.
@@ -56,10 +49,6 @@ pub struct RailStatus {
 /// Provider-agnostic interface for rail status lookups.
 #[async_trait::async_trait]
 pub trait RailStatusApi: Send + Sync {
-    /// Provider name written to the `status_enrichments.provider` column.
-    #[allow(dead_code)]
-    fn provider_name(&self) -> &'static str;
-
     /// Look up rail status for a journey.
     ///
     /// Returns `Ok(None)` when the provider has no data for this journey (not an

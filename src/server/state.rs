@@ -223,7 +223,7 @@ pub fn create_router(state: AppState) -> Router {
         .finish_api_with(&mut api, api_docs)
         .layer(Extension(Arc::new(api)))
         .fallback(pages::not_found::page)
-        // Set the ID before tracing; propagation wraps the response path.
+        // Registration order is inner to outer: echo IDs, measure, trace, set IDs.
         .layer(PropagateRequestIdLayer::x_request_id())
         .layer(HttpMetricsLayer::default())
         .layer(OtelTraceLayer::<PropagatingSpanDecorator, HealthcheckFilter>::default())

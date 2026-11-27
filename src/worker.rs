@@ -1024,13 +1024,7 @@ async fn enrich_single_rail_hop(
         origin_name: &hop.origin_name,
         dest_name: &hop.dest_name,
         origin_country: hop.origin_country.as_deref(),
-        dest_country: hop.dest_country.as_deref(),
         start_date: &hop.start_date,
-        end_date: &hop.end_date,
-        origin_lat: hop.origin_lat,
-        origin_lng: hop.origin_lng,
-        dest_lat: hop.dest_lat,
-        dest_lng: hop.dest_lng,
     };
 
     dispatch_and_upsert_rail_status(config, user_id, hop, provider, train_number, &query).await

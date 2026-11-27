@@ -128,8 +128,8 @@ fn TripsPage(
                                 </div>
                             </a>
                         }.into_any();
-                        if groups.last().is_some_and(|(k, _)| *k == key) {
-                            groups.last_mut().unwrap().1.push(card);
+                        if let Some((_, cards)) = groups.last_mut().filter(|(group_key, _)| *group_key == key) {
+                            cards.push(card);
                         } else {
                             groups.push((key, vec![card]));
                         }

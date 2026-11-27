@@ -4,21 +4,27 @@
 use regex::Regex;
 use std::sync::LazyLock;
 
-static RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\(([A-Z]{3})\)").unwrap());
+static RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\(([A-Z]{3})\)").expect("IATA capture regex is valid"));
 
 // D12 AN22, A96 K7W4, etc.
-static EIRCODE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"\b[A-Z]\d{2}\s?[A-Z]{2}\d{2}\b").unwrap());
+static EIRCODE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\b[A-Z]\d{2}\s?[A-Z]{2}\d{2}\b").expect("Eircode regex is valid")
+});
 // 08820, 08004, 12345, etc.
-static POSTCODE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\b\d{4,5}\b").unwrap());
+static POSTCODE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\b\d{4,5}\b").expect("postcode regex is valid"));
 // "Terminal 2A", "Terminal 1"
-static TERMINAL: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)\bTerminal\s+\w+\b").unwrap());
+static TERMINAL: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)\bTerminal\s+\w+\b").expect("terminal regex is valid"));
 
 /// Extract a 3-letter IATA airport code from parenthesized text,
 /// e.g. `"Marrakech Menara Airport (RAK)"` → `Some("RAK")`.
 #[must_use]
 pub(super) fn extract_iata_code(name: &str) -> Option<&str> {
-    RE.captures(name).map(|c| c.get(1).unwrap().as_str())
+    RE.captures(name)
+        .and_then(|captures| captures.get(1))
+        .map(|capture| capture.as_str())
 }
 
 /// Strip noisy substrings that confuse Nominatim: Irish eircodes, European

@@ -256,10 +256,6 @@ fn derive_status(origin_event: Option<&Value>, dest_event: Option<&Value>) -> St
 
 #[async_trait::async_trait]
 impl RailStatusApi for DbRisClient {
-    fn provider_name(&self) -> &'static str {
-        "db_ris"
-    }
-
     async fn get_rail_status(
         &self,
         query: &RailStatusQuery<'_>,
@@ -389,13 +385,7 @@ mod tests {
             origin_name: "Frankfurt Hbf",
             dest_name: "Muenchen Hbf",
             origin_country: Some("de"),
-            dest_country: Some("de"),
             start_date: "2026-03-27",
-            end_date: "2026-03-27",
-            origin_lat: 50.1071,
-            origin_lng: 8.6636,
-            dest_lat: 48.1402,
-            dest_lng: 11.5600,
         }
     }
 

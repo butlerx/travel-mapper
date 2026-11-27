@@ -362,10 +362,6 @@ fn rail_status_from_service(service: &DarwinService) -> Result<RailStatus, RailS
 
 #[async_trait::async_trait]
 impl RailStatusApi for DarwinClient {
-    fn provider_name(&self) -> &'static str {
-        "darwin"
-    }
-
     async fn get_rail_status(
         &self,
         query: &RailStatusQuery<'_>,
@@ -406,13 +402,7 @@ mod tests {
             origin_name: "London Paddington",
             dest_name: "Edinburgh",
             origin_country: Some("gb"),
-            dest_country: Some("gb"),
             start_date: "2026-03-27 14:30",
-            end_date: "2026-03-27 17:00",
-            origin_lat: 51.5154,
-            origin_lng: -0.1755,
-            dest_lat: 55.952,
-            dest_lng: -3.189,
         }
     }
 

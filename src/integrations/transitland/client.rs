@@ -70,26 +70,15 @@ impl TransitlandClient {
             .await
     }
 
-    /// Downloads the latest GTFS-RT protobuf data for a specific feed.
-    ///
-    /// # Arguments
-    ///
-    /// * `feed_id` - Transitland feed onestop ID (e.g., `f-u0-sncf~transilien~rer`)
-    /// * `rt_type` - Type of realtime data: `trip_updates`, `vehicle_positions`, or `alerts`
+    /// Downloads the latest trip updates protobuf data for a feed.
     ///
     /// # Errors
     ///
     /// Returns an error if the HTTP request fails.
-    pub async fn download_rt_feed(
-        &self,
-        feed_id: &str,
-        rt_type: RtFeedType,
-    ) -> Result<Response, reqwest::Error> {
+    async fn download_trip_updates(&self, feed_id: &str) -> Result<Response, reqwest::Error> {
         let url = format!(
-            "{}/feeds/{}/download_latest_rt/{}.pb",
-            self.base_url,
-            feed_id,
-            rt_type.as_str()
+            "{}/feeds/{}/download_latest_rt/trip_updates.pb",
+            self.base_url, feed_id,
         );
 
         self.client
@@ -105,29 +94,8 @@ impl TransitlandClient {
     ///
     /// Returns an error if the HTTP request fails or response cannot be read.
     pub async fn fetch_trip_updates(&self, feed_id: &str) -> Result<Vec<u8>, reqwest::Error> {
-        let response = self
-            .download_rt_feed(feed_id, RtFeedType::TripUpdates)
-            .await?;
+        let response = self.download_trip_updates(feed_id).await?;
         response.bytes().await.map(|b| b.to_vec())
-    }
-}
-
-/// GTFS-RT feed type for download endpoint.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[allow(dead_code)]
-pub enum RtFeedType {
-    TripUpdates,
-    VehiclePositions,
-    Alerts,
-}
-
-impl RtFeedType {
-    const fn as_str(self) -> &'static str {
-        match self {
-            Self::TripUpdates => "trip_updates",
-            Self::VehiclePositions => "vehicle_positions",
-            Self::Alerts => "alerts",
-        }
     }
 }
 
@@ -178,13 +146,6 @@ pub struct ResponseMeta {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn rt_feed_type_as_str() {
-        assert_eq!(RtFeedType::TripUpdates.as_str(), "trip_updates");
-        assert_eq!(RtFeedType::VehiclePositions.as_str(), "vehicle_positions");
-        assert_eq!(RtFeedType::Alerts.as_str(), "alerts");
-    }
 
     #[tokio::test]
     async fn new_client_succeeds() {

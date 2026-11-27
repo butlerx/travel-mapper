@@ -220,10 +220,6 @@ impl TransitlandRailClient {
 
 #[async_trait::async_trait]
 impl RailStatusApi for TransitlandRailClient {
-    fn provider_name(&self) -> &'static str {
-        "transitland"
-    }
-
     async fn get_rail_status(
         &self,
         query: &RailStatusQuery<'_>,
@@ -372,15 +368,6 @@ fn serialize_trip_update(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::db::tests::test_pool;
-
-    #[tokio::test]
-    async fn test_provider_name() {
-        let pool = test_pool().await;
-        let client = TransitlandRailClient::new("test-api-key".to_string(), pool).unwrap();
-        assert_eq!(client.provider_name(), "transitland");
-    }
-
     #[test]
     fn test_operator_for_country() {
         assert_eq!(operator_for_country("fr"), Some(RailOperator::TerFrance));

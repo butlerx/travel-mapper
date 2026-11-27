@@ -86,6 +86,16 @@ struct AddressFix {
     full_object: Value,
 }
 
+struct SegmentFix {
+    station_name: String,
+    endpoint: &'static str,
+    new_lat: f64,
+    new_lng: f64,
+    old_lat: f64,
+    old_lng: f64,
+    distance_km: f64,
+}
+
 /// # Errors
 ///
 /// Returns an error if database access, credential decryption, or `TripIt` API calls fail.
@@ -216,21 +226,16 @@ async fn find_incorrect_addresses(
                 let mut modified_object = obj.clone();
 
                 for (seg_idx, seg) in segments.iter().enumerate() {
-                    let segment_fixes = check_segment(
-                        geocoder, seg, seg_idx, trip_name, &object_id, obj_type, addr_key,
-                    )
-                    .await;
+                    let segment_fixes = check_segment(geocoder, seg, addr_key).await;
 
-                    for (station, endpoint, new_lat, new_lng, old_lat, old_lng, dist) in
-                        &segment_fixes
-                    {
+                    for fix in &segment_fixes {
                         apply_coord_fix(
                             &mut modified_object,
                             seg_idx,
-                            endpoint,
+                            fix.endpoint,
                             addr_key,
-                            *new_lat,
-                            *new_lng,
+                            fix.new_lat,
+                            fix.new_lng,
                         );
 
                         fixes.push(AddressFix {
@@ -238,12 +243,12 @@ async fn find_incorrect_addresses(
                             object_type: obj_type.trim_end_matches("Object").to_ascii_lowercase(),
                             object_id: object_id.clone(),
                             segment_index: seg_idx,
-                            station_name: station.clone(),
-                            old_lat: *old_lat,
-                            old_lng: *old_lng,
-                            new_lat: *new_lat,
-                            new_lng: *new_lng,
-                            distance_km: *dist,
+                            station_name: fix.station_name.clone(),
+                            old_lat: fix.old_lat,
+                            old_lng: fix.old_lng,
+                            new_lat: fix.new_lat,
+                            new_lng: fix.new_lng,
+                            distance_km: fix.distance_km,
                             full_object: modified_object.clone(),
                         });
                     }
@@ -255,17 +260,7 @@ async fn find_incorrect_addresses(
     Ok(fixes)
 }
 
-#[allow(clippy::type_complexity)]
-async fn check_segment(
-    geocoder: &Geocoder,
-    seg: &Value,
-    seg_idx: usize,
-    trip_name: &str,
-    object_id: &str,
-    obj_type: &str,
-    addr_key: &str,
-) -> Vec<(String, String, f64, f64, f64, f64, f64)> {
-    let _ = (seg_idx, trip_name, object_id, obj_type);
+async fn check_segment(geocoder: &Geocoder, seg: &Value, addr_key: &str) -> Vec<SegmentFix> {
     let mut results = Vec::new();
 
     for (endpoint, name_key) in [("Start", "start_station_name"), ("End", "end_station_name")] {
@@ -304,15 +299,15 @@ async fn check_segment(
             let resolved =
                 resolve_station(geocoder, station_name, qualified_query.as_deref()).await;
             if let Some((geo_lat, geo_lng)) = resolved {
-                results.push((
-                    station_name.to_string(),
-                    endpoint.to_string(),
-                    geo_lat,
-                    geo_lng,
-                    existing_lat,
-                    existing_lng,
-                    0.0,
-                ));
+                results.push(SegmentFix {
+                    station_name: station_name.to_owned(),
+                    endpoint,
+                    new_lat: geo_lat,
+                    new_lng: geo_lng,
+                    old_lat: existing_lat,
+                    old_lng: existing_lng,
+                    distance_km: 0.0,
+                });
             }
             continue;
         }
@@ -335,15 +330,15 @@ async fn check_segment(
 
         let distance = haversine_km(existing_lat, existing_lng, geo_lat, geo_lng);
         if distance > DISTANCE_THRESHOLD_KM {
-            results.push((
-                station_name.to_string(),
-                endpoint.to_string(),
-                geo_lat,
-                geo_lng,
-                existing_lat,
-                existing_lng,
-                distance,
-            ));
+            results.push(SegmentFix {
+                station_name: station_name.to_owned(),
+                endpoint,
+                new_lat: geo_lat,
+                new_lng: geo_lng,
+                old_lat: existing_lat,
+                old_lng: existing_lng,
+                distance_km: distance,
+            });
         }
     }
 
