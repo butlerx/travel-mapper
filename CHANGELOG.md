@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.3](https://github.com/butlerx/travel-mapper/compare/v0.1.2...v0.1.3) (2026-11-27)
+
+
+### Features
+
+* **observability:** add OpenTelemetry server telemetry ([fdc6a36](https://github.com/butlerx/travel-mapper/commit/fdc6a360c5974d5144a93e67b2b87c1e7338309d))
+
+
+### Bug Fixes
+
+* **ci:** correct zigbuild action version comment ([#61](https://github.com/butlerx/travel-mapper/issues/61)) ([45420e4](https://github.com/butlerx/travel-mapper/commit/45420e45c6584f7ab155cbc175032668219a49b6))
+
 ## [0.1.2](https://github.com/butlerx/travel-mapper/compare/v0.1.1...v0.1.2) (2026-11-16)
 
 
