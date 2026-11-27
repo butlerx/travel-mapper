@@ -16,7 +16,7 @@ airport-data                = "1.0"
 argon2                      = "0.6"
 async-trait                 = "0.1"
 axum                        = { version = "0.8", features = ["multipart"] }
-axum-extra                  = { version = "0.10", features = ["cookie"] }
+axum-extra                  = { version = "0.12", features = ["cookie"] }
 base64                      = "0.22"
 chrono                      = { version = "0.4", default-features = false }
 clap                        = { version = "4", features = ["derive", "env"] }
