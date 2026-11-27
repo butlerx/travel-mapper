@@ -4,32 +4,32 @@
 
 [[repos]]
 repo  = "https://github.com/pre-commit/pre-commit-hooks"
-rev   = "3e8a8703264a2f4a69428a0aa4dcb512790b2c8c"
+rev   = "3e8a8703264a2f4a69428a0aa4dcb512790b2c8c"                                                                                                                                                                                      # frozen: v6.0.0
 hooks = [{ id = "trailing-whitespace" }, { id = "end-of-file-fixer" }, { id = "check-toml" }, { id = "check-yaml" }, { id = "check-json" }, { id = "check-merge-conflict" }, { id = "check-added-large-files", exclude = "(?x).png" }]
 
 [[repos]]
 repo  = "https://github.com/tombi-toml/tombi-pre-commit"
-rev   = "6f428aba5ced98b5a579ff23cab6b39822b4347d"
+rev   = "1066584123cce44a99b4818c2b2c4a7e732ff8e9"        # frozen: v1.11.3
 hooks = [{ id = "tombi-format" }, { id = "tombi-lint" }]
 
 [[repos]]
 repo  = "https://github.com/rhysd/actionlint"
-rev   = "914e7df21a07ef503a81201c76d2b11c789d3fca"
+rev   = "914e7df21a07ef503a81201c76d2b11c789d3fca"  # frozen: v1.7.12
 hooks = [{ id = "actionlint" }]
 
 [[repos]]
 repo  = "https://github.com/google/yamlfmt"
-rev   = "21ca5323a9c87ee37a434e0ca908efc0a89daa07"
+rev   = "21ca5323a9c87ee37a434e0ca908efc0a89daa07"  # frozen: v0.21.0
 hooks = [{ id = "yamlfmt" }]
 
 [[repos]]
 repo  = "https://github.com/zizmorcore/zizmor-pre-commit"
-rev   = "067260dc5fe6ea86b7551bfd6f8b3ba4e6c93129"
+rev   = "c7d31dc612dffdd4d3b2f2b88b9660d3ab057ee8"                                        # frozen: v1.33.1
 hooks = [{ id = "zizmor", pass_filenames = false, args = ["--no-progress", ".github"] }]
 
 [[repos]]
 repo  = "https://github.com/doublify/pre-commit-rust"
-rev   = "eeee35a89e69d5772bdee97db1a6a898467b686e"
+rev   = "eeee35a89e69d5772bdee97db1a6a898467b686e"                                              # frozen: v1.0
 hooks = [{ id = "fmt" }, { id = "clippy", args = ["--all-features", "--", "-D", "warnings"] }]
 
 [[repos]]
@@ -41,5 +41,5 @@ hooks = [
 
 [[repos]]
 repo  = "https://github.com/compilerla/conventional-pre-commit"
-rev   = "91ab4bf57e58b32adf1a122681f6ebe164d081c8"
+rev   = "33b50eb042bee26eac0ee96ad84aa9c1b4dccdd8"                     # frozen: v4.5.0
 hooks = [{ id = "conventional-pre-commit", stages = ["commit-msg"] }]
