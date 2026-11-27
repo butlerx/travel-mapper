@@ -1,7 +1,7 @@
 use crate::auth::{CryptoError, parse_encryption_key};
 use clap::Args as ClapArgs;
 use leptos::prelude::LeptosOptions;
-use std::path::PathBuf;
+use std::{net::SocketAddr, path::PathBuf};
 
 #[derive(ClapArgs)]
 pub struct Args {
@@ -19,6 +19,13 @@ pub struct Args {
 
     #[arg(long, env = "PORT", default_value_t = 3000)]
     port: u16,
+
+    #[arg(
+        long,
+        env = "METRICS_PROMETHEUS_ENDPOINT",
+        default_value = "127.0.0.1:9000"
+    )]
+    metrics_prometheus_endpoint: SocketAddr,
 
     #[arg(long, env = "REGISTRATION_ENABLED", default_value_t = true)]
     registration_enabled: bool,
@@ -79,14 +86,37 @@ pub enum Error {
 
     #[error("failed to bind TCP listener: {0}")]
     Bind(#[from] std::io::Error),
+
+    #[error("failed to initialize Prometheus metrics exporter: {0}")]
+    Metrics(#[from] metrics_exporter_prometheus::BuildError),
 }
 
 /// Start the web server, binding to the configured address and serving all routes.
 ///
 /// # Errors
 ///
-/// Returns an error if database access, TCP binding, or server startup fails.
+/// Returns an error if database access, telemetry setup, TCP binding, or server startup fails.
 pub async fn run(args: Args) -> Result<(), Error> {
+    let builder = metrics_exporter_prometheus::PrometheusBuilder::new()
+        .with_http_listener(args.metrics_prometheus_endpoint)
+        .with_recommended_naming(true);
+    let builder = builder.set_buckets_for_metric(
+        metrics_exporter_prometheus::Matcher::Full("http.server.request.duration".to_owned()),
+        &tower_telemetry::metrics::DURATION_BUCKETS,
+    )?;
+    let builder = builder.set_buckets_for_metric(
+        metrics_exporter_prometheus::Matcher::Full("http.server.request.body.size".to_owned()),
+        &tower_telemetry::metrics::BODY_SIZE_BUCKETS,
+    )?;
+    let builder = builder.set_buckets_for_metric(
+        metrics_exporter_prometheus::Matcher::Full("http.server.response.body.size".to_owned()),
+        &tower_telemetry::metrics::BODY_SIZE_BUCKETS,
+    )?;
+    builder.install()?;
+    tower_telemetry::metrics::install_panic_counter("process.panics");
+    let _runtime_metrics = tower_telemetry::metrics::export_runtime_metrics();
+    let _process_metrics = tower_telemetry::metrics::export_process_metrics();
+
     let encryption_key = parse_encryption_key(&args.encryption_key)?;
     let pool = crate::db::create_pool(&args.database_url).await?;
 
@@ -153,7 +183,7 @@ pub async fn run(args: Args) -> Result<(), Error> {
     let service = app.into_make_service_with_connect_info::<std::net::SocketAddr>();
 
     tracing::info!(address, "listening");
-
+    tracing::info!(endpoint = %args.metrics_prometheus_endpoint, "Prometheus metrics listening");
     axum::serve(listener, service)
         .with_graceful_shutdown(crate::shutdown_signal())
         .await

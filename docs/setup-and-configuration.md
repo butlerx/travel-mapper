@@ -512,10 +512,15 @@ REGISTRATION_ENABLED=false
 
 ## Logging and Telemetry
 
-Travel Mapper uses the `tracing` crate with structured logging.
+Travel Mapper uses `tracing` with structured logs and exports OpenTelemetry
+traces over OTLP/gRPC. Server HTTP spans and metrics use `tower-telemetry` and
+follow OpenTelemetry HTTP semantic conventions. Prometheus metrics are exposed
+on a separate listener, bound to localhost by default.
 
 ```bash
 RUST_LOG=info,tower_http=debug    # default
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
+METRICS_PROMETHEUS_ENDPOINT=127.0.0.1:9000
 ```
 
 The format differs by build type:
@@ -533,7 +538,7 @@ standard
 # Show debug logs for the worker module only
 RUST_LOG=info,travel_mapper::worker=debug
 
-# Silence tower_http request logging
+# Silence tower_http logs
 RUST_LOG=info,tower_http=warn
 
 # Verbose everything
@@ -695,6 +700,8 @@ This requires a live database with up-to-date migrations. The generated
 | `ENCRYPTION_KEY`           | Yes      | —                    | 32-byte hex key (64 hex chars) for AES-256-GCM encryption         |
 | `DATABASE_URL`             | No       | `sqlite:travel.db`   | SQLite database URL                                               |
 | `PORT`                     | No       | `3000`               | Server bind port                                                  |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | No    | `http://localhost:4317` | OTLP/gRPC collector for traces                                  |
+| `METRICS_PROMETHEUS_ENDPOINT` | No     | `127.0.0.1:9000`    | Prometheus scrape listener (keep off the public interface)        |
 | `REGISTRATION_ENABLED`     | No       | `true`               | Set to `false` to disable registration (also disabled without SMTP) |
 | `SYNC_POLL_INTERVAL_SECS`  | No       | `5`                  | Sync worker poll interval in seconds                              |
 | `AIRLABS_API_KEY`          | No       | —                    | AirLabs API key for flight status enrichment                      |

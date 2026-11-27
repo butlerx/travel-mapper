@@ -10,53 +10,59 @@ license     = "Apache-2.0"
 ssr = ["leptos/ssr"]
 
 [dependencies]
-aes-gcm            = "0.10"
-aide               = { version = "0.15", features = ["axum", "axum-extra-cookie", "axum-form", "axum-json", "axum-query", "swagger"] }
-airport-data       = "1.0"
-argon2             = "0.6"
-async-trait        = "0.1"
-axum               = { version = "0.8", features = ["multipart"] }
-axum-extra         = { version = "0.10", features = ["cookie"] }
-base64             = "0.22"
-chrono             = { version = "0.4", default-features = false }
-clap               = { version = "4", features = ["derive", "env"] }
-csv                = "1"
-deunicode          = "1.6.2"
-governor           = { version = "0.10", default-features = false, features = ["jitter", "std"] }
-gtfs-realtime      = "0.2"
-gtfs-structures    = "0.42"
-hmac               = "0.13"
-icalendar          = "0.17"
-indexmap           = "2"
-leptos             = { version = "0.8" }
-lettre             = { version = "0.11", default-features = false, features = ["builder", "hostname", "smtp-transport", "tokio1", "tokio1-native-tls"] }
-mail-parser        = { version = "0.11.3", features = ["encoding_rs"] }
-nominatim          = "0.3"
-percent-encoding   = "2"
-prost              = "0.14"
-quick-xml          = "0.37"
-rand               = "0.9"
-regex              = "1"
-reqwest            = { version = "0.12", features = ["json"] }
-rpassword          = "7"
-schemars           = { version = "0.9", features = ["uuid1"] }
-serde              = { version = "1", features = ["derive"] }
-serde_json         = "1"
-serde_urlencoded   = "0.7"
-sha1               = "0.11"
-sha2               = "0.10"
-sqlx               = { version = "0.9", features = ["macros", "runtime-tokio", "sqlite"] }
-strsim             = "0.11.1"
-tempfile           = "3.27.0"
-thiserror          = "2"
-tokio              = { version = "1", features = ["full"] }
-tower-http         = { version = "0.7", features = ["cors", "trace"] }
-tracing            = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
-url                = "2"
-uuid               = { version = "1", features = ["v4"] }
-web-push           = "0.11"
-zip                = "8.4.0"
+aes-gcm                     = "0.10"
+aide                        = { version = "0.15", features = ["axum", "axum-extra-cookie", "axum-form", "axum-json", "axum-query", "swagger"] }
+airport-data                = "1.0"
+argon2                      = "0.6"
+async-trait                 = "0.1"
+axum                        = { version = "0.8", features = ["multipart"] }
+axum-extra                  = { version = "0.10", features = ["cookie"] }
+base64                      = "0.22"
+chrono                      = { version = "0.4", default-features = false }
+clap                        = { version = "4", features = ["derive", "env"] }
+csv                         = "1"
+deunicode                   = "1.6.2"
+governor                    = { version = "0.10", default-features = false, features = ["jitter", "std"] }
+gtfs-realtime               = "0.2"
+gtfs-structures             = "0.42"
+hmac                        = "0.13"
+icalendar                   = "0.17"
+indexmap                    = "2"
+leptos                      = { version = "0.8" }
+lettre                      = { version = "0.11", default-features = false, features = ["builder", "hostname", "smtp-transport", "tokio1", "tokio1-native-tls"] }
+mail-parser                 = { version = "0.11.3", features = ["encoding_rs"] }
+metrics-exporter-prometheus = { version = "0.18", default-features = false, features = ["http-listener"] }
+nominatim                   = "0.3"
+opentelemetry               = "0.33"
+opentelemetry-otlp          = { version = "0.33", features = ["grpc-tonic", "trace"] }
+opentelemetry_sdk           = { version = "0.33", features = ["rt-tokio", "trace"] }
+percent-encoding            = "2"
+prost                       = "0.14"
+quick-xml                   = "0.37"
+rand                        = "0.9"
+regex                       = "1"
+reqwest                     = { version = "0.12", features = ["json"] }
+rpassword                   = "7"
+schemars                    = { version = "0.9", features = ["uuid1"] }
+serde                       = { version = "1", features = ["derive"] }
+serde_json                  = "1"
+serde_urlencoded            = "0.7"
+sha1                        = "0.11"
+sha2                        = "0.10"
+sqlx                        = { version = "0.9", features = ["macros", "runtime-tokio", "sqlite"] }
+strsim                      = "0.11.1"
+tempfile                    = "3.27.0"
+thiserror                   = "2"
+tokio                       = { version = "1", features = ["full"] }
+tower-http                  = { version = "0.7", features = ["cors", "request-id"] }
+tower-telemetry             = { version = "0.3", features = ["axum", "process-metrics", "runtime-metrics"] }
+tracing                     = "0.1"
+tracing-opentelemetry       = "0.34"
+tracing-subscriber          = { version = "0.3", features = ["env-filter", "json"] }
+url                         = "2"
+uuid                        = { version = "1", features = ["v4"] }
+web-push                    = "0.11"
+zip                         = "8.4.0"
 
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }

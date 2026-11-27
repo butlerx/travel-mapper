@@ -8,8 +8,6 @@ pub(crate) mod email;
 pub(crate) mod error;
 /// Axum extractors for request authentication and authorization.
 pub(crate) mod extractors;
-/// Tower middleware for HTTP request tracing and diagnostics.
-pub(crate) mod middleware;
 /// Leptos SSR page components — dashboard, settings, stats, and more.
 pub(crate) mod pages;
 /// Web Push notification delivery.

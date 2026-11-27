@@ -2,7 +2,7 @@
 
 use crate::{
     integrations::tripit::TripItApi,
-    server::{middleware, pages, routes},
+    server::{pages, routes},
 };
 use aide::{
     axum::IntoApiResponse,
@@ -15,7 +15,10 @@ use indexmap::IndexMap;
 use leptos::prelude::LeptosOptions;
 use sqlx::SqlitePool;
 use std::{path::PathBuf, sync::Arc};
-use tower_http::trace::TraceLayer;
+use tower_http::request_id::{MakeRequestUuid, PropagateRequestIdLayer, SetRequestIdLayer};
+use tower_telemetry::{
+    HealthcheckFilter, HttpMetricsLayer, OtelTraceLayer, PropagatingSpanDecorator,
+};
 
 /// SMTP connection details for sending transactional email (verification, etc.).
 ///
@@ -220,10 +223,10 @@ pub fn create_router(state: AppState) -> Router {
         .finish_api_with(&mut api, api_docs)
         .layer(Extension(Arc::new(api)))
         .fallback(pages::not_found::page)
-        .layer(
-            TraceLayer::new_for_http()
-                .make_span_with(middleware::request_span)
-                .on_response(middleware::on_response),
-        )
+        // Set the ID before tracing; propagation wraps the response path.
+        .layer(PropagateRequestIdLayer::x_request_id())
+        .layer(HttpMetricsLayer::default())
+        .layer(OtelTraceLayer::<PropagatingSpanDecorator, HealthcheckFilter>::default())
+        .layer(SetRequestIdLayer::x_request_id(MakeRequestUuid))
         .with_state(state)
 }

@@ -9,12 +9,20 @@ struct Cli {
 
 #[tokio::main]
 async fn main() {
-    travel_mapper::telemetry::init();
+    let tracer_provider = match travel_mapper::telemetry::init() {
+        Ok(provider) => provider,
+        Err(error) => {
+            eprintln!("failed to initialize OpenTelemetry tracing: {error}");
+            std::process::exit(1);
+        }
+    };
 
     let cli = Cli::parse();
 
     if let Err(error) = travel_mapper::commands::run(cli.command).await {
         tracing::error!(%error, "fatal error");
+        let _ = tracer_provider.shutdown();
         std::process::exit(1);
     }
+    let _ = tracer_provider.shutdown();
 }

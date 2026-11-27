@@ -2,6 +2,8 @@
 //! environment-driven filters, compact single-line output in debug builds, and
 //! JSON in release.
 
+use opentelemetry::trace::TracerProvider as _;
+use opentelemetry_sdk::{propagation::TraceContextPropagator, trace::SdkTracerProvider};
 use tracing_subscriber::prelude::*;
 
 /// Initialise the global tracing subscriber.
@@ -11,10 +13,23 @@ use tracing_subscriber::prelude::*;
 /// release builds it is machine-parseable JSON. The log level is read from the
 /// `RUST_LOG` environment variable, defaulting to `info,tower_http=debug`.
 ///
-/// Span-close events are intentionally not emitted: each HTTP request already
-/// logs a single `response` line (status + latency) from the trace layer, so a
-/// separate `close` line per span would just duplicate it.
-pub fn init() {
+/// Span-close events are not logged separately; request completion details are
+/// recorded on their OpenTelemetry spans by `tower-telemetry`.
+///
+/// # Errors
+///
+/// Returns an error if the OTLP span exporter cannot be configured.
+pub fn init() -> Result<SdkTracerProvider, opentelemetry_otlp::ExporterBuildError> {
+    opentelemetry::global::set_text_map_propagator(TraceContextPropagator::new());
+    let exporter = opentelemetry_otlp::SpanExporter::builder()
+        .with_tonic()
+        .build()?;
+    let provider = SdkTracerProvider::builder()
+        .with_batch_exporter(exporter)
+        .build();
+    let tracer = provider.tracer(env!("CARGO_PKG_NAME"));
+    opentelemetry::global::set_tracer_provider(provider.clone());
+
     #[cfg(debug_assertions)]
     let log_layer = tracing_subscriber::fmt::layer().compact();
 
@@ -23,8 +38,10 @@ pub fn init() {
 
     tracing_subscriber::registry()
         .with(env_filter())
+        .with(tracing_opentelemetry::layer().with_tracer(tracer))
         .with(log_layer)
         .init();
+    Ok(provider)
 }
 
 /// Build the log filter from `RUST_LOG` (falling back to a sensible default),
