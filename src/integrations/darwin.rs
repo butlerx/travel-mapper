@@ -153,9 +153,9 @@ async fn sleep_with_backoff(attempt: u32) {
     tokio::time::sleep(delay).await;
 }
 
-fn local_name(raw_name: &[u8]) -> String {
-    let full = String::from_utf8_lossy(raw_name);
-    full.split(':')
+fn local_name(full_name: &str) -> String {
+    full_name
+        .split(':')
         .next_back()
         .unwrap_or_default()
         .to_ascii_lowercase()
@@ -163,11 +163,14 @@ fn local_name(raw_name: &[u8]) -> String {
 
 fn decode_text_event(event: &Event<'_>) -> Result<String, RailStatusError> {
     match event {
-        Event::Text(text) => text
-            .unescape()
-            .map(std::borrow::Cow::into_owned)
-            .map_err(|e| RailStatusError::Parse(e.to_string())),
-        Event::CData(text) => Ok(String::from_utf8_lossy(text.as_ref()).into_owned()),
+        Event::Text(text) => Ok(text.xml10_content().into_owned()),
+        Event::CData(text) => Ok(text.xml10_content().into_owned()),
+        Event::GeneralRef(reference) => {
+            let reference = reference.as_ref();
+            quick_xml::escape::unescape(&format!("&{reference};"))
+                .map(std::borrow::Cow::into_owned)
+                .map_err(|e| RailStatusError::Parse(e.to_string()))
+        }
         _ => Ok(String::new()),
     }
 }
